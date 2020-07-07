@@ -1,12 +1,4 @@
-interface EnvironmentConfig {
-  bridgeUrl?: string
-  bridgeUser: string
-  bridgePass: string
-  encryptionKey: string
-  logLevel?: number
-}
-
-class Environment {
+export class Environment {
   private config: EnvironmentConfig
 
   constructor(config: EnvironmentConfig) {
@@ -14,6 +6,4 @@ class Environment {
   }
 }
 
-export default {
-  Environment
-}
+export default Environment

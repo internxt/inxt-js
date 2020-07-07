@@ -5,12 +5,20 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "ts-mocha tests/**/*.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/jest": "^26.0.4",
+    "chai": "^4.2.0",
+    "mocha": "^8.0.1",
+    "ts-mocha": "^7.0.0",
     "typescript": "^3.9.6"
+  },
+  "dependencies": {
+    "bip39": "^3.0.2"
   }
 }
