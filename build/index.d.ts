@@ -4,3 +4,10 @@ export declare class Environment {
     setEncryptionKey(newEncryptionKey: string): void;
     download(bucketId: string, fileId: string): void;
 }
+export interface EnvironmentConfig {
+    bridgeUrl?: string;
+    bridgeUser: string;
+    bridgePass: string;
+    encryptionKey?: string;
+    logLevel?: number;
+}
