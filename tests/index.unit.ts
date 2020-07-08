@@ -1,5 +1,7 @@
-import { Environment } from '../src/index'
-import { expect } from 'chai'
+import { Environment } from '../build/index'
 
 describe('# environment', () => {
+  const inxt = new Environment({
+    
+  })
 })

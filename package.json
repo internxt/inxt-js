@@ -2,9 +2,9 @@
   "name": "inxt-js",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "rimraf build/* && tsc",
     "test": "ts-mocha tests/**/*.ts"
   },
   "keywords": [],
@@ -15,10 +15,12 @@
     "@types/jest": "^26.0.4",
     "chai": "^4.2.0",
     "mocha": "^8.0.1",
+    "rimraf": "^3.0.2",
     "ts-mocha": "^7.0.0",
     "typescript": "^3.9.6"
   },
   "dependencies": {
-    "bip39": "^3.0.2"
+    "bip39": "^3.0.2",
+    "commander": "^5.1.0"
   }
 }

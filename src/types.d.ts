@@ -1,3 +1,7 @@
+interface Environment {
+  config: EnvironmentConfig
+}
+
 interface EnvironmentConfig {
   bridgeUrl?: string
   bridgeUser: string
