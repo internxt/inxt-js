@@ -39,64 +39,48 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Aes256ctrDecrypter = exports.GenerateFileKey = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
-var crypto_1 = __importDefault(require("crypto"));
-var bip39_1 = require("bip39");
-function sha256(input) {
-    return crypto_1.default.createHash('sha256').update(input).digest();
-}
-exports.sha256 = sha256;
-function sha256HashBuffer() {
-    return crypto_1.default.createHash('sha256');
-}
-exports.sha256HashBuffer = sha256HashBuffer;
-function sha512(input) {
-    return crypto_1.default.createHash('sha512').update(input).digest();
-}
-exports.sha512 = sha512;
-function sha512HmacBuffer(key) {
-    return crypto_1.default.createHmac('sha512', key);
-}
-exports.sha512HmacBuffer = sha512HmacBuffer;
-function ripemd160(input) {
-    return crypto_1.default.createHash('ripemd160').update(input).digest();
-}
-exports.ripemd160 = ripemd160;
-function GetDeterministicKey(key, data) {
-    var hash = crypto_1.default.createHash('sha512');
-    hash.update(key).update(data);
-    return hash.digest();
-}
-exports.GetDeterministicKey = GetDeterministicKey;
-function GenerateBucketKey(mnemonic, bucketId) {
+exports.DownloadShard = void 0;
+var crypto_1 = require("../lib/crypto");
+var node_fetch_1 = __importDefault(require("node-fetch"));
+function DownloadShardRequest(address, port, hash, token, excluded) {
+    if (excluded === void 0) { excluded = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var seed;
+        var excludedNodeIds;
+        return __generator(this, function (_a) {
+            excludedNodeIds = excluded.join(',');
+            return [2 /*return*/, node_fetch_1.default("http://" + address + ":" + port + "/shards/" + hash + "?token=" + token + "&exclude=" + excluded).then(function (res) {
+                    if (res.status === 200) {
+                        return res.buffer();
+                    }
+                    else {
+                        throw res;
+                    }
+                }).catch(function (err) {
+                    console.log('ERROR', err.message);
+                })];
+        });
+    });
+}
+function DownloadShard(shard) {
+    return __awaiter(this, void 0, void 0, function () {
+        var hasher, shardBinary, rmdDigest, finalShardHashBin, finalShardHash;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, bip39_1.mnemonicToSeed(mnemonic)];
+                case 0:
+                    hasher = crypto_1.sha256HashBuffer();
+                    return [4 /*yield*/, DownloadShardRequest(shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
                 case 1:
-                    seed = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'))];
+                    shardBinary = _a.sent();
+                    hasher.update(shardBinary);
+                    rmdDigest = hasher.digest();
+                    finalShardHashBin = crypto_1.ripemd160(rmdDigest);
+                    finalShardHash = Buffer.from(finalShardHashBin).toString('hex');
+                    console.log('SHARD %s: Is hash ok = %s', shard.index, finalShardHash === shard.hash);
+                    console.log('SHARD %s length: %s', shard.index, shardBinary.length);
+                    // TODO create exange report
+                    return [2 /*return*/, shardBinary];
             }
         });
     });
 }
-exports.GenerateBucketKey = GenerateBucketKey;
-function GenerateFileKey(mnemonic, bucketId, index) {
-    return __awaiter(this, void 0, void 0, function () {
-        var bucketKey;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, GenerateBucketKey(mnemonic, bucketId)];
-                case 1:
-                    bucketKey = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
-            }
-        });
-    });
-}
-exports.GenerateFileKey = GenerateFileKey;
-function Aes256ctrDecrypter(key, iv) {
-    return crypto_1.default.createDecipheriv('aes-256-ctr', key, iv);
-}
-exports.Aes256ctrDecrypter = Aes256ctrDecrypter;
+exports.DownloadShard = DownloadShard;
