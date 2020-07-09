@@ -35,28 +35,25 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadShard = exports.CheckShard = void 0;
 var crypto_1 = require("../lib/crypto");
-var node_fetch_1 = __importDefault(require("node-fetch"));
 function DownloadShardRequest(address, port, hash, token, excluded) {
     if (excluded === void 0) { excluded = []; }
     return __awaiter(this, void 0, void 0, function () {
         var excludedNodeIds;
         return __generator(this, function (_a) {
             excludedNodeIds = excluded.join(',');
-            return [2 /*return*/, node_fetch_1.default("http://" + address + ":" + port + "/shards/" + hash + "?token=" + token + "&exclude=" + excluded).then(function (res) {
+            return [2 /*return*/, global.fetch("https://api.internxt.com:8081/http://" + address + ":" + port + "/shards/" + hash + "?token=" + token + "&exclude=" + excluded).then(function (res) {
                     if (res.status === 200) {
-                        return res.buffer();
+                        return res.arrayBuffer();
                     }
                     else {
                         throw res;
                     }
                 }).catch(function (err) {
                     console.log('ERROR', err.message);
+                    return null;
                 })];
         });
     });
@@ -75,18 +72,20 @@ function DownloadShard(shard) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    console.log(shard);
                     hasher = crypto_1.sha256HashBuffer();
                     return [4 /*yield*/, DownloadShardRequest(shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
                 case 1:
                     shardBinary = _a.sent();
-                    hasher.update(shardBinary);
+                    if (shardBinary !== null)
+                        hasher.update(Buffer.from(shardBinary));
                     rmdDigest = hasher.digest();
                     finalShardHashBin = crypto_1.ripemd160(rmdDigest);
                     finalShardHash = Buffer.from(finalShardHashBin).toString('hex');
                     console.log('SHARD %s: Is hash ok = %s', shard.index, finalShardHash === shard.hash);
-                    console.log('SHARD %s length: %s', shard.index, shardBinary.length);
+                    // console.log('SHARD %s length: %s', shard.index, shardBinary.length)
                     // TODO create exange report
-                    return [2 /*return*/, shardBinary];
+                    return [2 /*return*/, Buffer.from(shardBinary ? shardBinary : '')];
             }
         });
     });

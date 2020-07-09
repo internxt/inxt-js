@@ -14,6 +14,7 @@ var Environment = /** @class */ (function () {
     };
     Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
         var downloader = download_1.default(this.config, bucketId, fileId);
+        return downloader;
     };
     return Environment;
 }());

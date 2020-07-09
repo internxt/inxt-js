@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'
-
 class AuthMethod {
   static BasicAuth: string = "1"
 }

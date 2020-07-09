@@ -11,19 +11,20 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
 
   const fileInfo = await GetFileInfo(config, bucketId, fileId)
   const fileShards = await GetFileMirrors(config, bucketId, fileId)
+  console.log('File Shards', fileShards)
 
   const index = Buffer.from(fileInfo.index, 'hex')
   const fileKey = await GenerateFileKey(config.encryptionKey, bucketId, index)
 
-  const shards: any = []
+  const shards: Buffer[] = []
   const binary = await new Promise(resolve => {
     const globalHash = sha512HmacBuffer(fileKey)
     eachSeries(fileShards, (shard: any, nextShard: Function) => {
-      DownloadShard(shard).then((shardData: Buffer) => {
+      DownloadShard(shard).then((shardData: any) => {
         const shardHash = sha256(shardData)
         const rpm = ripemd160(shardHash)
         globalHash.update(rpm)
-        console.log(rpm.toString('hex'))
+        console.log('Shard hash', rpm.toString('hex'))
         shards.push(shardData)
         nextShard()
       })

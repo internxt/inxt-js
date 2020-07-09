@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export interface Shard {
     farmer: {
         address: string;
@@ -8,4 +9,4 @@ export interface Shard {
     index: string;
 }
 export declare function CheckShard(shard: Shard): Promise<void>;
-export declare function DownloadShard(shard: Shard): Promise<any>;
+export declare function DownloadShard(shard: Shard): Promise<Buffer>;

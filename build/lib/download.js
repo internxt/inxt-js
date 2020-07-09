@@ -55,6 +55,7 @@ function Download(config, bucketId, fileId) {
                     return [4 /*yield*/, fileinfo_1.GetFileMirrors(config, bucketId, fileId)];
                 case 2:
                     fileShards = _a.sent();
+                    console.log('File Shards', fileShards);
                     index = Buffer.from(fileInfo.index, 'hex');
                     return [4 /*yield*/, crypto_1.GenerateFileKey(config.encryptionKey, bucketId, index)];
                 case 3:
@@ -67,7 +68,7 @@ function Download(config, bucketId, fileId) {
                                     var shardHash = crypto_1.sha256(shardData);
                                     var rpm = crypto_1.ripemd160(shardHash);
                                     globalHash.update(rpm);
-                                    console.log(rpm.toString('hex'));
+                                    console.log('Shard hash', rpm.toString('hex'));
                                     shards.push(shardData);
                                     nextShard();
                                 });

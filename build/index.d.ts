@@ -13,7 +13,10 @@ export declare class Environment {
     private config;
     constructor(config: EnvironmentConfig);
     setEncryptionKey(newEncryptionKey: string): void;
-    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
+    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): Promise<{
+        name: string;
+        data: unknown;
+    }>;
 }
 export interface EnvironmentConfig {
     bridgeUrl?: string;

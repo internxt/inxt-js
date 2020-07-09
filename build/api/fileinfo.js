@@ -1,14 +1,11 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetFileMirrors = exports.GetFileInfo = void 0;
 var auth_1 = require("./auth");
 var async_1 = require("async");
-var node_fetch_1 = __importDefault(require("node-fetch"));
 function GetFileInfo(config, bucketId, fileId) {
-    return node_fetch_1.default(config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "/info", {
+    return global.fetch("https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "/info", {
+        mode: 'cors',
         headers: {
             'authorization': auth_1.GetBasicAuth(config)
         }
@@ -21,7 +18,7 @@ function GetFileInfo(config, bucketId, fileId) {
 }
 exports.GetFileInfo = GetFileInfo;
 function GetFileMirror(config, bucketId, fileId, limit, skip) {
-    return node_fetch_1.default(config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip, {
+    return global.fetch("https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip, {
         headers: { 'authorization': auth_1.GetBasicAuth(config) }
     }).then(function (res) {
         if (res.status !== 200) {
