@@ -26,6 +26,10 @@ async function DownloadShardRequest(address: string, port: number, hash: string,
 
 }
 
+export async function CheckShard(shard: Shard) {
+
+}
+
 export async function DownloadShard(shard: Shard) {
   const hasher = sha256HashBuffer()
   const shardBinary = await DownloadShardRequest(shard.farmer.address, shard.farmer.port, shard.hash, shard.token)

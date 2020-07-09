@@ -1,5 +1,16 @@
 import Download from './lib/download'
 
+interface OnlyErrorCallback {
+  (err: Error | null): void
+}
+interface DownloadProgressCallback {
+  (progress: Number, downloadedBytes: Number | null, totalBytes: Number | null): void
+}
+export interface ResolveFileOptions {
+  progressCallback: DownloadProgressCallback,
+  finishedCallback: OnlyErrorCallback,
+  overwritte?: boolean
+}
 export class Environment {
   private config: EnvironmentConfig
 
@@ -11,8 +22,8 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey
   }
 
-  download(bucketId: string, fileId: string) {
-    return Download(this.config, bucketId, fileId)
+  resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions) {
+    const downloader = Download(this.config, bucketId, fileId)
   }
 }
 

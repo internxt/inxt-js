@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DownloadShard = void 0;
+exports.DownloadShard = exports.CheckShard = void 0;
 var crypto_1 = require("../lib/crypto");
 var node_fetch_1 = __importDefault(require("node-fetch"));
 function DownloadShardRequest(address, port, hash, token, excluded) {
@@ -61,6 +61,14 @@ function DownloadShardRequest(address, port, hash, token, excluded) {
         });
     });
 }
+function CheckShard(shard) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/];
+        });
+    });
+}
+exports.CheckShard = CheckShard;
 function DownloadShard(shard) {
     return __awaiter(this, void 0, void 0, function () {
         var hasher, shardBinary, rmdDigest, finalShardHashBin, finalShardHash;

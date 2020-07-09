@@ -7,4 +7,5 @@ export interface Shard {
     token: string;
     index: string;
 }
+export declare function CheckShard(shard: Shard): Promise<void>;
 export declare function DownloadShard(shard: Shard): Promise<any>;

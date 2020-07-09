@@ -12,8 +12,8 @@ var Environment = /** @class */ (function () {
     Environment.prototype.setEncryptionKey = function (newEncryptionKey) {
         this.config.encryptionKey = newEncryptionKey;
     };
-    Environment.prototype.download = function (bucketId, fileId) {
-        return download_1.default(this.config, bucketId, fileId);
+    Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
+        var downloader = download_1.default(this.config, bucketId, fileId);
     };
     return Environment;
 }());
