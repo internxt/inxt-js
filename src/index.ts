@@ -1,4 +1,5 @@
 import Download from './lib/download'
+import fetch from 'node-fetch'
 
 interface OnlyErrorCallback {
   (err: Error | null): void
@@ -34,4 +35,5 @@ export interface EnvironmentConfig {
   bridgePass: string
   encryptionKey?: string
   logLevel?: number
+  webProxy?: string
 }

@@ -14,7 +14,7 @@ export declare class Environment {
     constructor(config: EnvironmentConfig);
     setEncryptionKey(newEncryptionKey: string): void;
     resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): Promise<{
-        name: string;
+        name: any;
         data: unknown;
     }>;
 }
@@ -24,5 +24,6 @@ export interface EnvironmentConfig {
     bridgePass: string;
     encryptionKey?: string;
     logLevel?: number;
+    webProxy?: string;
 }
 export {};

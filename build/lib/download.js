@@ -55,7 +55,6 @@ function Download(config, bucketId, fileId) {
                     return [4 /*yield*/, fileinfo_1.GetFileMirrors(config, bucketId, fileId)];
                 case 2:
                     fileShards = _a.sent();
-                    console.log('File Shards', fileShards);
                     index = Buffer.from(fileInfo.index, 'hex');
                     return [4 /*yield*/, crypto_1.GenerateFileKey(config.encryptionKey, bucketId, index)];
                 case 3:
@@ -64,7 +63,7 @@ function Download(config, bucketId, fileId) {
                     return [4 /*yield*/, new Promise(function (resolve) {
                             var globalHash = crypto_1.sha512HmacBuffer(fileKey);
                             async_1.eachSeries(fileShards, function (shard, nextShard) {
-                                shard_1.DownloadShard(shard).then(function (shardData) {
+                                shard_1.DownloadShard(config, shard, bucketId, fileId).then(function (shardData) {
                                     var shardHash = crypto_1.sha256(shardData);
                                     var rpm = crypto_1.ripemd160(shardHash);
                                     globalHash.update(rpm);

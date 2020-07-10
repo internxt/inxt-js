@@ -38,23 +38,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadShard = exports.CheckShard = void 0;
 var crypto_1 = require("../lib/crypto");
-function DownloadShardRequest(address, port, hash, token, excluded) {
-    if (excluded === void 0) { excluded = []; }
+var request_1 = require("../services/request");
+var fileinfo_1 = require("./fileinfo");
+function DownloadShardRequest(config, address, port, hash, token) {
     return __awaiter(this, void 0, void 0, function () {
-        var excludedNodeIds;
+        var fetchUrl;
         return __generator(this, function (_a) {
-            excludedNodeIds = excluded.join(',');
-            return [2 /*return*/, global.fetch("https://api.internxt.com:8081/http://" + address + ":" + port + "/shards/" + hash + "?token=" + token + "&exclude=" + excluded).then(function (res) {
-                    if (res.status === 200) {
-                        return res.arrayBuffer();
-                    }
-                    else {
-                        throw res;
-                    }
-                }).catch(function (err) {
-                    console.log('ERROR', err.message);
-                    return null;
-                })];
+            fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
+            return [2 /*return*/, request_1.request(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'arraybuffer' }, function () { })];
         });
     });
 }
@@ -66,26 +57,36 @@ function CheckShard(shard) {
     });
 }
 exports.CheckShard = CheckShard;
-function DownloadShard(shard) {
+function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
+    if (excludedNodes === void 0) { excludedNodes = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var hasher, shardBinary, rmdDigest, finalShardHashBin, finalShardHash;
+        var hasher, shardBinary, rmdDigest, finalShardHashBin, finalShardHash, anotherMirror;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    console.log(shard);
                     hasher = crypto_1.sha256HashBuffer();
-                    return [4 /*yield*/, DownloadShardRequest(shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
+                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
                 case 1:
                     shardBinary = _a.sent();
-                    if (shardBinary !== null)
-                        hasher.update(Buffer.from(shardBinary));
+                    hasher.update(Buffer.from(shardBinary.data));
                     rmdDigest = hasher.digest();
                     finalShardHashBin = crypto_1.ripemd160(rmdDigest);
                     finalShardHash = Buffer.from(finalShardHashBin).toString('hex');
-                    console.log('SHARD %s: Is hash ok = %s', shard.index, finalShardHash === shard.hash);
-                    // console.log('SHARD %s length: %s', shard.index, shardBinary.length)
-                    // TODO create exange report
-                    return [2 /*return*/, Buffer.from(shardBinary ? shardBinary : '')];
+                    if (!(finalShardHash === shard.hash)) return [3 /*break*/, 2];
+                    return [2 /*return*/, shardBinary.data];
+                case 2:
+                    excludedNodes.push(shard.farmer.nodeID);
+                    return [4 /*yield*/, fileinfo_1.GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)];
+                case 3:
+                    anotherMirror = _a.sent();
+                    if (!anotherMirror[0].farmer) {
+                        throw Error('File missing shard error');
+                    }
+                    else {
+                        return [2 /*return*/, DownloadShard(config, anotherMirror[0], bucketId, fileId, excludedNodes)];
+                    }
+                    _a.label = 4;
+                case 4: return [2 /*return*/];
             }
         });
     });

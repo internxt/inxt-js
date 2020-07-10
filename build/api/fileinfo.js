@@ -1,32 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetFileMirrors = exports.GetFileInfo = void 0;
-var auth_1 = require("./auth");
+exports.GetFileMirrors = exports.GetFileMirror = exports.GetFileInfo = void 0;
 var async_1 = require("async");
+var request_1 = require("../services/request");
 function GetFileInfo(config, bucketId, fileId) {
-    return global.fetch("https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "/info", {
-        mode: 'cors',
-        headers: {
-            'authorization': auth_1.GetBasicAuth(config)
-        }
-    }).then(function (res) {
+    return request_1.request(config, 'GET', "https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "/info", { responseType: 'json' }, function () { }).then(function (res) {
         if (res.status !== 200) {
             throw res;
         }
-        return res.json();
+        return res.data;
     });
 }
 exports.GetFileInfo = GetFileInfo;
-function GetFileMirror(config, bucketId, fileId, limit, skip) {
-    return global.fetch("https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip, {
-        headers: { 'authorization': auth_1.GetBasicAuth(config) }
-    }).then(function (res) {
+function GetFileMirror(config, bucketId, fileId, limit, skip, excludeNodes) {
+    if (excludeNodes === void 0) { excludeNodes = []; }
+    var excludeNodeIds = excludeNodes.join(',');
+    console.log('Excluded', excludeNodes);
+    return request_1.request(config, 'GET', "https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip + "&exclude=" + excludeNodeIds, { responseType: 'json' }, function () { }).then(function (res) {
         if (res.status !== 200) {
             throw res;
         }
-        return res.json();
+        return res.data;
     });
 }
+exports.GetFileMirror = GetFileMirror;
 function GetFileMirrors(config, bucketId, fileId) {
     var shards = [];
     return async_1.doUntil(function (next) {
