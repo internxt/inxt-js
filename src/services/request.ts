@@ -1,5 +1,3 @@
-import path from 'path'
-import url from 'url'
 import axios, { AxiosRequestConfig } from 'axios'
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'

@@ -1,5 +1,4 @@
 import Download from './lib/download'
-import fetch from 'node-fetch'
 
 interface OnlyErrorCallback {
   (err: Error | null): void

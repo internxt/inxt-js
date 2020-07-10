@@ -1,8 +1,7 @@
 import { ripemd160, sha256HashBuffer } from "../lib/crypto"
 import { request } from "../services/request"
 import { EnvironmentConfig } from ".."
-import { doUntil, doDuring, doWhilst } from 'async'
-import { GetFileMirrors, GetFileMirror } from "./fileinfo"
+import { GetFileMirror } from "./fileinfo"
 
 export interface Shard {
   farmer: {

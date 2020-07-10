@@ -1,5 +1,4 @@
 import { EnvironmentConfig } from '../index'
-import { GetBasicAuth } from './auth'
 import { doUntil } from 'async'
 import { request } from '../services/request'
 import { Shard } from './shard'
