@@ -62,13 +62,12 @@ export class ExchangeReport {
   }
 
   validate() {
-    if (!this.params.dataHash || !this.params.farmerId) {
-      return false
-    }
-
     const expectedResultCode = this.expectedResultCode()
 
-    if (expectedResultCode === 0 || expectedResultCode !== this.params.exchangeResultCode) {
+    if (!this.params.dataHash
+      || !this.params.farmerId
+      || expectedResultCode === 0
+      || expectedResultCode !== this.params.exchangeResultCode) {
       return false
     }
 
@@ -76,6 +75,9 @@ export class ExchangeReport {
   }
 
   sendReport() {
-    return request(this.config, 'POST', '/reports/exchanges', {}, () => { })
+    if (!this.validate()) {
+      return Promise.reject(Error('Not valid report to send'))
+    }
+    return request(this.config, 'POST', '/reports/exchanges', { data: this.params }, () => { })
   }
 }

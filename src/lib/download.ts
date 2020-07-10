@@ -26,6 +26,8 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
         console.log('Shard hash', rpm.toString('hex'))
         shards.push(shardData)
         nextShard()
+      }).catch(err => {
+        nextShard(err)
       })
     }, () => {
       const finalGlobalHash = globalHash.digest()
