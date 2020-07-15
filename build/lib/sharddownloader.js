@@ -13,19 +13,18 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShardDownloader = void 0;
+exports.ShardDownloaderStream = void 0;
 var stream_1 = require("stream");
-var ShardDownloader = /** @class */ (function (_super) {
-    __extends(ShardDownloader, _super);
-    // private hasher: HashStream = null
-    function ShardDownloader(fileInfo) {
+var ShardDownloaderStream = /** @class */ (function (_super) {
+    __extends(ShardDownloaderStream, _super);
+    function ShardDownloaderStream(fileInfo, shardInfo) {
         var _this = _super.call(this) || this;
         _this.fileInfo = fileInfo;
+        _this.shardInfo = shardInfo;
         return _this;
-        // this.hasher = new HashStream()
     }
-    ShardDownloader.prototype.startDownload = function () {
+    ShardDownloaderStream.prototype.startDownload = function () {
     };
-    return ShardDownloader;
+    return ShardDownloaderStream;
 }(stream_1.Transform));
-exports.ShardDownloader = ShardDownloader;
+exports.ShardDownloaderStream = ShardDownloaderStream;

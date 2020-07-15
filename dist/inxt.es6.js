@@ -159,7 +159,6 @@ var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var hashstream_1 = require("../lib/hashstream");
-var stream_1 = require("stream");
 function DownloadShardRequest(config, address, port, hash, token, size) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
     return request_1.streamRequest(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'stream' }, size, function () { });
@@ -167,7 +166,7 @@ function DownloadShardRequest(config, address, port, hash, token, size) {
 function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes) {
     if (excludedNodes === void 0) { excludedNodes = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var hasher, exchangeReport, shardBinary, shardStream, outputStream, finalShardHash, anotherMirror;
+        var hasher, exchangeReport, shardBinary, outputStream, finalShardHash, anotherMirror;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -176,12 +175,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                     return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.size)];
                 case 1:
                     shardBinary = _a.sent();
-                    shardStream = new stream_1.Transform({
-                        transform: function (chunk, enc, cb) {
-                            cb(null, chunk);
-                        }
-                    });
-                    outputStream = shardBinary.pipe(hasher).pipe(shardStream);
+                    outputStream = shardBinary.pipe(hasher);
                     // Force data to be piped
                     outputStream.on('data', function () { });
                     return [4 /*yield*/, new Promise(function (resolve) {
@@ -196,7 +190,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                     console.log('Hash %s is OK', finalShardHash);
                     exchangeReport.DownloadOk();
                     // exchangeReport.sendReport()
-                    return [2 /*return*/, shardStream];
+                    return [2 /*return*/, outputStream];
                 case 3:
                     console.error('Hash %s is WRONG', finalShardHash);
                     exchangeReport.DownloadError();
@@ -219,7 +213,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
 }
 exports.DownloadShard = DownloadShard;
 
-},{"../lib/crypto":5,"../lib/hashstream":7,"../services/request":8,"./fileinfo":1,"./reports":2,"stream":228}],4:[function(require,module,exports){
+},{"../lib/crypto":5,"../lib/hashstream":7,"../services/request":8,"./fileinfo":1,"./reports":2}],4:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -398,6 +392,7 @@ var shard_1 = require("../api/shard");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
         var fileInfo, fileShards, index, fileKey, shards, binary;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -421,23 +416,23 @@ function Download(config, bucketId, fileId) {
                     shards = [];
                     return [4 /*yield*/, new Promise(function (resolve) {
                             var globalHash = crypto_1.sha512HmacBuffer(fileKey);
-                            async_1.eachSeries(fileShards, function (shard, nextShard) {
-                                shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
-                                    shardData.on('end', function () {
-                                        console.log('end');
+                            async_1.eachSeries(fileShards, function (shard, nextShard) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
+                                        /*
+                                        const shardHash = sha256(shardData)
+                                        const rpm = ripemd160(shardHash)
+                                        globalHash.update(rpm)
+                                        shards.push(shardData)
+                                        */
+                                        nextShard();
+                                    }).catch(function (err) {
+                                        console.error(err);
+                                        nextShard(err);
                                     });
-                                    /*
-                                    const shardHash = sha256(shardData)
-                                    const rpm = ripemd160(shardHash)
-                                    globalHash.update(rpm)
-                                    shards.push(shardData)
-                                    nextShard()
-                                    */
-                                }).catch(function (err) {
-                                    console.error(err);
-                                    nextShard(err);
+                                    return [2 /*return*/];
                                 });
-                            }, function () {
+                            }); }, function () {
                                 var finalGlobalHash = globalHash.digest();
                                 console.log('FINAL HASH', finalGlobalHash.toString('hex'), finalGlobalHash.toString('hex') === fileInfo.hmac.value);
                                 var nonParityChunk = fileShards.map(function (x) {

@@ -4,14 +4,14 @@ import DecryptStream from "./decryptstream";
 import { FileInfo } from "../api/fileinfo";
 import { HashStream } from "./hashstream";
 
-export class ShardDownloader extends Transform {
+export class ShardDownloaderStream extends Transform {
   fileInfo: FileInfo
-  // private hasher: HashStream = null
+  shardInfo: Shard
 
-  constructor(fileInfo: FileInfo) {
+  constructor(fileInfo: FileInfo, shardInfo: Shard) {
     super()
     this.fileInfo = fileInfo
-    // this.hasher = new HashStream()
+    this.shardInfo = shardInfo
   }
 
   startDownload() {

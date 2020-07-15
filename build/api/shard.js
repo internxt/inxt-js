@@ -42,7 +42,6 @@ var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var hashstream_1 = require("../lib/hashstream");
-var stream_1 = require("stream");
 function DownloadShardRequest(config, address, port, hash, token, size) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
     return request_1.streamRequest(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'stream' }, size, function () { });
@@ -50,7 +49,7 @@ function DownloadShardRequest(config, address, port, hash, token, size) {
 function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes) {
     if (excludedNodes === void 0) { excludedNodes = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var hasher, exchangeReport, shardBinary, shardStream, outputStream, finalShardHash, anotherMirror;
+        var hasher, exchangeReport, shardBinary, outputStream, finalShardHash, anotherMirror;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -59,12 +58,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                     return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.size)];
                 case 1:
                     shardBinary = _a.sent();
-                    shardStream = new stream_1.Transform({
-                        transform: function (chunk, enc, cb) {
-                            cb(null, chunk);
-                        }
-                    });
-                    outputStream = shardBinary.pipe(hasher).pipe(shardStream);
+                    outputStream = shardBinary.pipe(hasher);
                     // Force data to be piped
                     outputStream.on('data', function () { });
                     return [4 /*yield*/, new Promise(function (resolve) {
@@ -79,7 +73,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                     console.log('Hash %s is OK', finalShardHash);
                     exchangeReport.DownloadOk();
                     // exchangeReport.sendReport()
-                    return [2 /*return*/, shardStream];
+                    return [2 /*return*/, outputStream];
                 case 3:
                     console.error('Hash %s is WRONG', finalShardHash);
                     exchangeReport.DownloadError();

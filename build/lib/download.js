@@ -43,6 +43,7 @@ var shard_1 = require("../api/shard");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
         var fileInfo, fileShards, index, fileKey, shards, binary;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -66,23 +67,23 @@ function Download(config, bucketId, fileId) {
                     shards = [];
                     return [4 /*yield*/, new Promise(function (resolve) {
                             var globalHash = crypto_1.sha512HmacBuffer(fileKey);
-                            async_1.eachSeries(fileShards, function (shard, nextShard) {
-                                shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
-                                    shardData.on('end', function () {
-                                        console.log('end');
+                            async_1.eachSeries(fileShards, function (shard, nextShard) { return __awaiter(_this, void 0, void 0, function () {
+                                return __generator(this, function (_a) {
+                                    shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
+                                        /*
+                                        const shardHash = sha256(shardData)
+                                        const rpm = ripemd160(shardHash)
+                                        globalHash.update(rpm)
+                                        shards.push(shardData)
+                                        */
+                                        nextShard();
+                                    }).catch(function (err) {
+                                        console.error(err);
+                                        nextShard(err);
                                     });
-                                    /*
-                                    const shardHash = sha256(shardData)
-                                    const rpm = ripemd160(shardHash)
-                                    globalHash.update(rpm)
-                                    shards.push(shardData)
-                                    nextShard()
-                                    */
-                                }).catch(function (err) {
-                                    console.error(err);
-                                    nextShard(err);
+                                    return [2 /*return*/];
                                 });
-                            }, function () {
+                            }); }, function () {
                                 var finalGlobalHash = globalHash.digest();
                                 console.log('FINAL HASH', finalGlobalHash.toString('hex'), finalGlobalHash.toString('hex') === fileInfo.hmac.value);
                                 var nonParityChunk = fileShards.map(function (x) {

@@ -23,18 +23,15 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   const shards: Buffer[] = []
   const binary = await new Promise(resolve => {
     const globalHash = sha512HmacBuffer(fileKey)
-    eachSeries(fileShards, (shard: any, nextShard: Function) => {
+    eachSeries(fileShards, async (shard: any, nextShard: Function) => {
       DownloadShard(config, fileInfo, shard, bucketId, fileId).then((shardData: Transform) => {
-        shardData.on('end', () => {
-          console.log('end')
-        })
         /*
         const shardHash = sha256(shardData)
         const rpm = ripemd160(shardHash)
         globalHash.update(rpm)
         shards.push(shardData)
-        nextShard()
         */
+        nextShard()
       }).catch(err => {
         console.error(err)
         nextShard(err)

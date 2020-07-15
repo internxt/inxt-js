@@ -4,15 +4,25 @@ import { request } from '../services/request'
 import { Shard } from './shard'
 
 export interface FileInfo {
-  index: string,
+  bucket: string
+  mimetype: string
+  filename: string
+  frame: string
+  size: number
+  id: string
+  created: Date
   hmac: {
     value: string
-  },
-  filename: string
+    type: string
+  }
+  erasure: {
+    type: string
+  }
+  index: string
 }
 
 export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string) {
-  return request(config, 'GET', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}, () => { }).then(res => {
+  return request(config, 'GET', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}, () => { }).then<FileInfo>(res => {
     if (res.status !== 200) { throw res }
     return res.data
   })
@@ -27,7 +37,7 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
 }
 
 export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string) {
-  const shards: JSON[] = []
+  const shards: Shard[] = []
   return doUntil((next: any) => {
     GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {
       shards.push(...results)
