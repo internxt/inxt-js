@@ -18,6 +18,7 @@
     "@types/node-fetch": "^2.5.7",
     "browserify": "^16.5.1",
     "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
     "mocha": "^8.0.1",
     "rimraf": "^3.0.2",
     "ts-mocha": "^7.0.0",
