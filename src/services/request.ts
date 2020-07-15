@@ -1,18 +1,10 @@
-import axios, { AxiosRequestConfig } from 'axios'
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { EnvironmentConfig } from '..'
-import { sha256 } from '../lib/crypto'
+import { sha256, sha256HashBuffer } from '../lib/crypto'
+import { Transform } from 'stream'
+import { IncomingMessage } from 'http'
 
-class AuthMethod {
-  static BasicAuth: string = "1"
-}
-
-export function authmethod(authMethod: string) {
-  if (authMethod === AuthMethod.BasicAuth) {
-
-  }
-}
-
-export function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, callback: Function) {
+export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, callback: Function) {
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -23,5 +15,22 @@ export function request(config: EnvironmentConfig, method: AxiosRequestConfig['m
   }
 
   const options = { ...DefaultOptions, ...params }
+
   return axios.request(options)
+}
+
+export function streamRequest(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, dataSize: number, callback: Function): Transform {
+  const forcedOptions: AxiosRequestConfig = {
+    responseType: 'stream'
+  }
+
+  const RequestReader = new Transform({ transform(chunk, encoding, callback) { callback(null, chunk) }, defaultEncoding: 'binary' })
+
+  axios.get(targetUrl, forcedOptions).then((axiosRes: AxiosResponse<IncomingMessage>) => {
+    axiosRes.data.pipe(RequestReader)
+  }).catch(err => {
+    RequestReader.emit('error', err)
+  })
+
+  return RequestReader
 }

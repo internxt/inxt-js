@@ -36,57 +36,66 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DownloadShard = exports.CheckShard = void 0;
+exports.DownloadShard = void 0;
 var crypto_1 = require("../lib/crypto");
 var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
-function DownloadShardRequest(config, address, port, hash, token) {
-    return __awaiter(this, void 0, void 0, function () {
-        var fetchUrl;
-        return __generator(this, function (_a) {
-            fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
-            return [2 /*return*/, request_1.request(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'arraybuffer' }, function () { })];
-        });
-    });
+var reports_1 = require("./reports");
+var hashstream_1 = require("../lib/hashstream");
+var stream_1 = require("stream");
+function DownloadShardRequest(config, address, port, hash, token, size) {
+    var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
+    return request_1.streamRequest(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'stream' }, size, function () { });
 }
-function CheckShard(shard) {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            return [2 /*return*/];
-        });
-    });
-}
-exports.CheckShard = CheckShard;
-function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
+function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes) {
     if (excludedNodes === void 0) { excludedNodes = []; }
     return __awaiter(this, void 0, void 0, function () {
-        var hasher, shardBinary, rmdDigest, finalShardHashBin, finalShardHash, anotherMirror;
+        var hasher, exchangeReport, shardBinary, shardStream, outputStream, finalShardHash, anotherMirror;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    hasher = crypto_1.sha256HashBuffer();
-                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
+                    hasher = new hashstream_1.HashStream(shard.size);
+                    exchangeReport = new reports_1.ExchangeReport(config);
+                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.size)];
                 case 1:
                     shardBinary = _a.sent();
-                    hasher.update(Buffer.from(shardBinary.data));
-                    rmdDigest = hasher.digest();
-                    finalShardHashBin = crypto_1.ripemd160(rmdDigest);
-                    finalShardHash = Buffer.from(finalShardHashBin).toString('hex');
-                    if (!(finalShardHash === shard.hash)) return [3 /*break*/, 2];
-                    return [2 /*return*/, shardBinary.data];
+                    shardStream = new stream_1.Transform({
+                        transform: function (chunk, enc, cb) {
+                            cb(null, chunk);
+                        }
+                    });
+                    outputStream = shardBinary.pipe(hasher).pipe(shardStream);
+                    // Force data to be piped
+                    outputStream.on('data', function () { });
+                    return [4 /*yield*/, new Promise(function (resolve) {
+                            hasher.on('end', function () { resolve(crypto_1.ripemd160(hasher.read()).toString('hex')); });
+                        })];
                 case 2:
+                    finalShardHash = _a.sent();
+                    exchangeReport.params.dataHash = finalShardHash;
+                    exchangeReport.params.exchangeEnd = new Date();
+                    exchangeReport.params.farmerId = shard.farmer.nodeID;
+                    if (!(finalShardHash === shard.hash)) return [3 /*break*/, 3];
+                    console.log('Hash %s is OK', finalShardHash);
+                    exchangeReport.DownloadOk();
+                    // exchangeReport.sendReport()
+                    return [2 /*return*/, shardStream];
+                case 3:
+                    console.error('Hash %s is WRONG', finalShardHash);
+                    exchangeReport.DownloadError();
+                    // exchangeReport.sendReport()
                     excludedNodes.push(shard.farmer.nodeID);
                     return [4 /*yield*/, fileinfo_1.GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)];
-                case 3:
+                case 4:
                     anotherMirror = _a.sent();
                     if (!anotherMirror[0].farmer) {
                         throw Error('File missing shard error');
                     }
                     else {
-                        return [2 /*return*/, DownloadShard(config, anotherMirror[0], bucketId, fileId, excludedNodes)];
+                        return [2 /*return*/, DownloadShard(config, fileInfo, anotherMirror[0], bucketId, fileId, excludedNodes)];
                     }
-                    _a.label = 4;
-                case 4: return [2 /*return*/];
+                    _a.label = 5;
+                case 5: return [2 /*return*/];
             }
         });
     });

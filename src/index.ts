@@ -24,6 +24,11 @@ export class Environment {
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions) {
     const downloader = Download(this.config, bucketId, fileId)
+
+    if (options && options.progressCallback) {
+      options.progressCallback(10, 10, 10)
+    }
+
     return downloader
   }
 }

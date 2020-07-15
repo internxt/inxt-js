@@ -3,15 +3,20 @@ import { GetFileInfo, GetFileMirrors } from '../api/fileinfo'
 import { GenerateFileKey, sha512HmacBuffer, sha256, ripemd160, Aes256ctrDecrypter } from './crypto'
 import { eachSeries } from 'async'
 import { DownloadShard } from '../api/shard'
+import {Transform} from 'stream'
 
-export default async function Download(config: EnvironmentConfig, bucketId: string, fileId: string) {
+export default async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<any> {
   if (!config.encryptionKey) {
     throw Error('Encryption key required')
   }
 
+  // API request file info
   const fileInfo = await GetFileInfo(config, bucketId, fileId)
+
+  // API request file mirrors with tokens
   const fileShards = await GetFileMirrors(config, bucketId, fileId)
 
+  // Prepare file keys to decrypt
   const index = Buffer.from(fileInfo.index, 'hex')
   const fileKey = await GenerateFileKey(config.encryptionKey, bucketId, index)
 
@@ -19,21 +24,26 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   const binary = await new Promise(resolve => {
     const globalHash = sha512HmacBuffer(fileKey)
     eachSeries(fileShards, (shard: any, nextShard: Function) => {
-      DownloadShard(config, shard, bucketId, fileId).then((shardData: any) => {
+      DownloadShard(config, fileInfo, shard, bucketId, fileId).then((shardData: Transform) => {
+        shardData.on('end', () => {
+          console.log('end')
+        })
+        /*
         const shardHash = sha256(shardData)
         const rpm = ripemd160(shardHash)
         globalHash.update(rpm)
-        console.log('Shard hash', rpm.toString('hex'))
         shards.push(shardData)
         nextShard()
+        */
       }).catch(err => {
+        console.error(err)
         nextShard(err)
       })
     }, () => {
       const finalGlobalHash = globalHash.digest()
       console.log('FINAL HASH', finalGlobalHash.toString('hex'), finalGlobalHash.toString('hex') === fileInfo.hmac.value)
 
-      const nonParityChunk = fileShards.map((x: any) => {
+      const nonParityChunk: Buffer[] = fileShards.map((x: any) => {
         return x.parity ? Buffer.alloc(0) : shards[x.index]
       })
 

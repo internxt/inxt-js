@@ -17,11 +17,15 @@ exports.ShardDownloader = void 0;
 var stream_1 = require("stream");
 var ShardDownloader = /** @class */ (function (_super) {
     __extends(ShardDownloader, _super);
+    // private hasher: HashStream = null
     function ShardDownloader(fileInfo) {
         var _this = _super.call(this) || this;
         _this.fileInfo = fileInfo;
         return _this;
+        // this.hasher = new HashStream()
     }
+    ShardDownloader.prototype.startDownload = function () {
+    };
     return ShardDownloader;
 }(stream_1.Transform));
 exports.ShardDownloader = ShardDownloader;

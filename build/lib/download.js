@@ -49,10 +49,14 @@ function Download(config, bucketId, fileId) {
                     if (!config.encryptionKey) {
                         throw Error('Encryption key required');
                     }
-                    return [4 /*yield*/, fileinfo_1.GetFileInfo(config, bucketId, fileId)];
+                    return [4 /*yield*/, fileinfo_1.GetFileInfo(config, bucketId, fileId)
+                        // API request file mirrors with tokens
+                    ];
                 case 1:
                     fileInfo = _a.sent();
-                    return [4 /*yield*/, fileinfo_1.GetFileMirrors(config, bucketId, fileId)];
+                    return [4 /*yield*/, fileinfo_1.GetFileMirrors(config, bucketId, fileId)
+                        // Prepare file keys to decrypt
+                    ];
                 case 2:
                     fileShards = _a.sent();
                     index = Buffer.from(fileInfo.index, 'hex');
@@ -63,13 +67,20 @@ function Download(config, bucketId, fileId) {
                     return [4 /*yield*/, new Promise(function (resolve) {
                             var globalHash = crypto_1.sha512HmacBuffer(fileKey);
                             async_1.eachSeries(fileShards, function (shard, nextShard) {
-                                shard_1.DownloadShard(config, shard, bucketId, fileId).then(function (shardData) {
-                                    var shardHash = crypto_1.sha256(shardData);
-                                    var rpm = crypto_1.ripemd160(shardHash);
-                                    globalHash.update(rpm);
-                                    console.log('Shard hash', rpm.toString('hex'));
-                                    shards.push(shardData);
-                                    nextShard();
+                                shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
+                                    shardData.on('end', function () {
+                                        console.log('end');
+                                    });
+                                    /*
+                                    const shardHash = sha256(shardData)
+                                    const rpm = ripemd160(shardHash)
+                                    globalHash.update(rpm)
+                                    shards.push(shardData)
+                                    nextShard()
+                                    */
+                                }).catch(function (err) {
+                                    console.error(err);
+                                    nextShard(err);
                                 });
                             }, function () {
                                 var finalGlobalHash = globalHash.digest();

@@ -78,6 +78,16 @@ export class ExchangeReport {
     if (!this.validate()) {
       return Promise.reject(Error('Not valid report to send'))
     }
-    return request(this.config, 'POST', '/reports/exchanges', { data: this.params }, () => { })
+    return request(this.config, 'POST', `https://api.internxt.com:8081/${this.config.bridgeUrl}/reports/exchanges`, { data: this.params }, () => { })
+  }
+
+  DownloadOk() {
+    this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS
+    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_SHARD_DOWNLOADED
+  }
+
+  DownloadError() {
+    this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE
+    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR
   }
 }
