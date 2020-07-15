@@ -36,7 +36,7 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
   })
 }
 
-export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string) {
+export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
   const shards: Shard[] = []
   return doUntil((next: any) => {
     GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {

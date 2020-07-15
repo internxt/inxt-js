@@ -54,6 +54,7 @@ exports.streamRequest = exports.request = void 0;
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var stream_1 = require("stream");
+var BufferToStream = require('buffer-to-stream');
 function request(config, method, targetUrl, params, callback) {
     return __awaiter(this, void 0, void 0, function () {
         var DefaultOptions, options;
@@ -74,11 +75,21 @@ function request(config, method, targetUrl, params, callback) {
 exports.request = request;
 function streamRequest(config, method, targetUrl, params, dataSize, callback) {
     var forcedOptions = {
-        responseType: 'stream'
+        responseType: 'arraybuffer'
     };
     var RequestReader = new stream_1.Transform({ transform: function (chunk, encoding, callback) { callback(null, chunk); }, defaultEncoding: 'binary' });
     axios_1.default.get(targetUrl, forcedOptions).then(function (axiosRes) {
-        axiosRes.data.pipe(RequestReader);
+        // Buffer.from is not redundant since axios response is an array buffer on browsers
+        /*
+          Aquí el problema es que necesitamos un stream con los datos de la request.
+          Axios tiene la opción de poner el parámetro 'stream' en responseType.
+          El problema es que 'stream' sólo funciona en NodeJS, en navegadores devuelve un string.
+          Si elegimos como opción ArrayBuffer, en NodeJS nos devolverá la info como un Buffer.
+          Pero en navegador, ArrayBuffer devuelve un veradero ArrayBuffer, incompatible con Buffer.
+          Por tanto, Buffer.from asegura que la respuesta siempre sea un Buffer, en NODEJS será redundante,
+          ya que está convirtiendo un Buffer en Buffer, pero en navegador, asegura que ArrayBuffer será un Buffer.
+        */
+        BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader);
     }).catch(function (err) {
         RequestReader.emit('error', err);
     });

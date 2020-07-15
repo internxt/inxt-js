@@ -35,11 +35,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var fileinfo_1 = require("../api/fileinfo");
 var crypto_1 = require("./crypto");
 var async_1 = require("async");
 var shard_1 = require("../api/shard");
+var hashglobalstream_1 = require("./hashglobalstream");
+var crypto_2 = __importDefault(require("crypto"));
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
         var fileInfo, fileShards, index, fileKey, shards, binary;
@@ -66,19 +71,18 @@ function Download(config, bucketId, fileId) {
                     fileKey = _a.sent();
                     shards = [];
                     return [4 /*yield*/, new Promise(function (resolve) {
-                            var globalHash = crypto_1.sha512HmacBuffer(fileKey);
-                            async_1.eachSeries(fileShards, function (shard, nextShard) { return __awaiter(_this, void 0, void 0, function () {
+                            var globalHash = new hashglobalstream_1.GlobalHash(fileKey);
+                            async_1.eachLimit(fileShards, 4, function (shard, nextShard) { return __awaiter(_this, void 0, void 0, function () {
                                 return __generator(this, function (_a) {
+                                    console.log('DOWNLOAD SHARD %s', shard.index);
                                     shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
-                                        /*
-                                        const shardHash = sha256(shardData)
-                                        const rpm = ripemd160(shardHash)
-                                        globalHash.update(rpm)
-                                        shards.push(shardData)
-                                        */
-                                        nextShard();
+                                        globalHash.push(shard.index, Buffer.from(shardData.hashito, 'hex'));
+                                        shards.push(shardData);
+                                        var time = crypto_2.default.randomBytes(3).readInt8() % 15 + 5;
+                                        setTimeout(function () {
+                                            nextShard();
+                                        }, time);
                                     }).catch(function (err) {
-                                        console.error(err);
                                         nextShard(err);
                                     });
                                     return [2 /*return*/];

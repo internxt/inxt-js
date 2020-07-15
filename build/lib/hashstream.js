@@ -35,7 +35,6 @@ var HashStream = /** @class */ (function (_super) {
         this.hasher.update(chunk);
         this.length += chunk.length;
         this.emit('percentage', this.length * 100 / this.expectedSize);
-        console.log(this.length);
         callback(null, chunk);
     };
     HashStream.prototype._flush = function () {

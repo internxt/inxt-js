@@ -4,7 +4,7 @@ export declare class HashStream extends stream.Transform {
     private hasher;
     private length;
     private flushed;
-    private finalHash;
+    finalHash: Buffer | null;
     private expectedSize;
     constructor(expectedSize?: number);
     _transform(chunk: Buffer, encoding: BufferEncoding, callback: any): void;

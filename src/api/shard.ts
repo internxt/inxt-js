@@ -44,6 +44,8 @@ export async function DownloadShard(config: EnvironmentConfig, fileInfo: FileInf
     hasher.on('end', () => { resolve(ripemd160(hasher.read()).toString('hex')) })
   })
 
+  outputStream.hashito = finalShardHash
+
   exchangeReport.params.dataHash = finalShardHash
   exchangeReport.params.exchangeEnd = new Date()
   exchangeReport.params.farmerId = shard.farmer.nodeID

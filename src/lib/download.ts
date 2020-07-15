@@ -1,9 +1,11 @@
 import { EnvironmentConfig } from '../index'
 import { GetFileInfo, GetFileMirrors } from '../api/fileinfo'
-import { GenerateFileKey, sha512HmacBuffer, sha256, ripemd160, Aes256ctrDecrypter } from './crypto'
-import { eachSeries } from 'async'
-import { DownloadShard } from '../api/shard'
-import {Transform} from 'stream'
+import { GenerateFileKey, Aes256ctrDecrypter } from './crypto'
+import { eachSeries, eachLimit } from 'async'
+import { DownloadShard, Shard } from '../api/shard'
+import { Transform } from 'stream'
+import { GlobalHash } from './hashglobalstream'
+import crypto from 'crypto'
 
 export default async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<any> {
   if (!config.encryptionKey) {
@@ -14,7 +16,7 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   const fileInfo = await GetFileInfo(config, bucketId, fileId)
 
   // API request file mirrors with tokens
-  const fileShards = await GetFileMirrors(config, bucketId, fileId)
+  const fileShards: Shard[] = await GetFileMirrors(config, bucketId, fileId)
 
   // Prepare file keys to decrypt
   const index = Buffer.from(fileInfo.index, 'hex')
@@ -22,18 +24,17 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
 
   const shards: Buffer[] = []
   const binary = await new Promise(resolve => {
-    const globalHash = sha512HmacBuffer(fileKey)
-    eachSeries(fileShards, async (shard: any, nextShard: Function) => {
+    const globalHash = new GlobalHash(fileKey)
+    eachLimit(fileShards, 4, async (shard: Shard, nextShard: Function) => {
+      console.log('DOWNLOAD SHARD %s', shard.index)
       DownloadShard(config, fileInfo, shard, bucketId, fileId).then((shardData: Transform) => {
-        /*
-        const shardHash = sha256(shardData)
-        const rpm = ripemd160(shardHash)
-        globalHash.update(rpm)
+        globalHash.push(shard.index, Buffer.from(shardData.hashito, 'hex'))
         shards.push(shardData)
-        */
-        nextShard()
-      }).catch(err => {
-        console.error(err)
+        const time = crypto.randomBytes(3).readInt8() % 15 + 5
+        setTimeout(() => {
+          nextShard()
+        }, time)
+      }).catch((err) => {
         nextShard(err)
       })
     }, () => {

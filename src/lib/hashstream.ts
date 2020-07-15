@@ -6,7 +6,7 @@ export class HashStream extends stream.Transform {
   private hasher: crypto.Hash
   private length: number
   private flushed: boolean = false
-  private finalHash: Buffer | null
+  public finalHash: Buffer | null
   private expectedSize: number = 1
 
   constructor(expectedSize?: number) {
@@ -21,7 +21,6 @@ export class HashStream extends stream.Transform {
     this.hasher.update(chunk)
     this.length += chunk.length
     this.emit('percentage', this.length * 100 / this.expectedSize)
-    console.log(this.length)
     callback(null, chunk)
   }
 

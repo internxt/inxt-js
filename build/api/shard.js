@@ -66,6 +66,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                         })];
                 case 2:
                     finalShardHash = _a.sent();
+                    outputStream.hashito = finalShardHash;
                     exchangeReport.params.dataHash = finalShardHash;
                     exchangeReport.params.exchangeEnd = new Date();
                     exchangeReport.params.farmerId = shard.farmer.nodeID;
