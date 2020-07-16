@@ -138,7 +138,7 @@ var FileObject = /** @class */ (function (_super) {
             }
             nextShard();
         }, function () {
-            _this.emit('progress', result);
+            _this.emit('progress', result.totalBytesDownloaded, result.totalSize, result.totalBytesDownloaded / (result.totalSize || 1));
         });
     };
     return FileObject;

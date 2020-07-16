@@ -12,12 +12,9 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HashStream = void 0;
-var stream_1 = __importDefault(require("stream"));
+var stream_1 = require("stream");
 var crypto_1 = require("./crypto");
 var HashStream = /** @class */ (function (_super) {
     __extends(HashStream, _super);
@@ -34,7 +31,7 @@ var HashStream = /** @class */ (function (_super) {
     HashStream.prototype._transform = function (chunk, enc, callback) {
         this.hasher.update(chunk);
         this.length += chunk.length;
-        this.emit('percentage', this.length * 100 / this.expectedSize);
+        this.emit('progress', this.length * 100 / this.expectedSize);
         callback(null, chunk);
     };
     HashStream.prototype._flush = function () {
@@ -43,5 +40,5 @@ var HashStream = /** @class */ (function (_super) {
     };
     HashStream.prototype.read = function () { return this.finalHash = this.hasher.read(); };
     return HashStream;
-}(stream_1.default.Transform));
+}(stream_1.Transform));
 exports.HashStream = HashStream;

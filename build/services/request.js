@@ -54,7 +54,7 @@ exports.streamRequest = exports.request = void 0;
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var stream_1 = require("stream");
-var node_fetch_1 = __importDefault(require("node-fetch"));
+var BufferToStream = require('buffer-to-stream');
 function request(config, method, targetUrl, params) {
     return __awaiter(this, void 0, void 0, function () {
         var DefaultOptions, options;
@@ -74,8 +74,12 @@ function request(config, method, targetUrl, params) {
 }
 exports.request = request;
 function streamRequest(targetUrl) {
-    var RequestReader = new stream_1.Transform({ transform: function (chunk, enc, callback) { callback(null, chunk); }, defaultEncoding: 'binary' });
-    node_fetch_1.default(targetUrl).then(function (response) { return response.body.pipe(RequestReader); });
+    var RequestReader = new stream_1.Transform({ transform: function (c, e, cb) { cb(null, c); } });
+    axios_1.default.get(targetUrl, {
+        responseType: 'arraybuffer'
+    }).then(function (axiosRes) {
+        BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader);
+    });
     return RequestReader;
 }
 exports.streamRequest = streamRequest;

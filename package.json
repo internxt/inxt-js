@@ -33,7 +33,6 @@
     "axios": "^0.19.2",
     "bip39": "^3.0.2",
     "buffer-to-stream": "^1.0.0",
-    "commander": "^5.1.0",
-    "node-fetch": "^2.6.0"
+    "commander": "^5.1.0"
   }
 }

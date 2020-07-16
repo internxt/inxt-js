@@ -1,8 +1,8 @@
-import stream from 'stream'
+import { Transform } from 'stream'
 import crypto from 'crypto'
 import { sha256HashBuffer } from './crypto'
 
-export class HashStream extends stream.Transform {
+export class HashStream extends Transform {
   private hasher: crypto.Hash
   private length: number
   private flushed = false
@@ -20,7 +20,7 @@ export class HashStream extends stream.Transform {
   _transform(chunk: Buffer, enc: BufferEncoding, callback: (err: Error | null, chunk: Buffer) => void): void {
     this.hasher.update(chunk)
     this.length += chunk.length
-    this.emit('percentage', this.length * 100 / this.expectedSize)
+    this.emit('progress', this.length * 100 / this.expectedSize)
     callback(null, chunk)
   }
 

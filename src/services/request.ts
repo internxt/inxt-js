@@ -1,9 +1,10 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { Transform } from 'stream'
+import { Transform, Duplex } from 'stream'
 import { IncomingMessage } from 'http'
-import fetch from 'node-fetch'
+
+const BufferToStream = require('buffer-to-stream')
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
@@ -21,7 +22,13 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
 }
 
 export function streamRequest(targetUrl: string): Transform {
-  const RequestReader = new Transform({ transform(chunk, enc, callback) { callback(null, chunk) }, defaultEncoding: 'binary' })
-  fetch(targetUrl).then(response => response.body.pipe(RequestReader))
+  const RequestReader = new Transform({ transform(c, e, cb) { cb(null, c) } })
+
+  axios.get(targetUrl, {
+    responseType: 'arraybuffer'
+  }).then((axiosRes: AxiosResponse<ArrayBuffer>) => {
+    BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader)
+  })
+
   return RequestReader
 }

@@ -16,8 +16,8 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   const File = new FileObject(config, bucketId, fileId)
   await File.GetFileInfo()
 
-  File.on('progress', (...r) => {
-    console.log(r)
+  File.on('progress', (t, s, p) => {
+    console.log(p)
   })
 
   // Prepare file keys to decrypt

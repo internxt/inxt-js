@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import stream from 'stream';
-export declare class HashStream extends stream.Transform {
+import { Transform } from 'stream';
+export declare class HashStream extends Transform {
     private hasher;
     private length;
     private flushed;

@@ -51,12 +51,8 @@ function Download(config, bucketId, fileId) {
                     return [4 /*yield*/, File.GetFileInfo()];
                 case 1:
                     _a.sent();
-                    File.on('progress', function () {
-                        var r = [];
-                        for (var _i = 0; _i < arguments.length; _i++) {
-                            r[_i] = arguments[_i];
-                        }
-                        console.log(r);
+                    File.on('progress', function (t, s, p) {
+                        console.log(p);
                     });
                     globalHash = new hashglobalstream_1.GlobalHash(File.fileKey);
                     // API request file mirrors with tokens

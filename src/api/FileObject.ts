@@ -64,7 +64,7 @@ export class FileObject extends EventEmitter {
       if (!shard.shardInfo.parity) { result.totalBytesDownloaded += shard.currentPosition }
       nextShard()
     }, () => {
-      this.emit('progress', result)
+      this.emit('progress', result.totalBytesDownloaded, result.totalSize, result.totalBytesDownloaded / (result.totalSize || 1))
     })
   }
 }
