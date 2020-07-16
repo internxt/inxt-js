@@ -2,10 +2,11 @@ import { ShardObject } from "./ShardObject"
 import { FileInfo, GetFileInfo, GetFileMirrors } from "./fileinfo"
 import { EnvironmentConfig } from ".."
 import { EventEmitter } from 'events'
-import { GenerateFileKey } from "../lib/crypto"
+import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
 import { Shard } from "./shard"
 import { eachLimit, eachSeries } from "async"
-
+import DecryptStream from "../lib/decryptstream"
+import fs from 'fs'
 export class FileObject extends EventEmitter {
   shards = new Map<number, ShardObject>()
   rawShards = new Map<number, Shard>()
@@ -16,6 +17,10 @@ export class FileObject extends EventEmitter {
   fileId: string
 
   fileKey: Buffer
+
+  totalSizeWithECs = 0
+
+  decipher: DecryptStream | null = null
 
   constructor(config: EnvironmentConfig, bucketId: string, fileId: string) {
     super()
@@ -41,7 +46,7 @@ export class FileObject extends EventEmitter {
   async StartDownloadFile(): Promise<void> {
     if (this.fileInfo === null) { return }
     let shardObject
-    return eachLimit(this.rawShards.keys(), 4, (shardIndex, nextItem) => {
+    return eachLimit(this.rawShards.keys(), 1, (shardIndex, nextItem) => {
       const shard = this.rawShards.get(shardIndex)
 
       if (this.fileInfo && shard) {
@@ -54,17 +59,42 @@ export class FileObject extends EventEmitter {
 
       return nextItem()
     }, () => {
-      console.log('ALL SHARDS DOWNLOADING')
+      this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
     })
   }
 
-  updateGlobalPercentage(): void {
-    const result = { totalBytesDownloaded: 0, totalSize: this.fileInfo?.size }
-    eachSeries(this.shards.values(), (shard, nextShard) => {
-      if (!shard.shardInfo.parity) { result.totalBytesDownloaded += shard.currentPosition }
+  private updateGlobalPercentage(): void {
+    const result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 }
+    eachSeries(this.shards.keys(), (shardIndex, nextShard) => {
+      const shard = this.shards.get(shardIndex)
+      if (!shard) { return nextShard() }
+      result.totalBytesDownloaded += shard.currentPosition
+      if (shard.isFinished()) { result.shardsCompleted++ }
       nextShard()
     }, () => {
-      this.emit('progress', result.totalBytesDownloaded, result.totalSize, result.totalBytesDownloaded / (result.totalSize || 1))
+      if (result.totalBytesDownloaded === result.totalSize) {
+        this.emit('download-end')
+        this.emit('decrypt')
+        this.DecryptFile()
+      }
+      const percentage = result.totalBytesDownloaded / (result.totalSize || 1)
+      this.emit('progress', result.totalBytesDownloaded, result.totalSize, percentage)
     })
+  }
+
+  private DecryptFile() {
+    // Prepare decipher
+    if (this.fileInfo) {
+      this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
+      eachSeries(this.shards.keys(), (shardIndex, nextShard) => {
+        const shard = this.shards.get(shardIndex)
+        if (!shard?.shardInfo.parity) {
+          this.decipher?.push(shardIndex, shard?.shardData)
+        }
+        nextShard()
+      }, () => {
+        return this.decipher?.final()
+      })
+    }
   }
 }

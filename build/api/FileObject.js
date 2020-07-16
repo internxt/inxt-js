@@ -48,6 +48,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileObject = void 0;
 var ShardObject_1 = require("./ShardObject");
@@ -55,12 +58,15 @@ var fileinfo_1 = require("./fileinfo");
 var events_1 = require("events");
 var crypto_1 = require("../lib/crypto");
 var async_1 = require("async");
+var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
         var _this = _super.call(this) || this;
         _this.shards = new Map();
         _this.rawShards = new Map();
+        _this.totalSizeWithECs = 0;
+        _this.decipher = null;
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
@@ -112,7 +118,7 @@ var FileObject = /** @class */ (function (_super) {
                 if (this.fileInfo === null) {
                     return [2 /*return*/];
                 }
-                return [2 /*return*/, async_1.eachLimit(this.rawShards.keys(), 4, function (shardIndex, nextItem) {
+                return [2 /*return*/, async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
                         var shard = _this.rawShards.get(shardIndex);
                         if (_this.fileInfo && shard) {
                             shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
@@ -123,23 +129,43 @@ var FileObject = /** @class */ (function (_super) {
                         }
                         return nextItem();
                     }, function () {
-                        console.log('ALL SHARDS DOWNLOADING');
+                        _this.shards.forEach(function (shard) {
+                            _this.totalSizeWithECs += shard.shardInfo.size;
+                        });
                     })];
             });
         });
     };
     FileObject.prototype.updateGlobalPercentage = function () {
         var _this = this;
-        var _a;
-        var result = { totalBytesDownloaded: 0, totalSize: (_a = this.fileInfo) === null || _a === void 0 ? void 0 : _a.size };
+        var result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 };
         async_1.eachSeries(this.shards.values(), function (shard, nextShard) {
-            if (!shard.shardInfo.parity) {
-                result.totalBytesDownloaded += shard.currentPosition;
+            result.totalBytesDownloaded += shard.currentPosition;
+            if (shard.isFinished()) {
+                result.shardsCompleted++;
             }
             nextShard();
         }, function () {
-            _this.emit('progress', result.totalBytesDownloaded, result.totalSize, result.totalBytesDownloaded / (result.totalSize || 1));
+            if (result.totalBytesDownloaded === result.totalSize) {
+                _this.emit('download-end');
+                _this.emit('decrypt');
+                _this.DecryptFile();
+            }
+            var percentage = result.totalBytesDownloaded / (result.totalSize || 1);
+            _this.emit('progress', result.totalBytesDownloaded, result.totalSize, percentage);
         });
+    };
+    FileObject.prototype.DecryptFile = function () {
+        var _this = this;
+        // Prepare decipher
+        if (this.fileInfo) {
+            this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
+            async_1.eachSeries(this.shards.keys(), function (shardIndex, nextShard) {
+                var shard = _this.shards.get(shardIndex);
+                console.log(shard);
+                nextShard();
+            });
+        }
     };
     return FileObject;
 }(events_1.EventEmitter));

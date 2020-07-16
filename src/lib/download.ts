@@ -16,12 +16,15 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   const File = new FileObject(config, bucketId, fileId)
   await File.GetFileInfo()
 
-  File.on('progress', (t, s, p) => {
-    console.log(p)
+  File.on('end', () => {
+    console.log('FILE END')
   })
 
-  // Prepare file keys to decrypt
-  const globalHash = new GlobalHash(File.fileKey)
+  File.on('progress', (t, s, p) => {
+    if (p ===1 ) {
+      setTimeout(() => {}, 15000)
+    }
+  })
 
   // API request file mirrors with tokens
   await File.GetFileMirrors()

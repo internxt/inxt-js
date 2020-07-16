@@ -1,13 +1,8 @@
 /// <reference types="node" />
-import { Transform } from 'stream';
-/**
- * Creates a new stream to decrypt one file
- */
-export declare class DecryptStream extends Transform {
+export declare class DecryptStream {
+    private currentIndex;
     private decipher;
-    private totalBytesDecrypted;
+    private SFiles;
     constructor(key: Buffer, iv: Buffer);
-    _transform: (chunk: Buffer, enc: any, callback: any) => void;
-    _flush: (callback: any) => void;
 }
 export default DecryptStream;

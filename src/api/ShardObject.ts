@@ -65,7 +65,10 @@ export class ShardObject extends EventEmitter {
       this.emit('progress', this.currentPosition, this.shardInfo.size, this.currentPosition / this.shardInfo.size)
     })
 
-    res.on('end', () => this.emit('end'))
+    res.on('end', () => {
+      this._isFinished = true
+      this.emit('end')
+    })
   }
 
 

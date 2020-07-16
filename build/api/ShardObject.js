@@ -55,7 +55,10 @@ var ShardObject = /** @class */ (function (_super) {
             _this.currentPosition += data.length;
             _this.emit('progress', _this.currentPosition, _this.shardInfo.size, _this.currentPosition / _this.shardInfo.size);
         });
-        res.on('end', function () { return _this.emit('end'); });
+        res.on('end', function () {
+            _this._isFinished = true;
+            _this.emit('end');
+        });
     };
     ShardObject.prototype.isFinished = function () { return this._isFinished; };
     return ShardObject;
