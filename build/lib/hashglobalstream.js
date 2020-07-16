@@ -12,21 +12,22 @@ var GlobalHash = /** @class */ (function () {
         this.hasher = crypto_1.sha512HmacBuffer(key);
     }
     GlobalHash.prototype.push = function (index, hash) {
-        var _a, _b;
+        var _a;
         if (hash) {
             (_a = this.HKeys) === null || _a === void 0 ? void 0 : _a.set(index, hash);
         }
-        if (index === this.currentIndex && ((_b = this.HKeys) === null || _b === void 0 ? void 0 : _b.has(index))) {
-            this.hasher.update(this.HKeys.get(index));
-            this.HKeys.delete(index);
-            this.currentIndex++;
-            this.push(this.currentIndex);
+        if (index === this.currentIndex && this.HKeys.has(index)) {
+            var hashValue = this.HKeys.get(index);
+            if (hashValue) {
+                this.hasher.update(hashValue);
+                this.HKeys.delete(index);
+                this.currentIndex++;
+                this.push(this.currentIndex);
+            }
         }
     };
     GlobalHash.prototype.digest = function () {
-        var _a;
-        (_a = this.HKeys) === null || _a === void 0 ? void 0 : _a.clear();
-        this.HKeys = null;
+        this.HKeys.clear();
         return this.hasher.digest();
     };
     return GlobalHash;

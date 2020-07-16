@@ -2,6 +2,8 @@ import { EnvironmentConfig } from '../index'
 import { doUntil } from 'async'
 import { request } from '../services/request'
 import { Shard } from './shard'
+import { ShardObject } from './ShardObject'
+import { AxiosResponse } from 'axios'
 
 export interface FileInfo {
   bucket: string
@@ -21,26 +23,28 @@ export interface FileInfo {
   index: string
 }
 
-export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string) {
-  return request(config, 'GET', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}, () => { }).then<FileInfo>(res => {
-    if (res.status !== 200) { throw res }
-    return res.data
-  })
+export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
+  return request(config, 'get', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data)
 }
 
-export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Array<Shard>> {
+export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Shard[]> {
   const excludeNodeIds: string = excludeNodes.join(',')
-  return request(config, 'GET', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`, { responseType: 'json' }, () => { }).then(res => {
-    if (res.status !== 200) { throw res }
-    return res.data
-  })
+  return request(config,
+    'GET',
+    `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`,
+    { responseType: 'json' }).then((res: AxiosResponse) => {
+      return res.data
+    })
 }
 
-export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
-  const shards: Shard[] = []
+export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Map<number, Shard>> {
+  const shards: Map<number, Shard> = new Map<number, Shard>()
+
   return doUntil((next: any) => {
-    GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {
-      shards.push(...results)
+    GetFileMirror(config, bucketId, fileId, 3, shards.size).then((results: any) => {
+      results.forEach((shard: Shard) => {
+        shards.set(shard.index, shard)
+      })
       next(null, results, shards)
     }).catch(next)
   }, (results: any, totalShard: any, next: any) => {

@@ -31,7 +31,7 @@ var HashStream = /** @class */ (function (_super) {
         _this.expectedSize = expectedSize || 1;
         return _this;
     }
-    HashStream.prototype._transform = function (chunk, encoding, callback) {
+    HashStream.prototype._transform = function (chunk, enc, callback) {
         this.hasher.update(chunk);
         this.length += chunk.length;
         this.emit('percentage', this.length * 100 / this.expectedSize);
@@ -41,9 +41,7 @@ var HashStream = /** @class */ (function (_super) {
         this.hasher.end();
         this.emit('end');
     };
-    HashStream.prototype.read = function () {
-        return this.finalHash = this.hasher.read();
-    };
+    HashStream.prototype.read = function () { return this.finalHash = this.hasher.read(); };
     return HashStream;
 }(stream_1.default.Transform));
 exports.HashStream = HashStream;

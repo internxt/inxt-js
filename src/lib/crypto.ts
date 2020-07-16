@@ -29,12 +29,12 @@ export function GetDeterministicKey(key: Buffer | string, data: Buffer | string)
 
 export async function GenerateBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
   const seed = await mnemonicToSeed(mnemonic)
-  return GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'));
+  return GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'))
 }
 
 export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer | string): Promise<Buffer> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId)
-  return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32);
+  return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)
 }
 
 export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipher {

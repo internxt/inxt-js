@@ -4,7 +4,7 @@ interface OnlyErrorCallback {
   (err: Error | null): void
 }
 interface DownloadProgressCallback {
-  (progress: Number, downloadedBytes: Number | null, totalBytes: Number | null): void
+  (progress: number, downloadedBytes: number | null, totalBytes: number | null): void
 }
 export interface ResolveFileOptions {
   progressCallback: DownloadProgressCallback,
@@ -18,18 +18,18 @@ export class Environment {
     this.config = config
   }
 
-  setEncryptionKey(newEncryptionKey: string) {
+  setEncryptionKey(newEncryptionKey: string): void {
     this.config.encryptionKey = newEncryptionKey
   }
 
-  resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions) {
-    const downloader = Download(this.config, bucketId, fileId)
+  resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
+    Download(this.config, bucketId, fileId)
 
     if (options && options.progressCallback) {
       options.progressCallback(10, 10, 10)
     }
 
-    return downloader
+    return
   }
 }
 

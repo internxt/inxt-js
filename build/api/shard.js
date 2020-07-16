@@ -36,17 +36,18 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DownloadShard = void 0;
+exports.DownloadShard = exports.DownloadShardRequest = void 0;
 var crypto_1 = require("../lib/crypto");
 var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var hashstream_1 = require("../lib/hashstream");
-function DownloadShardRequest(config, address, port, hash, token, size) {
+function DownloadShardRequest(config, address, port, hash, token) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
-    return request_1.streamRequest(config, 'GET', "https://api.internxt.com:8081/" + fetchUrl, { responseType: 'stream' }, size, function () { });
+    return request_1.streamRequest("https://api.internxt.com:8081/" + fetchUrl);
 }
-function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes) {
+exports.DownloadShardRequest = DownloadShardRequest;
+function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
     if (excludedNodes === void 0) { excludedNodes = []; }
     return __awaiter(this, void 0, void 0, function () {
         var hasher, exchangeReport, shardBinary, outputStream, finalShardHash, anotherMirror;
@@ -55,18 +56,15 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                 case 0:
                     hasher = new hashstream_1.HashStream(shard.size);
                     exchangeReport = new reports_1.ExchangeReport(config);
-                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.size)];
+                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
                 case 1:
                     shardBinary = _a.sent();
                     outputStream = shardBinary.pipe(hasher);
-                    // Force data to be piped
-                    outputStream.on('data', function () { });
                     return [4 /*yield*/, new Promise(function (resolve) {
                             hasher.on('end', function () { resolve(crypto_1.ripemd160(hasher.read()).toString('hex')); });
                         })];
                 case 2:
                     finalShardHash = _a.sent();
-                    outputStream.hashito = finalShardHash;
                     exchangeReport.params.dataHash = finalShardHash;
                     exchangeReport.params.exchangeEnd = new Date();
                     exchangeReport.params.farmerId = shard.farmer.nodeID;
@@ -87,7 +85,7 @@ function DownloadShard(config, fileInfo, shard, bucketId, fileId, excludedNodes)
                         throw Error('File missing shard error');
                     }
                     else {
-                        return [2 /*return*/, DownloadShard(config, fileInfo, anotherMirror[0], bucketId, fileId, excludedNodes)];
+                        return [2 /*return*/, DownloadShard(config, anotherMirror[0], bucketId, fileId, excludedNodes)];
                     }
                     _a.label = 5;
                 case 5: return [2 /*return*/];

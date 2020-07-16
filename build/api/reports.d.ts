@@ -26,7 +26,7 @@ export declare class ExchangeReport {
     constructor(config: EnvironmentConfig);
     expectedResultCode(): number;
     validate(): boolean;
-    sendReport(): Promise<import("axios").AxiosResponse<any>>;
+    sendReport(): Promise<import("axios").AxiosResponse<JSON>>;
     DownloadOk(): void;
     DownloadError(): void;
 }

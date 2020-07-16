@@ -2,7 +2,7 @@ interface OnlyErrorCallback {
     (err: Error | null): void;
 }
 interface DownloadProgressCallback {
-    (progress: Number, downloadedBytes: Number | null, totalBytes: Number | null): void;
+    (progress: number, downloadedBytes: number | null, totalBytes: number | null): void;
 }
 export interface ResolveFileOptions {
     progressCallback: DownloadProgressCallback;
@@ -13,7 +13,7 @@ export declare class Environment {
     private config;
     constructor(config: EnvironmentConfig);
     setEncryptionKey(newEncryptionKey: string): void;
-    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): Promise<any>;
+    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
 }
 export interface EnvironmentConfig {
     bridgeUrl?: string;

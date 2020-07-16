@@ -5,9 +5,9 @@ import { sha256HashBuffer } from './crypto'
 export class HashStream extends stream.Transform {
   private hasher: crypto.Hash
   private length: number
-  private flushed: boolean = false
+  private flushed = false
   public finalHash: Buffer | null
-  private expectedSize: number = 1
+  private expectedSize = 1
 
   constructor(expectedSize?: number) {
     super()
@@ -17,20 +17,18 @@ export class HashStream extends stream.Transform {
     this.expectedSize = expectedSize || 1
   }
 
-  _transform(chunk: Buffer, encoding: BufferEncoding, callback: any) {
+  _transform(chunk: Buffer, enc: BufferEncoding, callback: (err: Error | null, chunk: Buffer) => void): void {
     this.hasher.update(chunk)
     this.length += chunk.length
     this.emit('percentage', this.length * 100 / this.expectedSize)
     callback(null, chunk)
   }
 
-  _flush() {
+  _flush(): void {
     this.hasher.end()
     this.emit('end')
   }
 
-  read(): Buffer {
-    return this.finalHash = this.hasher.read()
-  }
+  read(): Buffer { return this.finalHash = this.hasher.read() }
 
 }

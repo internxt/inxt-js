@@ -1,12 +1,11 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { EnvironmentConfig } from '..'
-import { sha256, sha256HashBuffer } from '../lib/crypto'
+import { sha256 } from '../lib/crypto'
 import { Transform } from 'stream'
 import { IncomingMessage } from 'http'
+import fetch from 'node-fetch'
 
-const  BufferToStream = require('buffer-to-stream')
-
-export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, callback: Function) {
+export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -18,32 +17,11 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
 
   const options = { ...DefaultOptions, ...params }
 
-  return axios.request(options)
+  return axios.request<JSON>(options)
 }
 
-export function streamRequest(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, dataSize: number, callback: Function): Transform {
-  const forcedOptions: AxiosRequestConfig = {
-    responseType: 'arraybuffer'
-  }
-
-  const RequestReader = new Transform({ transform(chunk, encoding, callback) { callback(null, chunk) }, defaultEncoding: 'binary' })
-
-  axios.get(targetUrl, forcedOptions).then((axiosRes: AxiosResponse<Buffer>) => {
-    // Buffer.from is not redundant since axios response is an array buffer on browsers
-
-    /*
-      Aquí el problema es que necesitamos un stream con los datos de la request.
-      Axios tiene la opción de poner el parámetro 'stream' en responseType.
-      El problema es que 'stream' sólo funciona en NodeJS, en navegadores devuelve un string.
-      Si elegimos como opción ArrayBuffer, en NodeJS nos devolverá la info como un Buffer.
-      Pero en navegador, ArrayBuffer devuelve un veradero ArrayBuffer, incompatible con Buffer.
-      Por tanto, Buffer.from asegura que la respuesta siempre sea un Buffer, en NODEJS será redundante,
-      ya que está convirtiendo un Buffer en Buffer, pero en navegador, asegura que ArrayBuffer será un Buffer.
-    */
-    BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader)
-  }).catch(err => {
-    RequestReader.emit('error', err)
-  })
-
+export function streamRequest(targetUrl: string): Transform {
+  const RequestReader = new Transform({ transform(chunk, enc, callback) { callback(null, chunk) }, defaultEncoding: 'binary' })
+  fetch(targetUrl).then(response => response.body.pipe(RequestReader))
   return RequestReader
 }

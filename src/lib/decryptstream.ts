@@ -6,7 +6,7 @@ import { createDecipheriv, Decipher } from 'crypto'
  */
 export class DecryptStream extends Transform {
   private decipher: Decipher
-  private totalBytesDecrypted: number = 0
+  private totalBytesDecrypted = 0
   constructor(key: Buffer, iv: Buffer) {
     super()
     this.decipher = createDecipheriv('aes-256-ctr', key, iv)

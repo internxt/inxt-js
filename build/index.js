@@ -13,11 +13,11 @@ var Environment = /** @class */ (function () {
         this.config.encryptionKey = newEncryptionKey;
     };
     Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
-        var downloader = download_1.default(this.config, bucketId, fileId);
+        download_1.default(this.config, bucketId, fileId);
         if (options && options.progressCallback) {
             options.progressCallback(10, 10, 10);
         }
-        return downloader;
+        return;
     };
     return Environment;
 }());

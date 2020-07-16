@@ -10,7 +10,7 @@ export interface Shard {
   index: number
   hash: string
   size: number
-  parity: Boolean
+  parity: boolean
   token: string
   farmer: {
     userAgent: string
@@ -23,28 +23,22 @@ export interface Shard {
   operation: string
 }
 
-function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, size: number) {
-  let fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`
-  return streamRequest(config, 'GET', `https://api.internxt.com:8081/${fetchUrl}`, { responseType: 'stream' }, size, () => { })
+export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string): Transform {
+  const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`
+  return streamRequest(`https://api.internxt.com:8081/${fetchUrl}`)
 }
 
-export async function DownloadShard(config: EnvironmentConfig, fileInfo: FileInfo, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
   const hasher = new HashStream(shard.size)
   const exchangeReport = new ExchangeReport(config)
-  const shardBinary = await DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.size)
+  const shardBinary = await DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)
 
   const outputStream = shardBinary.pipe<HashStream>(hasher)
-
-  // Force data to be piped
-  outputStream.on('data', () => { })
-
 
   const finalShardHash: string = await new Promise((resolve) => {
     hasher.on('end', () => { resolve(ripemd160(hasher.read()).toString('hex')) })
   })
-
-  outputStream.hashito = finalShardHash
 
   exchangeReport.params.dataHash = finalShardHash
   exchangeReport.params.exchangeEnd = new Date()
@@ -64,7 +58,7 @@ export async function DownloadShard(config: EnvironmentConfig, fileInfo: FileInf
     if (!anotherMirror[0].farmer) {
       throw Error('File missing shard error')
     } else {
-      return DownloadShard(config, fileInfo, anotherMirror[0], bucketId, fileId, excludedNodes)
+      return DownloadShard(config, anotherMirror[0], bucketId, fileId, excludedNodes)
     }
   }
 }

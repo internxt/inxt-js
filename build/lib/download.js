@@ -35,76 +35,39 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-var fileinfo_1 = require("../api/fileinfo");
-var crypto_1 = require("./crypto");
-var async_1 = require("async");
-var shard_1 = require("../api/shard");
 var hashglobalstream_1 = require("./hashglobalstream");
-var crypto_2 = __importDefault(require("crypto"));
+var FileObject_1 = require("../api/FileObject");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
-        var fileInfo, fileShards, index, fileKey, shards, binary;
-        var _this = this;
+        var File, globalHash;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     if (!config.encryptionKey) {
                         throw Error('Encryption key required');
                     }
-                    return [4 /*yield*/, fileinfo_1.GetFileInfo(config, bucketId, fileId)
-                        // API request file mirrors with tokens
-                    ];
+                    File = new FileObject_1.FileObject(config, bucketId, fileId);
+                    return [4 /*yield*/, File.GetFileInfo()];
                 case 1:
-                    fileInfo = _a.sent();
-                    return [4 /*yield*/, fileinfo_1.GetFileMirrors(config, bucketId, fileId)
-                        // Prepare file keys to decrypt
-                    ];
+                    _a.sent();
+                    File.on('progress', function () {
+                        var r = [];
+                        for (var _i = 0; _i < arguments.length; _i++) {
+                            r[_i] = arguments[_i];
+                        }
+                        console.log(r);
+                    });
+                    globalHash = new hashglobalstream_1.GlobalHash(File.fileKey);
+                    // API request file mirrors with tokens
+                    return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:
-                    fileShards = _a.sent();
-                    index = Buffer.from(fileInfo.index, 'hex');
-                    return [4 /*yield*/, crypto_1.GenerateFileKey(config.encryptionKey, bucketId, index)];
+                    // API request file mirrors with tokens
+                    _a.sent();
+                    return [4 /*yield*/, File.StartDownloadFile()];
                 case 3:
-                    fileKey = _a.sent();
-                    shards = [];
-                    return [4 /*yield*/, new Promise(function (resolve) {
-                            var globalHash = new hashglobalstream_1.GlobalHash(fileKey);
-                            async_1.eachLimit(fileShards, 4, function (shard, nextShard) { return __awaiter(_this, void 0, void 0, function () {
-                                return __generator(this, function (_a) {
-                                    console.log('DOWNLOAD SHARD %s', shard.index);
-                                    shard_1.DownloadShard(config, fileInfo, shard, bucketId, fileId).then(function (shardData) {
-                                        globalHash.push(shard.index, Buffer.from(shardData.hashito, 'hex'));
-                                        shards.push(shardData);
-                                        var time = crypto_2.default.randomBytes(3).readInt8() % 15 + 5;
-                                        setTimeout(function () {
-                                            nextShard();
-                                        }, time);
-                                    }).catch(function (err) {
-                                        nextShard(err);
-                                    });
-                                    return [2 /*return*/];
-                                });
-                            }); }, function () {
-                                var finalGlobalHash = globalHash.digest();
-                                console.log('FINAL HASH', finalGlobalHash.toString('hex'), finalGlobalHash.toString('hex') === fileInfo.hmac.value);
-                                var nonParityChunk = fileShards.map(function (x) {
-                                    return x.parity ? Buffer.alloc(0) : shards[x.index];
-                                });
-                                var nonParityFile = Buffer.concat(nonParityChunk);
-                                var fileDecipher = crypto_1.Aes256ctrDecrypter(fileKey.slice(0, 32), index.slice(0, 16));
-                                var decrypted = Buffer.concat([fileDecipher.update(nonParityFile), fileDecipher.final()]);
-                                resolve(decrypted);
-                            });
-                        })];
-                case 4:
-                    binary = _a.sent();
-                    return [2 /*return*/, {
-                            name: fileInfo.filename,
-                            data: binary
-                        }];
+                    _a.sent();
+                    return [2 /*return*/];
             }
         });
     });

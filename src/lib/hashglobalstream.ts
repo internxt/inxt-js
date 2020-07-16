@@ -3,33 +3,35 @@ import { Hmac } from 'crypto'
 
 export class GlobalHash {
   private hasher: Hmac
-  private currentIndex: number = 0
+  private currentIndex = 0
 
-  private HKeys: Map<number, Buffer> | null = new Map<number, Buffer>()
+  private HKeys: Map<number, Buffer> = new Map<number, Buffer>()
 
-  constructor(key: Buffer | String) {
+  constructor(key: Buffer | string) {
     if (key instanceof String) {
       key = Buffer.from(key)
     }
     this.hasher = sha512HmacBuffer(key)
   }
 
-  push(index: number, hash?: Buffer) {
+  push(index: number, hash?: Buffer): void {
     if (hash) {
       this.HKeys?.set(index, hash)
     }
 
-    if (index === this.currentIndex && this.HKeys?.has(index)) {
-      this.hasher.update(this.HKeys.get(index)!)
-      this.HKeys.delete(index)
-      this.currentIndex++
-      this.push(this.currentIndex)
+    if (index === this.currentIndex && this.HKeys.has(index)) {
+      const hashValue = this.HKeys.get(index)
+      if (hashValue) {
+        this.hasher.update(hashValue)
+        this.HKeys.delete(index)
+        this.currentIndex++
+        this.push(this.currentIndex)
+      }
     }
   }
 
-  digest() {
-    this.HKeys?.clear()
-    this.HKeys = null
+  digest(): Buffer {
+    this.HKeys.clear()
     return this.hasher.digest()
   }
 }

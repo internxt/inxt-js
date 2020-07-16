@@ -6,5 +6,9 @@ module.exports = {
   },
   'extends': [
     'plugin:@typescript-eslint/recommended'
-  ]
+  ],
+  'rules': {
+    'no-unreachable': "error",
+    "semi": ['error', 'never']
+  }
 }

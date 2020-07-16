@@ -1,8 +1,8 @@
-import { Shard } from "../api/shard";
+import { Shard } from "../api/shard"
 import { Transform } from 'stream'
-import DecryptStream from "./decryptstream";
-import { FileInfo } from "../api/fileinfo";
-import { HashStream } from "./hashstream";
+import DecryptStream from "./decryptstream"
+import { FileInfo } from "../api/fileinfo"
+import { HashStream } from "./hashstream"
 
 export class ShardDownloaderStream extends Transform {
   fileInfo: FileInfo
