@@ -10,7 +10,9 @@ exports.GetFileInfo = GetFileInfo;
 function GetFileMirror(config, bucketId, fileId, limit, skip, excludeNodes) {
     if (excludeNodes === void 0) { excludeNodes = []; }
     var excludeNodeIds = excludeNodes.join(',');
-    return request_1.request(config, 'GET', "https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip + "&exclude=" + excludeNodeIds, { responseType: 'json' }).then(function (res) {
+    return request_1.request(config, 'GET', "https://api.internxt.com:8081/" + config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip + "&exclude=" + excludeNodeIds, {
+        responseType: 'json'
+    }).then(function (res) {
         return res.data;
     });
 }
@@ -23,11 +25,11 @@ function GetFileMirrors(config, bucketId, fileId) {
                 shards.set(shard.index, shard);
             });
             next(null, results, shards);
-        }).catch(next);
+        }).catch(function (err) {
+            next(err);
+        });
     }, function (results, totalShard, next) {
         return next(null, results.length === 0);
-    }).then(function (result) {
-        return result[1];
-    });
+    }).then(function (result) { return result[1]; });
 }
 exports.GetFileMirrors = GetFileMirrors;

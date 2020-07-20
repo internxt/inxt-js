@@ -59,6 +59,7 @@ var events_1 = require("events");
 var crypto_1 = require("../lib/crypto");
 var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
+var fs_1 = __importDefault(require("fs"));
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -112,25 +113,38 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.StartDownloadFile = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var shardObject;
+            var s, shardObject;
             var _this = this;
             return __generator(this, function (_a) {
+                s = fs_1.default.createWriteStream('PEPA.jpg');
                 if (this.fileInfo === null) {
                     return [2 /*return*/];
                 }
                 return [2 /*return*/, async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
                         var shard = _this.rawShards.get(shardIndex);
                         if (_this.fileInfo && shard) {
+                            _this.decipher = new decryptstream_1.default(_this.fileKey.slice(0, 32), Buffer.from(_this.fileInfo.index, 'hex').slice(0, 16));
                             shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
                             _this.shards.set(shardIndex, shardObject);
                             shardObject.on('progress', function () { _this.updateGlobalPercentage(); });
                             shardObject.on('error', function (err) { console.log('SHARD ERROR', err.message); });
-                            shardObject.StartDownloadShard();
+                            shardObject.on('end', function () { return nextItem(); });
+                            var buffer = shardObject.StartDownloadShard();
+                            if (!shard.parity) {
+                                console.log('piped non parity shard');
+                                var dec = buffer.pipe(_this.decipher);
+                                dec.on('data', function (data) { console.log('decipher piped data %s', data.length); s.write(data); });
+                            }
+                            else {
+                                buffer.on('data', function () { });
+                            }
                         }
-                        return nextItem();
                     }, function () {
-                        _this.shards.forEach(function (shard) {
-                            _this.totalSizeWithECs += shard.shardInfo.size;
+                        var _a;
+                        s.close();
+                        _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
+                        (_a = _this.decipher) === null || _a === void 0 ? void 0 : _a.on('data', function () {
+                            console.log('decrypted data');
                         });
                     })];
             });
@@ -139,7 +153,11 @@ var FileObject = /** @class */ (function (_super) {
     FileObject.prototype.updateGlobalPercentage = function () {
         var _this = this;
         var result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 };
-        async_1.eachSeries(this.shards.values(), function (shard, nextShard) {
+        async_1.eachSeries(this.shards.keys(), function (shardIndex, nextShard) {
+            var shard = _this.shards.get(shardIndex);
+            if (!shard) {
+                return nextShard();
+            }
             result.totalBytesDownloaded += shard.currentPosition;
             if (shard.isFinished()) {
                 result.shardsCompleted++;
@@ -148,24 +166,10 @@ var FileObject = /** @class */ (function (_super) {
         }, function () {
             if (result.totalBytesDownloaded === result.totalSize) {
                 _this.emit('download-end');
-                _this.emit('decrypt');
-                _this.DecryptFile();
             }
             var percentage = result.totalBytesDownloaded / (result.totalSize || 1);
             _this.emit('progress', result.totalBytesDownloaded, result.totalSize, percentage);
         });
-    };
-    FileObject.prototype.DecryptFile = function () {
-        var _this = this;
-        // Prepare decipher
-        if (this.fileInfo) {
-            this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
-            async_1.eachSeries(this.shards.keys(), function (shardIndex, nextShard) {
-                var shard = _this.shards.get(shardIndex);
-                console.log(shard);
-                nextShard();
-            });
-        }
     };
     return FileObject;
 }(events_1.EventEmitter));

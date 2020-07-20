@@ -16,9 +16,9 @@ export declare class ShardObject extends EventEmitter {
     retryCount: number;
     hasher: HashStream;
     exchangeReport: ExchangeReport;
-    downloadStream: Transform;
     private _isFinished;
+    private _isErrored;
     constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string);
-    StartDownloadShard(): void;
+    StartDownloadShard(): Transform;
     isFinished(): boolean;
 }

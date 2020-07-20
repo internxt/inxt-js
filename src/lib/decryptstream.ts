@@ -1,36 +1,21 @@
 import { createDecipheriv, Decipher } from 'crypto'
+import { Transform } from 'stream'
 
-import { ShardObject } from '../api/ShardObject'
-export class DecryptStream {
+export class DecryptStream extends Transform {
   private decipher: Decipher
 
-  private SFiles = new Map<number, Buffer>()
-  private currentIndex = 0
-  private finalBuffer: Buffer[] = []
-
   constructor(key: Buffer, iv: Buffer) {
+    super()
     this.decipher = createDecipheriv('aes-256-ctr', key, iv)
   }
 
-  push(index: number, shardData?: Buffer): void {
-    if (shardData) {
-      this.SFiles?.set(index, shardData)
-    }
-
-    if (index === this.currentIndex && this.SFiles.has(index)) {
-      const shardValue = this.SFiles.get(index)
-      if (shardValue) {
-        console.log('UPDATED', index, shardValue)
-        this.finalBuffer.push(this.decipher.update(shardValue))
-        this.SFiles.delete(index)
-        this.currentIndex++
-        this.push(this.currentIndex)
-      }
-    }
+  _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void): void {
+    this.decipher.write(chunk)
+    cb(null, this.decipher.read())
   }
 
-  final(): Buffer {
-    return Buffer.concat([...this.finalBuffer, this.decipher.final()])
+  _flush(cb: (err: Error | null, data: Buffer) => void): void {
+    cb(null, this.decipher.read())
   }
 }
 

@@ -20,5 +20,4 @@ export declare class FileObject extends EventEmitter {
     GetFileMirrors(): Promise<void>;
     StartDownloadFile(): Promise<void>;
     private updateGlobalPercentage;
-    private DecryptFile;
 }

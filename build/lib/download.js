@@ -36,11 +36,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var hashglobalstream_1 = require("./hashglobalstream");
 var FileObject_1 = require("../api/FileObject");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, globalHash;
+        var File;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -59,7 +58,6 @@ function Download(config, bucketId, fileId) {
                             setTimeout(function () { }, 15000);
                         }
                     });
-                    globalHash = new hashglobalstream_1.GlobalHash(File.fileKey);
                     // API request file mirrors with tokens
                     return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:

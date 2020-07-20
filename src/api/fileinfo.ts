@@ -32,7 +32,9 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
   return request(config,
     'GET',
     `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`,
-    { responseType: 'json' }).then((res: AxiosResponse) => {
+    {
+      responseType: 'json'
+    }).then((res: AxiosResponse) => {
       return res.data
     })
 }
@@ -40,16 +42,16 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
 export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Map<number, Shard>> {
   const shards: Map<number, Shard> = new Map<number, Shard>()
 
-  return doUntil((next: any) => {
+  return doUntil((next: (err: Error | null, results?: Array<Shard>, shards?: Map<number, Shard>) => void) => {
     GetFileMirror(config, bucketId, fileId, 3, shards.size).then((results: any) => {
       results.forEach((shard: Shard) => {
         shards.set(shard.index, shard)
       })
       next(null, results, shards)
-    }).catch(next)
+    }).catch((err) => {
+      next(err)
+    })
   }, (results: any, totalShard: any, next: any) => {
     return next(null, results.length === 0)
-  }).then((result: any) => {
-    return result[1]
-  })
+  }).then((result: any) => result[1])
 }

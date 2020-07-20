@@ -23,9 +23,8 @@ export class ShardObject extends EventEmitter {
   hasher: HashStream
   exchangeReport: ExchangeReport
 
-  downloadStream: Transform
-
   private _isFinished = false
+  private _isErrored = false
 
   constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string) {
     super()
@@ -40,35 +39,36 @@ export class ShardObject extends EventEmitter {
 
     this.hasher = new HashStream(shardInfo.size)
     this.exchangeReport = new ExchangeReport(config)
-
-    this.downloadStream = new Transform({ transform(chunk, enc, cb) { cb(null, chunk) } })
   }
 
-  StartDownloadShard(): void {
+  StartDownloadShard(): Transform {
     const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token)
-    const res = downloader.pipe(this.hasher).pipe(this.downloadStream)
+    const res = downloader.pipe(this.hasher)
 
     this.shardData = Buffer.alloc(this.shardInfo.size)
 
     this.currentPosition = 0
 
     this.hasher.on('end', () => {
+      console.log('HASHER END')
       this.shardHash = ripemd160(this.hasher.read())
       if (this.shardHash.toString('hex') !== this.shardInfo.hash) {
+        console.error('Hash shard corrupt')
+        this._isErrored = true
         this.emit('error', new Error('Invalid shard hash'))
+      } else {
+        console.debug('Shard hash ok')
       }
-    })
-
-    res.on('data', (data: Buffer) => {
-      data.copy(this.shardData, this.currentPosition)
-      this.currentPosition += data.length
-      this.emit('progress', this.currentPosition, this.shardInfo.size, this.currentPosition / this.shardInfo.size)
     })
 
     res.on('end', () => {
       this._isFinished = true
-      this.emit('end')
+      if (!this._isErrored) {
+        this.emit('end')
+      }
     })
+
+    return res
   }
 
 
