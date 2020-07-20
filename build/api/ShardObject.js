@@ -44,15 +44,11 @@ var ShardObject = /** @class */ (function (_super) {
         this.shardData = Buffer.alloc(this.shardInfo.size);
         this.currentPosition = 0;
         this.hasher.on('end', function () {
-            console.log('HASHER END');
             _this.shardHash = crypto_1.ripemd160(_this.hasher.read());
             if (_this.shardHash.toString('hex') !== _this.shardInfo.hash) {
                 console.error('Hash shard corrupt');
                 _this._isErrored = true;
                 _this.emit('error', new Error('Invalid shard hash'));
-            }
-            else {
-                console.debug('Shard hash ok');
             }
         });
         res.on('end', function () {

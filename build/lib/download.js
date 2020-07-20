@@ -53,20 +53,12 @@ function Download(config, bucketId, fileId) {
                     File.on('end', function () {
                         console.log('FILE END');
                     });
-                    File.on('progress', function (t, s, p) {
-                        if (p === 1) {
-                            setTimeout(function () { }, 15000);
-                        }
-                    });
                     // API request file mirrors with tokens
                     return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:
                     // API request file mirrors with tokens
                     _a.sent();
-                    return [4 /*yield*/, File.StartDownloadFile()];
-                case 3:
-                    _a.sent();
-                    return [2 /*return*/];
+                    return [2 /*return*/, File.StartDownloadFile()];
             }
         });
     });

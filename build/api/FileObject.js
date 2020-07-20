@@ -53,13 +53,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileObject = void 0;
-/// <reference path='../@types/stream-to-blob.d.ts' />
 var ShardObject_1 = require("./ShardObject");
 var fileinfo_1 = require("./fileinfo");
 var events_1 = require("events");
 var crypto_1 = require("../lib/crypto");
 var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
+var crypto_2 = require("crypto");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -67,11 +67,11 @@ var FileObject = /** @class */ (function (_super) {
         _this.shards = new Map();
         _this.rawShards = new Map();
         _this.totalSizeWithECs = 0;
-        _this.decipher = null;
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
         _this.fileKey = Buffer.alloc(0);
+        _this.decipher = new decryptstream_1.default(crypto_2.randomBytes(32), crypto_2.randomBytes(16));
         return _this;
     }
     FileObject.prototype.GetFileInfo = function () {
@@ -112,43 +112,43 @@ var FileObject = /** @class */ (function (_super) {
         });
     };
     FileObject.prototype.StartDownloadFile = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var s, shardObject;
-            var _this = this;
-            return __generator(this, function (_a) {
-                s = new Blob();
-                if (this.fileInfo === null) {
-                    return [2 /*return*/];
+        var _this = this;
+        var shardObject;
+        if (!this.fileInfo) {
+            throw Error('Undefined fileInfo');
+        }
+        this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
+        async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
+            var shard = _this.rawShards.get(shardIndex);
+            if (_this.fileInfo && shard) {
+                shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
+                _this.shards.set(shardIndex, shardObject);
+                shardObject.on('progress', function () { _this.updateGlobalPercentage(); });
+                shardObject.on('error', function (err) { console.log('SHARD ERROR', err.message); });
+                shardObject.on('end', function () {
+                    console.log('SHARD END');
+                    nextItem();
+                });
+                var buffer = shardObject.StartDownloadShard();
+                if (!shard.parity) {
+                    console.log('piped non parity shard');
+                    var dec = buffer.pipe(_this.decipher, { end: true });
+                    dec.on('end', function () {
+                        console.log('DEC END', shard.index);
+                    });
+                    dec.on('data', function (data) { });
                 }
-                return [2 /*return*/, async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
-                        var shard = _this.rawShards.get(shardIndex);
-                        if (_this.fileInfo && shard) {
-                            _this.decipher = new decryptstream_1.default(_this.fileKey.slice(0, 32), Buffer.from(_this.fileInfo.index, 'hex').slice(0, 16));
-                            shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
-                            _this.shards.set(shardIndex, shardObject);
-                            shardObject.on('progress', function () { _this.updateGlobalPercentage(); });
-                            shardObject.on('error', function (err) { console.log('SHARD ERROR', err.message); });
-                            shardObject.on('end', function () { return nextItem(); });
-                            var buffer = shardObject.StartDownloadShard();
-                            if (!shard.parity) {
-                                console.log('piped non parity shard');
-                                var dec = buffer.pipe(_this.decipher);
-                                dec.on('data', function (data) { s.write(data); });
-                            }
-                            else {
-                                buffer.on('data', function () { });
-                            }
-                        }
-                    }, function () {
-                        var _a;
-                        s.close();
-                        _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
-                        (_a = _this.decipher) === null || _a === void 0 ? void 0 : _a.on('data', function () {
-                            console.log('decrypted data');
-                        });
-                    })];
-            });
+                else {
+                    console.log('parity shard ignored');
+                    buffer.on('data', function () { });
+                }
+            }
+        }, function () {
+            _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
+            console.log('ALL SHARDS FINISHED');
+            _this.emit('end');
         });
+        return this.decipher;
     };
     FileObject.prototype.updateGlobalPercentage = function () {
         var _this = this;

@@ -1,2 +1,3 @@
 import { EnvironmentConfig } from '../index';
-export default function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<any>;
+import DecryptStream from './decryptstream';
+export default function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<DecryptStream>;

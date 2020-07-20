@@ -7,6 +7,7 @@ import { Shard } from "./shard"
 import { eachLimit, eachSeries } from "async"
 import DecryptStream from "../lib/decryptstream"
 import StreamToBlob from 'stream-to-blob'
+import { randomBytes } from 'crypto'
 
 export class FileObject extends EventEmitter {
   shards = new Map<number, ShardObject>()
@@ -21,7 +22,7 @@ export class FileObject extends EventEmitter {
 
   totalSizeWithECs = 0
 
-  decipher: DecryptStream | null = null
+  decipher: DecryptStream
 
   constructor(config: EnvironmentConfig, bucketId: string, fileId: string) {
     super()
@@ -29,6 +30,7 @@ export class FileObject extends EventEmitter {
     this.bucketId = bucketId
     this.fileId = fileId
     this.fileKey = Buffer.alloc(0)
+    this.decipher = new DecryptStream(randomBytes(32), randomBytes(16))
   }
 
   async GetFileInfo(): Promise<FileInfo | undefined> {
@@ -44,12 +46,14 @@ export class FileObject extends EventEmitter {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId)
   }
 
-  StartDownloadFile(): DecryptStream | undefined | null {
-    if (this.fileInfo === null) { return }
+  StartDownloadFile(): DecryptStream {
     let shardObject
 
-    if (this.fileInfo)
-      this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
+    if (!this.fileInfo) {
+      throw Error('Undefined fileInfo')
+    }
+
+    this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
 
     eachLimit(this.rawShards.keys(), 1, (shardIndex, nextItem) => {
       const shard = this.rawShards.get(shardIndex)
@@ -73,7 +77,7 @@ export class FileObject extends EventEmitter {
           dec.on('end', () => {
             console.log('DEC END', shard.index)
           })
-          dec.on('data', (data) => { })
+          dec.on('data', (data: Buffer) => { })
         } else {
           console.log('parity shard ignored')
           buffer.on('data', () => { })

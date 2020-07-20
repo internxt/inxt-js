@@ -1,4 +1,3 @@
-/// <reference path="../../src/@types/stream-to-blob.d.ts" />
 /// <reference types="node" />
 import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";
@@ -15,10 +14,10 @@ export declare class FileObject extends EventEmitter {
     fileId: string;
     fileKey: Buffer;
     totalSizeWithECs: number;
-    decipher: DecryptStream | null;
+    decipher: DecryptStream;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     GetFileInfo(): Promise<FileInfo | undefined>;
     GetFileMirrors(): Promise<void>;
-    StartDownloadFile(): Promise<void>;
+    StartDownloadFile(): DecryptStream;
     private updateGlobalPercentage;
 }
