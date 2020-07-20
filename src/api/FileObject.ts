@@ -6,7 +6,8 @@ import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
 import { Shard } from "./shard"
 import { eachLimit, eachSeries } from "async"
 import DecryptStream from "../lib/decryptstream"
-import fs from 'fs'
+import StreamToBlob from 'stream-to-blob'
+
 export class FileObject extends EventEmitter {
   shards = new Map<number, ShardObject>()
   rawShards = new Map<number, Shard>()
@@ -43,38 +44,49 @@ export class FileObject extends EventEmitter {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId)
   }
 
-  async StartDownloadFile(): Promise<void> {
-    const s = fs.createWriteStream('PEPA.jpg')
+  StartDownloadFile(): DecryptStream | undefined | null {
     if (this.fileInfo === null) { return }
     let shardObject
-    return eachLimit(this.rawShards.keys(), 1, (shardIndex, nextItem) => {
+
+    if (this.fileInfo)
+      this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
+
+    eachLimit(this.rawShards.keys(), 1, (shardIndex, nextItem) => {
       const shard = this.rawShards.get(shardIndex)
       if (this.fileInfo && shard) {
-        this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
         this.shards.set(shardIndex, shardObject)
 
         shardObject.on('progress', () => { this.updateGlobalPercentage() })
         shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
-        shardObject.on('end', () => nextItem())
+        shardObject.on('end', () => {
+          console.log('SHARD END')
+          nextItem()
+        })
 
-        let buffer = shardObject.StartDownloadShard()
+        const buffer = shardObject.StartDownloadShard()
+
 
         if (!shard.parity) {
           console.log('piped non parity shard')
-          const dec = buffer.pipe(this.decipher)
-          dec.on('data', (data) => { console.log('decipher piped data %s', data.length); s.write(data) })
+          const dec = buffer.pipe(this.decipher, { end: true })
+          dec.on('end', () => {
+            console.log('DEC END', shard.index)
+          })
+          dec.on('data', (data) => { })
         } else {
+          console.log('parity shard ignored')
           buffer.on('data', () => { })
         }
+
       }
     }, () => {
-      s.close()
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
-      this.decipher?.on('data', () => {
-        console.log('decrypted data')
-      })
+      console.log('ALL SHARDS FINISHED')
+      this.emit('end')
     })
+
+    return this.decipher
   }
 
   private updateGlobalPercentage(): void {

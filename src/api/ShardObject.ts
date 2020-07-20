@@ -50,14 +50,11 @@ export class ShardObject extends EventEmitter {
     this.currentPosition = 0
 
     this.hasher.on('end', () => {
-      console.log('HASHER END')
       this.shardHash = ripemd160(this.hasher.read())
       if (this.shardHash.toString('hex') !== this.shardInfo.hash) {
         console.error('Hash shard corrupt')
         this._isErrored = true
         this.emit('error', new Error('Invalid shard hash'))
-      } else {
-        console.debug('Shard hash ok')
       }
     })
 

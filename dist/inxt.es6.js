@@ -135,7 +135,7 @@ var FileObject = /** @class */ (function (_super) {
                             if (!shard.parity) {
                                 console.log('piped non parity shard');
                                 var dec = buffer.pipe(_this.decipher);
-                                dec.on('data', function (data) { console.log('decipher piped data %s', data.length); s.write(data); });
+                                dec.on('data', function (data) { s.write(data); });
                             }
                             else {
                                 buffer.on('data', function () { });

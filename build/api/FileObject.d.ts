@@ -1,3 +1,4 @@
+/// <reference path="../../src/@types/stream-to-blob.d.ts" />
 /// <reference types="node" />
 import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";

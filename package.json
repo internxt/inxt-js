@@ -33,6 +33,9 @@
     "axios": "^0.19.2",
     "bip39": "^3.0.2",
     "buffer-to-stream": "^1.0.0",
-    "commander": "^5.1.0"
+    "commander": "^5.1.0",
+    "memory-blob-store": "^5.0.1",
+    "stream-to-blob": "^2.0.1",
+    "streamsaver": "^2.0.4"
   }
 }

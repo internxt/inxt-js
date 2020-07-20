@@ -53,13 +53,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileObject = void 0;
+/// <reference path='../@types/stream-to-blob.d.ts' />
 var ShardObject_1 = require("./ShardObject");
 var fileinfo_1 = require("./fileinfo");
 var events_1 = require("events");
 var crypto_1 = require("../lib/crypto");
 var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
-var fs_1 = __importDefault(require("fs"));
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -116,7 +116,7 @@ var FileObject = /** @class */ (function (_super) {
             var s, shardObject;
             var _this = this;
             return __generator(this, function (_a) {
-                s = fs_1.default.createWriteStream('PEPA.jpg');
+                s = new Blob();
                 if (this.fileInfo === null) {
                     return [2 /*return*/];
                 }
@@ -133,7 +133,7 @@ var FileObject = /** @class */ (function (_super) {
                             if (!shard.parity) {
                                 console.log('piped non parity shard');
                                 var dec = buffer.pipe(_this.decipher);
-                                dec.on('data', function (data) { console.log('decipher piped data %s', data.length); s.write(data); });
+                                dec.on('data', function (data) { s.write(data); });
                             }
                             else {
                                 buffer.on('data', function () { });
