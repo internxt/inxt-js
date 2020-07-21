@@ -1,19 +1,14 @@
-import { Shard, DownloadShard, DownloadShardRequest } from "./shard"
-import { Hash } from 'crypto'
+import { Shard, DownloadShardRequest } from "./shard"
 import { EnvironmentConfig } from ".."
-import { Hmac } from 'crypto'
 import { HashStream } from "../lib/hashstream"
 import { ExchangeReport } from "./reports"
-import { Transform } from 'stream'
-import DecryptStream from "../lib/decryptstream"
+import { Transform, PassThrough } from 'stream'
 import { EventEmitter } from 'events'
 import { ripemd160 } from "../lib/crypto"
 
 export class ShardObject extends EventEmitter {
-  shardData: Buffer
   shardInfo: Shard
   shardHash: Buffer | null = null
-  currentPosition: number
   config: EnvironmentConfig
   fileId: string
   bucketId: string
@@ -29,43 +24,57 @@ export class ShardObject extends EventEmitter {
   constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string) {
     super()
     this.shardInfo = shardInfo
-    this.shardData = Buffer.alloc(0)
     this.config = config
 
     this.bucketId = bucketId
     this.fileId = fileId
-
-    this.currentPosition = 0
 
     this.hasher = new HashStream(shardInfo.size)
     this.exchangeReport = new ExchangeReport(config)
   }
 
   StartDownloadShard(): Transform {
-    const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token)
-    const res = downloader.pipe(this.hasher)
+    const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID)
 
-    this.shardData = Buffer.alloc(this.shardInfo.size)
+    {
+      downloader.on('error', (err) => {
+        console.log('DOWNLOADER ERROR', err)
+      })
+      downloader.on('end', () => {
+        console.log('downloader end')
+      })
+    }
 
-    this.currentPosition = 0
+    const pt = new PassThrough()
+    const res = downloader.pipe(this.hasher).pipe(pt)
 
     this.hasher.on('end', () => {
       this.shardHash = ripemd160(this.hasher.read())
+      console.log('Result: %s, Expected: %s', this.shardHash.toString('hex'), this.shardInfo.hash)
       if (this.shardHash.toString('hex') !== this.shardInfo.hash) {
         console.error('Hash shard corrupt')
         this._isErrored = true
         this.emit('error', new Error('Invalid shard hash'))
+      } else {
+        console.log('hash ok', this.shardInfo.index)
       }
     })
 
     res.on('end', () => {
+      this.hasher.end()
+
+      console.log('shard object pipe ended')
       this._isFinished = true
       if (!this._isErrored) {
         this.emit('end')
       }
     })
 
-    return res
+
+    res.on('data', () => {
+    })
+
+    return downloader
   }
 
 

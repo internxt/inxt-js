@@ -1,10 +1,11 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { Transform, Duplex } from 'stream'
-import { IncomingMessage } from 'http'
-
-const BufferToStream = require('buffer-to-stream')
+import { PassThrough, Readable } from 'stream'
+import BufferToStream from 'buffer-to-stream'
+import https from 'https'
+import { ClientRequest } from 'http'
+import url from 'url'
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
@@ -21,14 +22,38 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   return axios.request<JSON>(options)
 }
 
-export function streamRequest(targetUrl: string): Transform {
-  const RequestReader = new Transform({ transform(c, e, cb) { cb(null, c) } })
+export function streamRequest(targetUrl: string, nodeID: string): Readable {
+  const uriParts = url.parse(targetUrl)
+  let downloader: ClientRequest | null = null
 
-  axios.get(targetUrl, {
-    responseType: 'arraybuffer'
-  }).then((axiosRes: AxiosResponse<ArrayBuffer>) => {
-    BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader)
+  function _createDownloadStream() {
+    return https.get({
+      protocol: uriParts.protocol,
+      hostname: uriParts.hostname,
+      port: uriParts.port,
+      path: uriParts.path,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-storj-node-id': nodeID
+      }
+    })
+  }
+
+  return new Readable({
+    read: function () {
+      if (!downloader) {
+        downloader = _createDownloadStream()
+        downloader.on('response', (res) => {
+          res
+            .on('data', this.push.bind(this))
+            .on('error', this.emit.bind(this, 'error'))
+            .on('end', () => {
+              this.push.bind(this, null)
+              this.emit('end')
+            })
+        }).on('error', this.emit.bind(this, 'error'))
+      }
+    }
   })
 
-  return RequestReader
 }

@@ -4,7 +4,7 @@ import { EnvironmentConfig } from ".."
 import { GetFileMirror, FileInfo } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
-import { Transform } from 'stream'
+import { Transform, Readable } from 'stream'
 
 export interface Shard {
   index: number
@@ -23,16 +23,16 @@ export interface Shard {
   operation: string
 }
 
-export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string): Transform {
+export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`
-  return streamRequest(`https://api.internxt.com:8081/${fetchUrl}`)
+  return streamRequest(`https://api.internxt.com:8081/${fetchUrl}`, nodeID)
 }
 
 export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
   const hasher = new HashStream(shard.size)
   const exchangeReport = new ExchangeReport(config)
-  const shardBinary = await DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)
+  const shardBinary = await DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.farmer.nodeID)
 
   const outputStream = shardBinary.pipe<HashStream>(hasher)
 

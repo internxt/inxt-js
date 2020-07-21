@@ -1,4 +1,5 @@
 import Download from './lib/download'
+import fs from 'fs'
 
 interface OnlyErrorCallback {
   (err: Error | null): void
@@ -23,11 +24,21 @@ export class Environment {
   }
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
-    Download(this.config, bucketId, fileId)
-
-    if (options && options.progressCallback) {
-      options.progressCallback(10, 10, 10)
+    if (!options.overwritte && fs.existsSync(filePath)) {
+      return options.finishedCallback(new Error('File already exists'))
     }
+
+    const fileStream = fs.createWriteStream(filePath)
+
+    Download(this.config, bucketId, fileId).then(stream => {
+      const dump = stream.pipe(fileStream)
+      dump.on('error', (err) => {
+        options.finishedCallback(err)
+      })
+      dump.on('end', (err) => {
+        options.finishedCallback(err)
+      })
+    })
 
     return
   }

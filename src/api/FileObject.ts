@@ -50,7 +50,7 @@ export class FileObject extends EventEmitter {
     let shardObject
 
     if (!this.fileInfo) {
-      throw Error('Undefined fileInfo')
+      throw new Error('Undefined fileInfo')
     }
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
@@ -64,24 +64,32 @@ export class FileObject extends EventEmitter {
         shardObject.on('progress', () => { this.updateGlobalPercentage() })
         shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
         shardObject.on('end', () => {
-          console.log('SHARD END')
+          console.log('SHARD END', shard.index)
           nextItem()
         })
 
+        // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
 
+        buffer.on('data', (data) => {
+          console.log(data)
+        })
 
+        buffer.on('end', () => {
+          console.log('buffer end')
+        })
+
+        /*
         if (!shard.parity) {
           console.log('piped non parity shard')
           const dec = buffer.pipe(this.decipher, { end: true })
-          dec.on('end', () => {
-            console.log('DEC END', shard.index)
-          })
-          dec.on('data', (data: Buffer) => { })
+          dec.on('end', () => { console.log('DEC END', shard.index) })
+          dec.on('data', (data: Buffer) => { console.log('d', data) })
         } else {
-          console.log('parity shard ignored')
+          console.log('parity shard ignored', shard.index)
           buffer.on('data', () => { })
         }
+        */
 
       }
     }, () => {
@@ -98,7 +106,6 @@ export class FileObject extends EventEmitter {
     eachSeries(this.shards.keys(), (shardIndex, nextShard) => {
       const shard = this.shards.get(shardIndex)
       if (!shard) { return nextShard() }
-      result.totalBytesDownloaded += shard.currentPosition
       if (shard.isFinished()) { result.shardsCompleted++ }
       nextShard()
     }, () => {
