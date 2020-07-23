@@ -18,7 +18,7 @@ class FileMuxer extends Readable {
 
   static DEFAULTS = {
     sourceDrainWait: 8000,
-    sourceIdleWait: 50
+    sourceIdleWait: 4000
   }
 
   private hasher: Hash
@@ -58,6 +58,7 @@ class FileMuxer extends Readable {
   }
 
   private mux(bytes: Buffer) {
+    process.stdout.write(".")
     this.bytesRead += bytes.length
 
     if (this.length < this.bytesRead) {
@@ -72,7 +73,7 @@ class FileMuxer extends Readable {
    * Implements the underlying read method
    * @private
    */
-  _read(): boolean | void {
+  _read(size?: number): boolean | void {
     if (this.sourceDrainTimeout) {
       clearTimeout(this.sourceDrainTimeout)
     }
@@ -86,17 +87,16 @@ class FileMuxer extends Readable {
       return this.waitForSourceAvailable()
     }
 
-    const self = this
-    function readFromSource() {
-      const bytes = self.inputs && self.inputs[0] ? self.inputs[0].read() : null
+    const readFromSource = (size?: number) => {
+      const bytes = this.inputs && this.inputs[0] ? this.inputs[0].read(size) : null
       if (bytes !== null) {
-        return self.mux(bytes)
+        this.inputs[0].pause()
+        return this.mux(bytes)
       }
-      setTimeout(readFromSource, self.options.sourceIdleWait)
+      setTimeout(readFromSource.bind(this), this.options.sourceIdleWait)
     }
 
-
-    readFromSource()
+    readFromSource(size)
   }
 
   /**
@@ -109,31 +109,35 @@ class FileMuxer extends Readable {
     assert(typeof readable.pipe === 'function', 'Invalid input stream supplied')
     assert(this.added < this.shards, 'Inputs exceed defined number of shards')
 
-    const input = readable.pipe(new PassThrough()).pause()
+    const input = readable.pipe(new PassThrough(), { end: false }).pause()
 
     input.once('readable', () => {
-      // exchangeReportBeginHash
+      console.log('shard is now readable, start to download')
     })
 
     input.on('end', () => {
+      console.log('Expected size: %s, actual: %s', this.bytesRead)
       const inputHash = ripemd160(this.hasher.digest())
       this.hasher = createHash('sha256')
 
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
+      console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
-        this.emit('error', new Error('Shard failed integrity check'))
+        this.emit('error', Error('Shard failed integrity check'))
       } else {
-        // Send successful exchange report
+        // Send successful SHARD_DOWNLOADED
         console.log('SHARD HASH OK')
       }
 
+      console.log('DRAIN')
       this.emit('drain', input)
     })
 
     readable.on('error', (err) => {
       // Send failure exchange report DOWNLOAD_EERROR
+      console.log('ERROR')
       this.emit('error', err)
     })
 

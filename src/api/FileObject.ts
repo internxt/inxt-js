@@ -9,6 +9,7 @@ import DecryptStream from "../lib/decryptstream"
 import StreamToBlob from 'stream-to-blob'
 import { randomBytes } from 'crypto'
 import FileMuxer from "../lib/filemuxer"
+import MuxDemux from 'mux-demux'
 
 export class FileObject extends EventEmitter {
   shards: ShardObject[] = []
@@ -61,8 +62,7 @@ export class FileObject extends EventEmitter {
       length: this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
     })
 
-    fileMuxer.on('sourceAdded', () => console.log('file muxer: source added'))
-    fileMuxer.on('error', (err) => console.log('file muxer: error, %s', err.message))
+    const newFileMuxer = MuxDemux()
 
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (this.fileInfo && shard) {
@@ -80,15 +80,12 @@ export class FileObject extends EventEmitter {
 
         // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
+        const ShardMuxer = MuxDemux()
+        buffer.pipe(ShardMuxer)
 
-        buffer.on('error', fileMuxer.emit.bind(fileMuxer, 'error'))
-        fileMuxer.shards++
-        fileMuxer.addInputSource(buffer, Buffer.from(shard.hash, 'hex'), null)
-        fileMuxer.on('drain', () => {
-          fileMuxer.removeAllListeners('drain')
-          nextItem()
+        ShardMuxer.on('end', () => {
+          console.log('end')
         })
-
       }
     }, () => {
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })

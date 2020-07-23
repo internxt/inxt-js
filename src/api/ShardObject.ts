@@ -36,7 +36,6 @@ export class ShardObject extends EventEmitter {
   StartDownloadShard(): Readable {
     const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID)
 
-    const pt = new PassThrough()
     // const res = downloader.pipe(this.hasher).pipe(pt)
 
     /*
