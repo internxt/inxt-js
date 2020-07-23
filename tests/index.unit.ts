@@ -5,8 +5,8 @@ dotenv.config()
 
 process.on('unhandledRejection', (reason, p) => {
   // console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
-  console.log('Unhandled Rejection at: Promise');
-});
+  console.log('Unhandled Rejection at: Promise')
+})
 
 describe('# environment', () => {
   it('should create environment', () => {

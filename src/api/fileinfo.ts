@@ -39,13 +39,13 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
     })
 }
 
-export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Map<number, Shard>> {
-  const shards: Map<number, Shard> = new Map<number, Shard>()
+export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
+  const shards: Shard[] = []
 
-  return doUntil((next: (err: Error | null, results?: Array<Shard>, shards?: Map<number, Shard>) => void) => {
-    GetFileMirror(config, bucketId, fileId, 3, shards.size).then((results: any) => {
+  return doUntil((next: (err: Error | null, results?: Array<Shard>, shards?: Shard[]) => void) => {
+    GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {
       results.forEach((shard: Shard) => {
-        shards.set(shard.index, shard)
+        shards.push(shard)
       })
       next(null, results, shards)
     }).catch((err) => {

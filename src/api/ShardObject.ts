@@ -2,7 +2,7 @@ import { Shard, DownloadShardRequest } from "./shard"
 import { EnvironmentConfig } from ".."
 import { HashStream } from "../lib/hashstream"
 import { ExchangeReport } from "./reports"
-import { Transform, PassThrough } from 'stream'
+import { Transform, PassThrough, Readable } from 'stream'
 import { EventEmitter } from 'events'
 import { ripemd160 } from "../lib/crypto"
 
@@ -33,21 +33,13 @@ export class ShardObject extends EventEmitter {
     this.exchangeReport = new ExchangeReport(config)
   }
 
-  StartDownloadShard(): Transform {
+  StartDownloadShard(): Readable {
     const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID)
 
-    {
-      downloader.on('error', (err) => {
-        console.log('DOWNLOADER ERROR', err)
-      })
-      downloader.on('end', () => {
-        console.log('downloader end')
-      })
-    }
-
     const pt = new PassThrough()
-    const res = downloader.pipe(this.hasher).pipe(pt)
+    // const res = downloader.pipe(this.hasher).pipe(pt)
 
+    /*
     this.hasher.on('end', () => {
       this.shardHash = ripemd160(this.hasher.read())
       console.log('Result: %s, Expected: %s', this.shardHash.toString('hex'), this.shardInfo.hash)
@@ -55,24 +47,19 @@ export class ShardObject extends EventEmitter {
         console.error('Hash shard corrupt')
         this._isErrored = true
         this.emit('error', new Error('Invalid shard hash'))
-      } else {
-        console.log('hash ok', this.shardInfo.index)
       }
     })
 
     res.on('end', () => {
       this.hasher.end()
-
-      console.log('shard object pipe ended')
       this._isFinished = true
       if (!this._isErrored) {
         this.emit('end')
       }
     })
 
-
-    res.on('data', () => {
-    })
+    res.on('data', () => {})
+    */
 
     return downloader
   }

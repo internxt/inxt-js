@@ -54,7 +54,8 @@ exports.streamRequest = exports.request = void 0;
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var stream_1 = require("stream");
-var BufferToStream = require('buffer-to-stream');
+var https_1 = __importDefault(require("https"));
+var url_1 = __importDefault(require("url"));
 function request(config, method, targetUrl, params) {
     return __awaiter(this, void 0, void 0, function () {
         var DefaultOptions, options;
@@ -73,13 +74,38 @@ function request(config, method, targetUrl, params) {
     });
 }
 exports.request = request;
-function streamRequest(targetUrl) {
-    var RequestReader = new stream_1.Transform({ transform: function (c, e, cb) { cb(null, c); } });
-    axios_1.default.get(targetUrl, {
-        responseType: 'arraybuffer'
-    }).then(function (axiosRes) {
-        BufferToStream(Buffer.from(axiosRes.data)).pipe(RequestReader);
+function streamRequest(targetUrl, nodeID) {
+    var uriParts = url_1.default.parse(targetUrl);
+    var downloader = null;
+    function _createDownloadStream() {
+        new https_1.default.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
+        return https_1.default.get({
+            protocol: uriParts.protocol,
+            hostname: uriParts.hostname,
+            port: uriParts.port,
+            path: uriParts.path,
+            headers: {
+                'content-type': 'application/octet-stream',
+                'x-storj-node-id': nodeID
+            }
+        });
+    }
+    return new stream_1.Readable({
+        read: function () {
+            var _this = this;
+            if (!downloader) {
+                downloader = _createDownloadStream();
+                downloader.on('response', function (res) {
+                    res
+                        .on('data', _this.push.bind(_this))
+                        .on('error', _this.emit.bind(_this, 'error'))
+                        .on('end', function () {
+                        _this.push.bind(_this, null);
+                        _this.emit('end');
+                    }).on('close', _this.emit.bind(_this, 'close'));
+                }).on('error', this.emit.bind(this, 'error'));
+            }
+        }
     });
-    return RequestReader;
 }
 exports.streamRequest = streamRequest;

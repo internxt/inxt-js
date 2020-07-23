@@ -115,7 +115,7 @@ var FileObject = /** @class */ (function (_super) {
         var _this = this;
         var shardObject;
         if (!this.fileInfo) {
-            throw Error('Undefined fileInfo');
+            throw new Error('Undefined fileInfo');
         }
         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
         async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
@@ -126,22 +126,28 @@ var FileObject = /** @class */ (function (_super) {
                 shardObject.on('progress', function () { _this.updateGlobalPercentage(); });
                 shardObject.on('error', function (err) { console.log('SHARD ERROR', err.message); });
                 shardObject.on('end', function () {
-                    console.log('SHARD END');
+                    console.log('SHARD END', shard.index);
                     nextItem();
                 });
+                // axios --> hasher
                 var buffer = shardObject.StartDownloadShard();
+                buffer.on('data', function (data) {
+                    // console.log(data)
+                });
+                buffer.on('end', function () {
+                    console.log('buffer end');
+                });
+                /*
                 if (!shard.parity) {
-                    console.log('piped non parity shard');
-                    var dec = buffer.pipe(_this.decipher, { end: true });
-                    dec.on('end', function () {
-                        console.log('DEC END', shard.index);
-                    });
-                    dec.on('data', function (data) { });
+                  console.log('piped non parity shard')
+                  const dec = buffer.pipe(this.decipher, { end: true })
+                  dec.on('end', () => { console.log('DEC END', shard.index) })
+                  dec.on('data', (data: Buffer) => { console.log('d', data) })
+                } else {
+                  console.log('parity shard ignored', shard.index)
+                  buffer.on('data', () => { })
                 }
-                else {
-                    console.log('parity shard ignored');
-                    buffer.on('data', function () { });
-                }
+                */
             }
         }, function () {
             _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
@@ -158,7 +164,6 @@ var FileObject = /** @class */ (function (_super) {
             if (!shard) {
                 return nextShard();
             }
-            result.totalBytesDownloaded += shard.currentPosition;
             if (shard.isFinished()) {
                 result.shardsCompleted++;
             }

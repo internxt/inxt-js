@@ -4,14 +4,15 @@ import { EnvironmentConfig } from ".."
 import { EventEmitter } from 'events'
 import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
 import { Shard } from "./shard"
-import { eachLimit, eachSeries } from "async"
+import { eachLimit, eachSeries, queue, times, AsyncResultIterator } from "async"
 import DecryptStream from "../lib/decryptstream"
 import StreamToBlob from 'stream-to-blob'
 import { randomBytes } from 'crypto'
+import FileMuxer from "../lib/filemuxer"
 
 export class FileObject extends EventEmitter {
-  shards = new Map<number, ShardObject>()
-  rawShards = new Map<number, Shard>()
+  shards: ShardObject[] = []
+  rawShards: Shard[] = []
   fileInfo: FileInfo | undefined
   config: EnvironmentConfig
 
@@ -46,7 +47,7 @@ export class FileObject extends EventEmitter {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId)
   }
 
-  StartDownloadFile(): DecryptStream {
+  StartDownloadFile(): FileMuxer {
     let shardObject
 
     if (!this.fileInfo) {
@@ -55,41 +56,38 @@ export class FileObject extends EventEmitter {
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
 
-    eachLimit(this.rawShards.keys(), 1, (shardIndex, nextItem) => {
-      const shard = this.rawShards.get(shardIndex)
+    const fileMuxer = new FileMuxer({
+      shards: this.rawShards.length,
+      length: this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
+    })
+
+    fileMuxer.on('sourceAdded', () => console.log('file muxer: source added'))
+    fileMuxer.on('error', (err) => console.log('file muxer: error, %s', err.message))
+
+    eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (this.fileInfo && shard) {
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
-        this.shards.set(shardIndex, shardObject)
+        this.shards.push(shardObject)
 
+        /*
         shardObject.on('progress', () => { this.updateGlobalPercentage() })
         shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
         shardObject.on('end', () => {
           console.log('SHARD END', shard.index)
           nextItem()
         })
+        */
 
         // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
 
-        buffer.on('data', (data) => {
-          console.log(data)
+        buffer.on('error', fileMuxer.emit.bind(fileMuxer, 'error'))
+        fileMuxer.shards++
+        fileMuxer.addInputSource(buffer, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.on('drain', () => {
+          fileMuxer.removeAllListeners('drain')
+          nextItem()
         })
-
-        buffer.on('end', () => {
-          console.log('buffer end')
-        })
-
-        /*
-        if (!shard.parity) {
-          console.log('piped non parity shard')
-          const dec = buffer.pipe(this.decipher, { end: true })
-          dec.on('end', () => { console.log('DEC END', shard.index) })
-          dec.on('data', (data: Buffer) => { console.log('d', data) })
-        } else {
-          console.log('parity shard ignored', shard.index)
-          buffer.on('data', () => { })
-        }
-        */
 
       }
     }, () => {
@@ -98,7 +96,7 @@ export class FileObject extends EventEmitter {
       this.emit('end')
     })
 
-    return this.decipher
+    return fileMuxer
   }
 
   private updateGlobalPercentage(): void {

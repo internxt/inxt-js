@@ -1,10 +1,9 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { PassThrough, Readable } from 'stream'
-import BufferToStream from 'buffer-to-stream'
+import { Readable } from 'stream'
 import https from 'https'
-import { ClientRequest } from 'http'
+import { ClientRequest, IncomingMessage } from 'http'
 import url from 'url'
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
@@ -26,7 +25,9 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
   const uriParts = url.parse(targetUrl)
   let downloader: ClientRequest | null = null
 
-  function _createDownloadStream() {
+  function _createDownloadStream(): ClientRequest {
+    new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 })
+
     return https.get({
       protocol: uriParts.protocol,
       hostname: uriParts.hostname,
@@ -43,17 +44,16 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
     read: function () {
       if (!downloader) {
         downloader = _createDownloadStream()
-        downloader.on('response', (res) => {
+        downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))
             .on('error', this.emit.bind(this, 'error'))
             .on('end', () => {
               this.push.bind(this, null)
               this.emit('end')
-            })
+            }).on('close', this.emit.bind(this, 'close'))
         }).on('error', this.emit.bind(this, 'error'))
       }
     }
   })
-
 }

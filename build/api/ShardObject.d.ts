@@ -6,10 +6,8 @@ import { ExchangeReport } from "./reports";
 import { Transform } from 'stream';
 import { EventEmitter } from 'events';
 export declare class ShardObject extends EventEmitter {
-    shardData: Buffer;
     shardInfo: Shard;
     shardHash: Buffer | null;
-    currentPosition: number;
     config: EnvironmentConfig;
     fileId: string;
     bucketId: string;

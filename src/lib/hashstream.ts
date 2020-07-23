@@ -25,7 +25,6 @@ export class HashStream extends Transform {
   }
 
   _flush(): void {
-    console.log('LENGTH AFTER FLUSH %s, expected: %s', this.length, this.expectedSize)
     this.hasher.end()
     this.emit('end')
   }

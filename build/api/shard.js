@@ -42,9 +42,9 @@ var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var hashstream_1 = require("../lib/hashstream");
-function DownloadShardRequest(config, address, port, hash, token) {
+function DownloadShardRequest(config, address, port, hash, token, nodeID) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
-    return request_1.streamRequest("https://api.internxt.com:8081/" + fetchUrl);
+    return request_1.streamRequest("https://api.internxt.com:8081/" + fetchUrl, nodeID);
 }
 exports.DownloadShardRequest = DownloadShardRequest;
 function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
@@ -56,7 +56,7 @@ function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
                 case 0:
                     hasher = new hashstream_1.HashStream(shard.size);
                     exchangeReport = new reports_1.ExchangeReport(config);
-                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token)];
+                    return [4 /*yield*/, DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.farmer.nodeID)];
                 case 1:
                     shardBinary = _a.sent();
                     outputStream = shardBinary.pipe(hasher);
