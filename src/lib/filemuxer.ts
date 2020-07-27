@@ -60,7 +60,6 @@ class FileMuxer extends Readable {
 
   private mux(bytes: Buffer) {
     this.bytesRead += bytes.length
-    console.log('Bytes read: %s', this.bytesRead)
 
     if (this.length < this.bytesRead) {
       return this.emit('error', new Error('Input exceeds expected length'))
@@ -75,13 +74,11 @@ class FileMuxer extends Readable {
    * @private
    */
   _read(size?: number): boolean {
-    console.log('READ')
     if (this.sourceDrainTimeout) {
       clearTimeout(this.sourceDrainTimeout)
     }
 
     if (this.bytesRead === this.length) {
-      console.log('PUSH FINAL')
       return this.push(null)
     }
 
@@ -95,7 +92,6 @@ class FileMuxer extends Readable {
       if (bytes !== null) {
         return this.mux(bytes)
       }
-      console.log(this.options.sourceIdleWait)
       setTimeout(readFromSource.bind(this), this.options.sourceIdleWait)
     }
 
@@ -109,7 +105,7 @@ class FileMuxer extends Readable {
    * @param hash - Hash of the shard
    * @param echangeReport - Instance of exchange report
    */
-  addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer {
+  addInputSource(readable: Readable, shardSize: number, shardParity: boolean, hash: Buffer, echangeReport: any): FileMuxer {
     assert(typeof readable.pipe === 'function', 'Invalid input stream supplied')
     assert(this.added < this.shards, 'Inputs exceed defined number of shards')
 
@@ -123,33 +119,29 @@ class FileMuxer extends Readable {
     readable.on('end', () => { input.end() })
 
     input.once('readable', () => {
-      console.log('shard is now readable, start to download')
+      // console.log('shard is now readable, start to download')
+      // Init exchange report
     })
 
     input.once('end', () => {
-      console.log('Expected size: %s, actual: %s', this.bytesRead)
       const inputHash = ripemd160(this.hasher.digest())
       this.hasher = createHash('sha256')
 
-      console.log('SPLICE')
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
-      console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
+        console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
         this.emit('error', Error('Shard failed integrity check'))
       } else {
         // Send successful SHARD_DOWNLOADED
-        console.log('SHARD HASH OK')
       }
 
-      console.log('DRAIN')
       this.emit('drain', input)
     })
 
     readable.on('error', (err) => {
       // Send failure exchange report DOWNLOAD_EERROR
-      console.log('ERROR')
       this.emit('error', err)
     })
 

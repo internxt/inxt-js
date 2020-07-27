@@ -129,17 +129,14 @@ var FileObject = /** @class */ (function (_super) {
             if (_this.fileInfo && shard) {
                 shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
                 _this.shards.push(shardObject);
-                /*
-                shardObject.on('progress', () => { this.updateGlobalPercentage() })
-                shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
-                shardObject.on('end', () => {
-                  console.log('SHARD END', shard.index)
-                  nextItem()
-                })
-                */
+                console.log('shard %s is parity %s', shard.index, shard.parity);
+                if (shard.parity) {
+                    console.log('Skipping parity shard');
+                    return nextItem();
+                }
                 // axios --> hasher
                 var buffer = shardObject.StartDownloadShard();
-                fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
+                fileMuxer.addInputSource(buffer, shard.size, shard.parity, Buffer.from(shard.hash, 'hex'), null);
                 fileMuxer.once('drain', function () { return nextItem(); });
             }
         }, function () {
@@ -760,7 +757,6 @@ var FileMuxer = /** @class */ (function (_super) {
     };
     FileMuxer.prototype.mux = function (bytes) {
         this.bytesRead += bytes.length;
-        console.log('Bytes read: %s', this.bytesRead);
         if (this.length < this.bytesRead) {
             return this.emit('error', new Error('Input exceeds expected length'));
         }
@@ -773,12 +769,10 @@ var FileMuxer = /** @class */ (function (_super) {
      */
     FileMuxer.prototype._read = function (size) {
         var _this = this;
-        console.log('READ');
         if (this.sourceDrainTimeout) {
             clearTimeout(this.sourceDrainTimeout);
         }
         if (this.bytesRead === this.length) {
-            console.log('PUSH FINAL');
             return this.push(null);
         }
         if (!this.inputs[0]) {
@@ -790,7 +784,6 @@ var FileMuxer = /** @class */ (function (_super) {
             if (bytes !== null) {
                 return _this.mux(bytes);
             }
-            console.log(_this.options.sourceIdleWait);
             setTimeout(readFromSource.bind(_this), _this.options.sourceIdleWait);
         };
         readFromSource(size);
@@ -802,7 +795,7 @@ var FileMuxer = /** @class */ (function (_super) {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport) {
+    FileMuxer.prototype.addInputSource = function (readable, shardSize, shardParity, hash, echangeReport) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
@@ -813,29 +806,25 @@ var FileMuxer = /** @class */ (function (_super) {
         });
         readable.on('end', function () { input.end(); });
         input.once('readable', function () {
-            console.log('shard is now readable, start to download');
+            // console.log('shard is now readable, start to download')
+            // Init exchange report
         });
         input.once('end', function () {
-            console.log('Expected size: %s, actual: %s', _this.bytesRead);
             var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
-            console.log('SPLICE');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
-            console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
             if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
+                console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
                 _this.emit('error', Error('Shard failed integrity check'));
             }
             else {
                 // Send successful SHARD_DOWNLOADED
-                console.log('SHARD HASH OK');
             }
-            console.log('DRAIN');
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {
             // Send failure exchange report DOWNLOAD_EERROR
-            console.log('ERROR');
             _this.emit('error', err);
         });
         this.added++;

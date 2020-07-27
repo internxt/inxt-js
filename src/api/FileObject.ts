@@ -67,18 +67,15 @@ export class FileObject extends EventEmitter {
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
         this.shards.push(shardObject)
 
-        /*
-        shardObject.on('progress', () => { this.updateGlobalPercentage() })
-        shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
-        shardObject.on('end', () => {
-          console.log('SHARD END', shard.index)
-          nextItem()
-        })
-        */
+        console.log('shard %s is parity %s', shard.index, shard.parity)
+        if (shard.parity) {
+          console.log('Skipping parity shard')
+          return nextItem()
+        }
 
         // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
-        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.addInputSource(buffer, shard.size, shard.parity, Buffer.from(shard.hash, 'hex'), null)
         fileMuxer.once('drain', () => nextItem())
       }
     }, () => {

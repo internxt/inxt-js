@@ -26,6 +26,14 @@ describe('# environment', () => {
       overwritte: true
     })
 
+    inxt.resolveFile('e6aa7b3ea8085ee5223c3d08', '9a81bd3863bbe00c26eb466d', './PEPA.zip', {
+      finishedCallback: (err) => {
+        console.log('Download finished', err ? err.message : '')
+      },
+      progressCallback: () => {},
+      overwritte: true
+    })
 
+    
   })
 })

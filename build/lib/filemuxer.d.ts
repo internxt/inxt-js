@@ -38,6 +38,6 @@ declare class FileMuxer extends Readable {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer;
+    addInputSource(readable: Readable, shardSize: number, shardParity: boolean, hash: Buffer, echangeReport: any): FileMuxer;
 }
 export default FileMuxer;
