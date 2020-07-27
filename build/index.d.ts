@@ -13,6 +13,7 @@ export declare class Environment {
     private config;
     constructor(config: EnvironmentConfig);
     setEncryptionKey(newEncryptionKey: string): void;
+    downloadFile(bucketId: string, fileId: string): Promise<Blob>;
     resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
 }
 export interface EnvironmentConfig {

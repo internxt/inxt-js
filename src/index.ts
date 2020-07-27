@@ -1,5 +1,6 @@
 import Download from './lib/download'
 import fs from 'fs'
+import StreamToBlob from 'stream-to-blob'
 
 interface OnlyErrorCallback {
   (err: Error | null): void
@@ -21,6 +22,12 @@ export class Environment {
 
   setEncryptionKey(newEncryptionKey: string): void {
     this.config.encryptionKey = newEncryptionKey
+  }
+
+  downloadFile(bucketId: string, fileId: string): Promise<Blob> {
+    return Download(this.config, bucketId, fileId).then(stream => {
+      return StreamToBlob(stream, 'application/octet-stream')
+    })
   }
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {

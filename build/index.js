@@ -6,12 +6,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
 var download_1 = __importDefault(require("./lib/download"));
 var fs_1 = __importDefault(require("fs"));
+var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
     }
     Environment.prototype.setEncryptionKey = function (newEncryptionKey) {
         this.config.encryptionKey = newEncryptionKey;
+    };
+    Environment.prototype.downloadFile = function (bucketId, fileId) {
+        return download_1.default(this.config, bucketId, fileId).then(function (stream) {
+            return stream_to_blob_1.default(stream, 'application/octet-stream');
+        });
     };
     Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
         if (!options.overwritte && fs_1.default.existsSync(filePath)) {
