@@ -35,7 +35,6 @@ var HashStream = /** @class */ (function (_super) {
         callback(null, chunk);
     };
     HashStream.prototype._flush = function () {
-        console.log('LENGTH AFTER FLUSH %s, expected: %s', this.length, this.expectedSize);
         this.hasher.end();
         this.emit('end');
     };

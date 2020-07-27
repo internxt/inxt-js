@@ -58,7 +58,7 @@ function Download(config, bucketId, fileId) {
                 case 2:
                     // API request file mirrors with tokens
                     _a.sent();
-                    return [2 /*return*/, File.StartDownloadFile()];
+                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher)];
             }
         });
     });

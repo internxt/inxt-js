@@ -39,6 +39,7 @@ class FileMuxer extends Readable {
     this.hasher = createHash('sha256')
     this.shards = options.shards
     this.length = options.length
+
     this.options = { ...FileMuxer.DEFAULTS, ...options }
   }
 
@@ -53,50 +54,53 @@ class FileMuxer extends Readable {
     this.once('sourceAdded', this._read.bind(this))
     this.sourceDrainTimeout = setTimeout(() => {
       this.removeAllListeners('sourceAdded')
-      this.emit('error', new Error('Unexpected end of source stream'))
+      // this.emit('error', new Error('Unexpected end of source stream'))
     }, this.options.sourceDrainWait ? this.options.sourceDrainWait : 8000)
   }
 
   private mux(bytes: Buffer) {
-    process.stdout.write(".")
     this.bytesRead += bytes.length
+    console.log('Bytes read: %s', this.bytesRead)
 
     if (this.length < this.bytesRead) {
       return this.emit('error', new Error('Input exceeds expected length'))
     }
 
     this.hasher.update(bytes)
-    this.push(bytes)
+    return this.push(bytes)
   }
 
   /**
    * Implements the underlying read method
    * @private
    */
-  _read(size?: number): boolean | void {
+  _read(size?: number): boolean {
+    console.log('READ')
     if (this.sourceDrainTimeout) {
       clearTimeout(this.sourceDrainTimeout)
     }
 
     if (this.bytesRead === this.length) {
-      console.log('pull null')
+      console.log('PUSH FINAL')
       return this.push(null)
     }
 
     if (!this.inputs[0]) {
-      return this.waitForSourceAvailable()
+      this.waitForSourceAvailable()
+      return true
     }
 
     const readFromSource = (size?: number) => {
-      const bytes = this.inputs && this.inputs[0] ? this.inputs[0].read(size) : null
+      const bytes = this.inputs[0] ? this.inputs[0].read(size) : null
       if (bytes !== null) {
-        this.inputs[0].pause()
         return this.mux(bytes)
       }
+      console.log(this.options.sourceIdleWait)
       setTimeout(readFromSource.bind(this), this.options.sourceIdleWait)
     }
 
     readFromSource(size)
+    return true
   }
 
   /**
@@ -105,21 +109,29 @@ class FileMuxer extends Readable {
    * @param hash - Hash of the shard
    * @param echangeReport - Instance of exchange report
    */
-  addInputSource(readable: Readable, hash: Buffer, echangeReport: any): FileMuxer {
+  addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer {
     assert(typeof readable.pipe === 'function', 'Invalid input stream supplied')
     assert(this.added < this.shards, 'Inputs exceed defined number of shards')
 
-    const input = readable.pipe(new PassThrough(), { end: false }).pause()
+    const input = new PassThrough()
+
+    readable.on('data', (data: Buffer) => {
+      input.pause()
+      input.push(data)
+    })
+
+    readable.on('end', () => { input.end() })
 
     input.once('readable', () => {
       console.log('shard is now readable, start to download')
     })
 
-    input.on('end', () => {
+    input.once('end', () => {
       console.log('Expected size: %s, actual: %s', this.bytesRead)
       const inputHash = ripemd160(this.hasher.digest())
       this.hasher = createHash('sha256')
 
+      console.log('SPLICE')
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
       console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))

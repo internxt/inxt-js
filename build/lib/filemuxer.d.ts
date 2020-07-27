@@ -6,13 +6,17 @@ interface FileMuxerOptions {
     sourceDrainWait?: number;
     sourceIdleWait?: number;
 }
+/**
+ * Accepts multiple ordered input sources and exposes them as a single
+ * contiguous readable stream. Used for re-assembly of shards.
+ */
 declare class FileMuxer extends Readable {
     static DEFAULTS: {
         sourceDrainWait: number;
         sourceIdleWait: number;
     };
     private hasher;
-    private shards;
+    shards: number;
     private length;
     private inputs;
     private bytesRead;
@@ -23,14 +27,17 @@ declare class FileMuxer extends Readable {
     private checkOptions;
     private waitForSourceAvailable;
     private mux;
-    private readFromSource;
-    _read(): boolean | void;
+    /**
+     * Implements the underlying read method
+     * @private
+     */
+    _read(size?: number): boolean;
     /**
      * Adds an additional input stream to the multiplexer
      * @param readable - Readable input stream from file shard
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    addInputSource(readable: Readable, hash: Buffer, echangeReport: any): FileMuxer;
+    addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer;
 }
 export default FileMuxer;

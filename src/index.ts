@@ -31,11 +31,14 @@ export class Environment {
     const fileStream = fs.createWriteStream(filePath)
 
     Download(this.config, bucketId, fileId).then(stream => {
+      console.log('START DUMPING FILE')
       const dump = stream.pipe(fileStream)
       dump.on('error', (err) => {
+        console.log('DUMP FILE error', err.message)
         options.finishedCallback(err)
       })
       dump.on('end', (err) => {
+        console.log('DUMP FILE END')
         options.finishedCallback(err)
       })
     })

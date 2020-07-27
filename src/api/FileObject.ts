@@ -62,8 +62,6 @@ export class FileObject extends EventEmitter {
       length: this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
     })
 
-    const newFileMuxer = MuxDemux()
-
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (this.fileInfo && shard) {
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
@@ -80,12 +78,8 @@ export class FileObject extends EventEmitter {
 
         // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
-        const ShardMuxer = MuxDemux()
-        buffer.pipe(ShardMuxer)
-
-        ShardMuxer.on('end', () => {
-          console.log('end')
-        })
+        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.once('drain', () => nextItem())
       }
     }, () => {
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
@@ -96,6 +90,7 @@ export class FileObject extends EventEmitter {
     return fileMuxer
   }
 
+  /*
   private updateGlobalPercentage(): void {
     const result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 }
     eachSeries(this.shards.keys(), (shardIndex, nextShard) => {
@@ -111,4 +106,5 @@ export class FileObject extends EventEmitter {
       this.emit('progress', result.totalBytesDownloaded, result.totalSize, percentage)
     })
   }
+  */
 }

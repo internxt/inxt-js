@@ -36,8 +36,6 @@ export class ShardObject extends EventEmitter {
   StartDownloadShard(): Readable {
     const downloader = DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID)
 
-    // const res = downloader.pipe(this.hasher).pipe(pt)
-
     /*
     this.hasher.on('end', () => {
       this.shardHash = ripemd160(this.hasher.read())
@@ -48,6 +46,8 @@ export class ShardObject extends EventEmitter {
         this.emit('error', new Error('Invalid shard hash'))
       }
     })
+    */
+    /*
 
     res.on('end', () => {
       this.hasher.end()

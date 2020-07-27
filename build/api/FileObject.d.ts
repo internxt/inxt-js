@@ -5,9 +5,10 @@ import { EnvironmentConfig } from "..";
 import { EventEmitter } from 'events';
 import { Shard } from "./shard";
 import DecryptStream from "../lib/decryptstream";
+import FileMuxer from "../lib/filemuxer";
 export declare class FileObject extends EventEmitter {
-    shards: Map<number, ShardObject>;
-    rawShards: Map<number, Shard>;
+    shards: ShardObject[];
+    rawShards: Shard[];
     fileInfo: FileInfo | undefined;
     config: EnvironmentConfig;
     bucketId: string;
@@ -18,6 +19,5 @@ export declare class FileObject extends EventEmitter {
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     GetFileInfo(): Promise<FileInfo | undefined>;
     GetFileMirrors(): Promise<void>;
-    StartDownloadFile(): DecryptStream;
-    private updateGlobalPercentage;
+    StartDownloadFile(): FileMuxer;
 }

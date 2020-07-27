@@ -17,9 +17,7 @@ exports.ShardObject = void 0;
 var shard_1 = require("./shard");
 var hashstream_1 = require("../lib/hashstream");
 var reports_1 = require("./reports");
-var stream_1 = require("stream");
 var events_1 = require("events");
-var crypto_1 = require("../lib/crypto");
 var ShardObject = /** @class */ (function (_super) {
     __extends(ShardObject, _super);
     function ShardObject(config, shardInfo, bucketId, fileId) {
@@ -37,43 +35,30 @@ var ShardObject = /** @class */ (function (_super) {
         return _this;
     }
     ShardObject.prototype.StartDownloadShard = function () {
-        var _this = this;
         var downloader = shard_1.DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID);
-        {
-            downloader.on('close', function (info) {
-                console.log('DOWNLOADER CLOSE', info);
-            });
-            downloader.on('error', function (err) {
-                console.log('DOWNLOADER ERROR', err);
-            });
-            downloader.on('end', function (info) {
-                console.log('DOWNLOADER END', info);
-            });
-        }
-        var pt = new stream_1.PassThrough();
-        var res = downloader.pipe(this.hasher).pipe(pt);
-        this.hasher.on('end', function () {
-            _this.shardHash = crypto_1.ripemd160(_this.hasher.read());
-            console.log('Result: %s, Expected: %s', _this.shardHash.toString('hex'), _this.shardInfo.hash);
-            if (_this.shardHash.toString('hex') !== _this.shardInfo.hash) {
-                console.error('Hash shard corrupt');
-                _this._isErrored = true;
-                _this.emit('error', new Error('Invalid shard hash'));
-            }
-            else {
-                console.log('hash ok', _this.shardInfo.index);
-            }
-        });
-        res.on('end', function () {
-            _this.hasher.end();
-            console.log('shard object pipe ended');
-            _this._isFinished = true;
-            if (!_this._isErrored) {
-                _this.emit('end');
-            }
-        });
-        res.on('data', function () {
-        });
+        /*
+        this.hasher.on('end', () => {
+          this.shardHash = ripemd160(this.hasher.read())
+          console.log('Result: %s, Expected: %s', this.shardHash.toString('hex'), this.shardInfo.hash)
+          if (this.shardHash.toString('hex') !== this.shardInfo.hash) {
+            console.error('Hash shard corrupt')
+            this._isErrored = true
+            this.emit('error', new Error('Invalid shard hash'))
+          }
+        })
+        */
+        /*
+    
+        res.on('end', () => {
+          this.hasher.end()
+          this._isFinished = true
+          if (!this._isErrored) {
+            this.emit('end')
+          }
+        })
+    
+        res.on('data', () => {})
+        */
         return downloader;
     };
     ShardObject.prototype.isFinished = function () { return this._isFinished; };

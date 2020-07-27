@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { EnvironmentConfig } from '../index';
-import DecryptStream from './decryptstream';
-export default function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<DecryptStream>;
+import { Readable } from 'stream';
+export default function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Readable>;

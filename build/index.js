@@ -19,11 +19,14 @@ var Environment = /** @class */ (function () {
         }
         var fileStream = fs_1.default.createWriteStream(filePath);
         download_1.default(this.config, bucketId, fileId).then(function (stream) {
+            console.log('START DUMPING FILE');
             var dump = stream.pipe(fileStream);
             dump.on('error', function (err) {
+                console.log('DUMP FILE error', err.message);
                 options.finishedCallback(err);
             });
             dump.on('end', function (err) {
+                console.log('DUMP FILE END');
                 options.finishedCallback(err);
             });
         });

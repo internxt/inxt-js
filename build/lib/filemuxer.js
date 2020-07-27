@@ -31,6 +31,10 @@ var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var assert_1 = __importDefault(require("assert"));
 var crypto_2 = require("./crypto");
+/**
+ * Accepts multiple ordered input sources and exposes them as a single
+ * contiguous readable stream. Used for re-assembly of shards.
+ */
 var FileMuxer = /** @class */ (function (_super) {
     __extends(FileMuxer, _super);
     function FileMuxer(options) {
@@ -50,42 +54,53 @@ var FileMuxer = /** @class */ (function (_super) {
         assert_1.default(typeof options.shards === 'number', 'You must supply a shards parameter');
         assert_1.default(options.shards > 0, 'Cannot multiplex a 0 shard stream');
         assert_1.default(typeof options.length === 'number', 'You must supply a length parameter');
-        assert_1.default(options.length > 0, 'Cannot multiplex a 0 length streamº');
+        assert_1.default(options.length > 0, 'Cannot multiplex a 0 length stream');
     };
     FileMuxer.prototype.waitForSourceAvailable = function () {
         var _this = this;
-        this.once('sourceAddedd', this._read.bind(this));
+        this.once('sourceAdded', this._read.bind(this));
         this.sourceDrainTimeout = setTimeout(function () {
             _this.removeAllListeners('sourceAdded');
-            _this.emit('error', new Error('Unexpected end of source stream'));
-        }, this.options.sourceDrainWait);
+            // this.emit('error', new Error('Unexpected end of source stream'))
+        }, this.options.sourceDrainWait ? this.options.sourceDrainWait : 8000);
     };
     FileMuxer.prototype.mux = function (bytes) {
         this.bytesRead += bytes.length;
+        console.log('Bytes read: %s', this.bytesRead);
         if (this.length < this.bytesRead) {
             return this.emit('error', new Error('Input exceeds expected length'));
         }
         this.hasher.update(bytes);
-        this.push(bytes);
+        return this.push(bytes);
     };
-    FileMuxer.prototype.readFromSource = function () {
-        var bytes = this.inputs[0] ? this.inputs[0].read() : null;
-        if (bytes != null) {
-            return this.mux(bytes);
-        }
-        setTimeout(this.readFromSource, this.options.sourceIdleWait);
-    };
-    FileMuxer.prototype._read = function () {
+    /**
+     * Implements the underlying read method
+     * @private
+     */
+    FileMuxer.prototype._read = function (size) {
+        var _this = this;
+        console.log('READ');
         if (this.sourceDrainTimeout) {
             clearTimeout(this.sourceDrainTimeout);
         }
         if (this.bytesRead === this.length) {
+            console.log('PUSH FINAL');
             return this.push(null);
         }
         if (!this.inputs[0]) {
-            return this.waitForSourceAvailable();
+            this.waitForSourceAvailable();
+            return true;
         }
-        this.readFromSource();
+        var readFromSource = function (size) {
+            var bytes = _this.inputs[0] ? _this.inputs[0].read(size) : null;
+            if (bytes !== null) {
+                return _this.mux(bytes);
+            }
+            console.log(_this.options.sourceIdleWait);
+            setTimeout(readFromSource.bind(_this), _this.options.sourceIdleWait);
+        };
+        readFromSource(size);
+        return true;
     };
     /**
      * Adds an additional input stream to the multiplexer
@@ -93,29 +108,40 @@ var FileMuxer = /** @class */ (function (_super) {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    FileMuxer.prototype.addInputSource = function (readable, hash, echangeReport) {
+    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
-        var input = readable.pipe(new stream_1.PassThrough()).pause();
-        input.once('readable', function () {
-            // exchangeReportBeginHash
+        var input = new stream_1.PassThrough();
+        readable.on('data', function (data) {
+            input.pause();
+            input.push(data);
         });
-        input.on('end', function () {
+        readable.on('end', function () { input.end(); });
+        input.once('readable', function () {
+            console.log('shard is now readable, start to download');
+        });
+        input.once('end', function () {
+            console.log('Expected size: %s, actual: %s', _this.bytesRead);
             var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
+            console.log('SPLICE');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
-            if (inputHash !== hash) {
+            console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
+            if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
-                _this.emit('error', new Error('Shard failed integrity check'));
+                _this.emit('error', Error('Shard failed integrity check'));
             }
             else {
-                // Send successful exchange report
+                // Send successful SHARD_DOWNLOADED
+                console.log('SHARD HASH OK');
             }
+            console.log('DRAIN');
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {
             // Send failure exchange report DOWNLOAD_EERROR
+            console.log('ERROR');
             _this.emit('error', err);
         });
         this.added++;
@@ -125,7 +151,7 @@ var FileMuxer = /** @class */ (function (_super) {
     };
     FileMuxer.DEFAULTS = {
         sourceDrainWait: 8000,
-        sourceIdleWait: 50
+        sourceIdleWait: 4000
     };
     return FileMuxer;
 }(stream_1.Readable));

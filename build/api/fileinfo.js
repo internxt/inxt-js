@@ -18,11 +18,11 @@ function GetFileMirror(config, bucketId, fileId, limit, skip, excludeNodes) {
 }
 exports.GetFileMirror = GetFileMirror;
 function GetFileMirrors(config, bucketId, fileId) {
-    var shards = new Map();
+    var shards = [];
     return async_1.doUntil(function (next) {
-        GetFileMirror(config, bucketId, fileId, 3, shards.size).then(function (results) {
+        GetFileMirror(config, bucketId, fileId, 3, shards.length).then(function (results) {
             results.forEach(function (shard) {
-                shards.set(shard.index, shard);
+                shards.push(shard);
             });
             next(null, results, shards);
         }).catch(function (err) {

@@ -60,12 +60,13 @@ var crypto_1 = require("../lib/crypto");
 var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var crypto_2 = require("crypto");
+var filemuxer_1 = __importDefault(require("../lib/filemuxer"));
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
         var _this = _super.call(this) || this;
-        _this.shards = new Map();
-        _this.rawShards = new Map();
+        _this.shards = [];
+        _this.rawShards = [];
         _this.totalSizeWithECs = 0;
         _this.config = config;
         _this.bucketId = bucketId;
@@ -118,63 +119,33 @@ var FileObject = /** @class */ (function (_super) {
             throw new Error('Undefined fileInfo');
         }
         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
-        async_1.eachLimit(this.rawShards.keys(), 1, function (shardIndex, nextItem) {
-            var shard = _this.rawShards.get(shardIndex);
+        var fileMuxer = new filemuxer_1.default({
+            shards: this.rawShards.length,
+            length: this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size
+        });
+        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
             if (_this.fileInfo && shard) {
                 shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
-                _this.shards.set(shardIndex, shardObject);
-                shardObject.on('progress', function () { _this.updateGlobalPercentage(); });
-                shardObject.on('error', function (err) { console.log('SHARD ERROR', err.message); });
-                shardObject.on('end', function () {
-                    console.log('SHARD END', shard.index);
-                    nextItem();
-                });
+                _this.shards.push(shardObject);
+                /*
+                shardObject.on('progress', () => { this.updateGlobalPercentage() })
+                shardObject.on('error', (err: Error) => { console.log('SHARD ERROR', err.message) })
+                shardObject.on('end', () => {
+                  console.log('SHARD END', shard.index)
+                  nextItem()
+                })
+                */
                 // axios --> hasher
                 var buffer = shardObject.StartDownloadShard();
-                buffer.on('data', function (data) {
-                    // console.log(data)
-                });
-                buffer.on('end', function () {
-                    console.log('buffer end');
-                });
-                /*
-                if (!shard.parity) {
-                  console.log('piped non parity shard')
-                  const dec = buffer.pipe(this.decipher, { end: true })
-                  dec.on('end', () => { console.log('DEC END', shard.index) })
-                  dec.on('data', (data: Buffer) => { console.log('d', data) })
-                } else {
-                  console.log('parity shard ignored', shard.index)
-                  buffer.on('data', () => { })
-                }
-                */
+                fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
+                fileMuxer.once('drain', function () { return nextItem(); });
             }
         }, function () {
             _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
             console.log('ALL SHARDS FINISHED');
             _this.emit('end');
         });
-        return this.decipher;
-    };
-    FileObject.prototype.updateGlobalPercentage = function () {
-        var _this = this;
-        var result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 };
-        async_1.eachSeries(this.shards.keys(), function (shardIndex, nextShard) {
-            var shard = _this.shards.get(shardIndex);
-            if (!shard) {
-                return nextShard();
-            }
-            if (shard.isFinished()) {
-                result.shardsCompleted++;
-            }
-            nextShard();
-        }, function () {
-            if (result.totalBytesDownloaded === result.totalSize) {
-                _this.emit('download-end');
-            }
-            var percentage = result.totalBytesDownloaded / (result.totalSize || 1);
-            _this.emit('progress', result.totalBytesDownloaded, result.totalSize, percentage);
-        });
+        return fileMuxer;
     };
     return FileObject;
 }(events_1.EventEmitter));

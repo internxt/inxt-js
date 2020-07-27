@@ -3,7 +3,7 @@ import { Shard } from "./shard";
 import { EnvironmentConfig } from "..";
 import { HashStream } from "../lib/hashstream";
 import { ExchangeReport } from "./reports";
-import { Transform } from 'stream';
+import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 export declare class ShardObject extends EventEmitter {
     shardInfo: Shard;
@@ -17,6 +17,6 @@ export declare class ShardObject extends EventEmitter {
     private _isFinished;
     private _isErrored;
     constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string);
-    StartDownloadShard(): Transform;
+    StartDownloadShard(): Readable;
     isFinished(): boolean;
 }
