@@ -1,6 +1,6 @@
 import { EnvironmentConfig } from '../index'
 import { FileObject } from '../api/FileObject'
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 
 export default async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Readable> {
   if (!config.encryptionKey) {
@@ -17,5 +17,17 @@ export default async function Download(config: EnvironmentConfig, bucketId: stri
   // API request file mirrors with tokens
   await File.GetFileMirrors()
 
-  return File.StartDownloadFile().pipe(File.decipher)
+  let totalSize = File.final_length
+  const t = new Transform({
+    transform(chunk: Buffer, enc, cb) {
+      if (chunk.length > totalSize) {
+        cb(null, chunk.slice(0, totalSize))
+      } else {
+        totalSize -= chunk.length
+        cb(null, chunk)
+      }
+    }
+  })
+
+  return File.StartDownloadFile().pipe(File.decipher).pipe(t)
 }

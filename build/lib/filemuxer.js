@@ -104,7 +104,7 @@ var FileMuxer = /** @class */ (function (_super) {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    FileMuxer.prototype.addInputSource = function (readable, shardSize, shardParity, hash, echangeReport) {
+    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');

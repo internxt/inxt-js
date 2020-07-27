@@ -17,6 +17,9 @@ export class FileObject extends EventEmitter {
   fileInfo: FileInfo | undefined
   config: EnvironmentConfig
 
+  length = -1
+  final_length = -1
+
   bucketId: string
   fileId: string
 
@@ -46,6 +49,9 @@ export class FileObject extends EventEmitter {
 
   async GetFileMirrors(): Promise<void> {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId)
+
+    this.length = this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
+    this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
   }
 
   StartDownloadFile(): FileMuxer {
@@ -67,15 +73,9 @@ export class FileObject extends EventEmitter {
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
         this.shards.push(shardObject)
 
-        console.log('shard %s is parity %s', shard.index, shard.parity)
-        if (shard.parity) {
-          console.log('Skipping parity shard')
-          return nextItem()
-        }
-
         // axios --> hasher
         const buffer = shardObject.StartDownloadShard()
-        fileMuxer.addInputSource(buffer, shard.size, shard.parity, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
         fileMuxer.once('drain', () => nextItem())
       }
     }, () => {

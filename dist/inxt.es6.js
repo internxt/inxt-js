@@ -129,14 +129,9 @@ var FileObject = /** @class */ (function (_super) {
             if (_this.fileInfo && shard) {
                 shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
                 _this.shards.push(shardObject);
-                console.log('shard %s is parity %s', shard.index, shard.parity);
-                if (shard.parity) {
-                    console.log('Skipping parity shard');
-                    return nextItem();
-                }
                 // axios --> hasher
                 var buffer = shardObject.StartDownloadShard();
-                fileMuxer.addInputSource(buffer, shard.size, shard.parity, Buffer.from(shard.hash, 'hex'), null);
+                fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
                 fileMuxer.once('drain', function () { return nextItem(); });
             }
         }, function () {
@@ -795,7 +790,7 @@ var FileMuxer = /** @class */ (function (_super) {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    FileMuxer.prototype.addInputSource = function (readable, shardSize, shardParity, hash, echangeReport) {
+    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');

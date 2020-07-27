@@ -105,7 +105,7 @@ class FileMuxer extends Readable {
    * @param hash - Hash of the shard
    * @param echangeReport - Instance of exchange report
    */
-  addInputSource(readable: Readable, shardSize: number, shardParity: boolean, hash: Buffer, echangeReport: any): FileMuxer {
+  addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer {
     assert(typeof readable.pipe === 'function', 'Invalid input stream supplied')
     assert(this.added < this.shards, 'Inputs exceed defined number of shards')
 
