@@ -128,6 +128,7 @@ var FileMuxer = /** @class */ (function (_super) {
                 _this.emit('error', Error('Shard failed integrity check'));
             }
             else {
+                console.log('Shard %s OK', inputHash.toString('hex'));
                 // Send successful SHARD_DOWNLOADED
             }
             _this.emit('drain', input);

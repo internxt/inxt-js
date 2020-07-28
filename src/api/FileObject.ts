@@ -59,6 +59,27 @@ export class FileObject extends EventEmitter {
     this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
   }
 
+  StartDownloadShard(index: number): FileMuxer {
+    if (!this.fileInfo) {
+      throw new Error('Undefined fileInfo')
+    }
+
+    const shardIndex = this.rawShards.map(x => x.index).indexOf(index)
+    const shard = this.rawShards[shardIndex]
+
+    const fileMuxer = new FileMuxer({
+      shards: 1,
+      length: shard.size
+    })
+
+    const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
+    const buffer = shardObject.StartDownloadShard()
+
+    fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+
+    return fileMuxer
+  }
+
   StartDownloadFile(): FileMuxer {
     let shardObject
 

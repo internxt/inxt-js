@@ -122,6 +122,21 @@ var FileObject = /** @class */ (function (_super) {
             });
         });
     };
+    FileObject.prototype.StartDownloadShard = function (index) {
+        if (!this.fileInfo) {
+            throw new Error('Undefined fileInfo');
+        }
+        var shardIndex = this.rawShards.map(function (x) { return x.index; }).indexOf(index);
+        var shard = this.rawShards[shardIndex];
+        var fileMuxer = new filemuxer_1.default({
+            shards: 1,
+            length: shard.size
+        });
+        var shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+        var buffer = shardObject.StartDownloadShard();
+        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
+        return fileMuxer;
+    };
     FileObject.prototype.StartDownloadFile = function () {
         var _this = this;
         var shardObject;

@@ -134,6 +134,7 @@ class FileMuxer extends Readable {
         console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
         this.emit('error', Error('Shard failed integrity check'))
       } else {
+        console.log('Shard %s OK', inputHash.toString('hex'))
         // Send successful SHARD_DOWNLOADED
       }
 
