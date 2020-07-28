@@ -69,6 +69,8 @@ var FileObject = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.shards = [];
         _this.rawShards = [];
+        _this.length = -1;
+        _this.final_length = -1;
         _this.totalSizeWithECs = 0;
         _this.config = config;
         _this.bucketId = bucketId;
@@ -106,9 +108,17 @@ var FileObject = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
+                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)
+                            // Sanitize address
+                        ];
                     case 1:
                         _a.rawShards = _b.sent();
+                        // Sanitize address
+                        this.rawShards.map(function (shard) {
+                            shard.farmer.address = shard.farmer.address.trim();
+                        });
+                        this.length = this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
+                        this.final_length = this.rawShards.filter(function (x) { return x.parity === false; }).reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
                         return [2 /*return*/];
                 }
             });
@@ -654,9 +664,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var FileObject_1 = require("../api/FileObject");
+var stream_1 = require("stream");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
-        var File;
+        var File, totalSize, t;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -675,14 +686,26 @@ function Download(config, bucketId, fileId) {
                 case 2:
                     // API request file mirrors with tokens
                     _a.sent();
-                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher)];
+                    totalSize = File.final_length;
+                    t = new stream_1.Transform({
+                        transform: function (chunk, enc, cb) {
+                            if (chunk.length > totalSize) {
+                                cb(null, chunk.slice(0, totalSize));
+                            }
+                            else {
+                                totalSize -= chunk.length;
+                                cb(null, chunk);
+                            }
+                        }
+                    });
+                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher).pipe(t)];
             }
         });
     });
 }
 exports.default = Download;
 
-},{"../api/FileObject":1}],10:[function(require,module,exports){
+},{"../api/FileObject":1,"stream":244}],10:[function(require,module,exports){
 (function (Buffer){
 "use strict";
 var __extends = (this && this.__extends) || (function () {

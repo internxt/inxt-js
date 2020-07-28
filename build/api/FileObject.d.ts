@@ -11,6 +11,8 @@ export declare class FileObject extends EventEmitter {
     rawShards: Shard[];
     fileInfo: FileInfo | undefined;
     config: EnvironmentConfig;
+    length: number;
+    final_length: number;
     bucketId: string;
     fileId: string;
     fileKey: Buffer;

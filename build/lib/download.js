@@ -37,9 +37,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var FileObject_1 = require("../api/FileObject");
+var stream_1 = require("stream");
 function Download(config, bucketId, fileId) {
     return __awaiter(this, void 0, void 0, function () {
-        var File;
+        var File, totalSize, t;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -58,7 +59,19 @@ function Download(config, bucketId, fileId) {
                 case 2:
                     // API request file mirrors with tokens
                     _a.sent();
-                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher)];
+                    totalSize = File.final_length;
+                    t = new stream_1.Transform({
+                        transform: function (chunk, enc, cb) {
+                            if (chunk.length > totalSize) {
+                                cb(null, chunk.slice(0, totalSize));
+                            }
+                            else {
+                                totalSize -= chunk.length;
+                                cb(null, chunk);
+                            }
+                        }
+                    });
+                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher).pipe(t)];
             }
         });
     });

@@ -67,6 +67,8 @@ var FileObject = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.shards = [];
         _this.rawShards = [];
+        _this.length = -1;
+        _this.final_length = -1;
         _this.totalSizeWithECs = 0;
         _this.config = config;
         _this.bucketId = bucketId;
@@ -104,9 +106,17 @@ var FileObject = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
+                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)
+                            // Sanitize address
+                        ];
                     case 1:
                         _a.rawShards = _b.sent();
+                        // Sanitize address
+                        this.rawShards.map(function (shard) {
+                            shard.farmer.address = shard.farmer.address.trim();
+                        });
+                        this.length = this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
+                        this.final_length = this.rawShards.filter(function (x) { return x.parity === false; }).reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
                         return [2 /*return*/];
                 }
             });

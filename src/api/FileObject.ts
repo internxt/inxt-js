@@ -50,6 +50,11 @@ export class FileObject extends EventEmitter {
   async GetFileMirrors(): Promise<void> {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId)
 
+    // Sanitize address
+    this.rawShards.map(shard => {
+      shard.farmer.address = shard.farmer.address.trim()
+    })
+
     this.length = this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
     this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
   }
