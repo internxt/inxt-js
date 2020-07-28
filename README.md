@@ -34,6 +34,7 @@ API and CLI for the Internxt network
 - - - [ ] If shard cannot be downloaded, request another mirror
 - - - [ ] Blacklist the failed mirror
 - - - [ ] Use some system to rewind stream and start again from the failed shard
+- - - [ ] Report file progress
 - - [X] Download file as a stream
 - - - [X] Create a dummy Readable stream
 - - - [X] Pipe stream to FileMuxer
@@ -43,7 +44,7 @@ API and CLI for the Internxt network
 - - - [ ] As path on CLI version
 - - - [ ] As blob in Browser version
 - - [ ] Use erasure codes
-- - - [ ] Detect if file can be recovered
+- - - [ ] Detect if file can be recovered (has erasure codes)
 - - - [ ] Detect if file NEEDS to be recovered (missing shards)
 - - - [ ] Use parity shards to recompose the missing shards
 
@@ -55,9 +56,16 @@ API and CLI for the Internxt network
 - - [ ] Research C project
 - - [ ] Make API request
 - - [ ] Analize file info
-- - [ ] Create shards
+- - [ ] Encrypt the file
+- - [ ] File Demuxer
+- - - [ ] Calculate the suitable size of shards
+- - - [ ] Split file into shards (all w/ same size)
+- - - [ ] Upload as a stream
+- - - [ ] Report upload progress
 - - [ ] Publish shards on nodes
-- - [ ] Exchange reports for each shard uploaded
+- - [ ] Check if shards are published
+- - [ ] Exchange reports for each shard uploaded (to trigger mirror creation)
 - - [ ] Create parity shards with erasure codes
+- - [ ] Publish all file info into the bucket
 
 </details>
