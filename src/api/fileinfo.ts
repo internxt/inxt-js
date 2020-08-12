@@ -3,7 +3,7 @@ import { doUntil } from 'async'
 import { request } from '../services/request'
 import { Shard } from './shard'
 import { ShardObject } from './ShardObject'
-import { AxiosResponse } from 'axios'
+import { AxiosResponse, AxiosError } from 'axios'
 
 export interface FileInfo {
   bucket: string
@@ -24,7 +24,14 @@ export interface FileInfo {
 }
 
 export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
-  return request(config, 'get', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data)
+  return request(config, 'get', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data).catch((err: AxiosError) => {
+    switch (err.response?.status) {
+      case 404:
+        throw Error(err.response.data.error)
+      default:
+        throw Error('Unhandled error: ' + err.message)
+    }
+  })
 }
 
 export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Shard[]> {

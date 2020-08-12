@@ -18,7 +18,7 @@ describe('# environment', () => {
     })
 
 
-    inxt.resolveFile('e6aa7b3ea8085ee5223c3d08', 'a0b7bcc5521da01448e9941e', './PEPA.jpg', {
+    inxt.resolveFile('e6aa7b3ea8085ee5223c3d08', 'b48c8e3e355f0e82c8180744', './PEPA.jpg', {
       finishedCallback: (err) => {
         console.log('Download finished', err ? err.message : '')
       },
@@ -26,14 +26,6 @@ describe('# environment', () => {
       overwritte: true
     })
 
-    inxt.resolveFile('e6aa7b3ea8085ee5223c3d08', '9a81bd3863bbe00c26eb466d', './PEPA.zip', {
-      finishedCallback: (err) => {
-        console.log('Download finished', err ? err.message : '')
-      },
-      progressCallback: () => {},
-      overwritte: true
-    })
-
-    
+   
   })
 })
