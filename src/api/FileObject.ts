@@ -1,15 +1,23 @@
 import { ShardObject } from "./ShardObject"
-import { FileInfo, GetFileInfo, GetFileMirrors } from "./fileinfo"
+import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror } from "./fileinfo"
 import { EnvironmentConfig } from ".."
 import { EventEmitter } from 'events'
 import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
 import { Shard } from "./shard"
-import { eachLimit, eachSeries, queue, times, AsyncResultIterator } from "async"
+import { eachLimit, eachSeries, queue, times, AsyncResultIterator, retry } from "async"
 import DecryptStream from "../lib/decryptstream"
 import StreamToBlob from 'stream-to-blob'
 import { randomBytes } from 'crypto'
 import FileMuxer from "../lib/filemuxer"
-import MuxDemux from 'mux-demux'
+import fs from 'fs'
+import { Duplex } from 'stream'
+
+function BufferToStream(buffer: Buffer): Duplex {
+  const stream = new Duplex()
+  stream.push(buffer)
+  stream.push(null)
+  return stream
+}
 
 export class FileObject extends EventEmitter {
   shards: ShardObject[] = []
@@ -67,10 +75,7 @@ export class FileObject extends EventEmitter {
     const shardIndex = this.rawShards.map(x => x.index).indexOf(index)
     const shard = this.rawShards[shardIndex]
 
-    const fileMuxer = new FileMuxer({
-      shards: 1,
-      length: shard.size
-    })
+    const fileMuxer = new FileMuxer({ shards: 1, length: shard.size })
 
     const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
     const buffer = shardObject.StartDownloadShard()
@@ -78,6 +83,51 @@ export class FileObject extends EventEmitter {
     fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
 
     return fileMuxer
+  }
+
+  async TryDownloadShardWithFileMuxer(shard: Shard, excluded: string[] = []): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, (nextTry) => {
+        let downloadHasError = false
+        let downloadError: Error | null = null
+        const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size })
+        const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
+  
+        oneFileMuxer.on('error', (err) => {
+          downloadHasError = true
+          downloadError = err
+          // Should emit Exchange Report?
+        })
+  
+        const buffs: Buffer[] = []
+        oneFileMuxer.on('data', (data: Buffer) => { buffs.push(data) })
+  
+        oneFileMuxer.once('drain', () => {
+          if (downloadHasError) {
+            nextTry(downloadError)
+          } else {
+            nextTry(null, Buffer.concat(buffs))
+          }
+        })
+  
+        const buffer = shardObject.StartDownloadShard()
+  
+        oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+      }, async (err, result: Buffer) => {
+        if (err) {
+          excluded.push(shard.farmer.nodeID)
+          const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)
+          if (!newShard[0].farmer) {
+            reject(Error('File missing shard error'))
+          } else {
+            return this.TryDownloadShardWithFileMuxer(newShard[0], excluded)
+          }
+        } else {
+          resolve(result)
+        }
+      })
+    })
+
   }
 
   StartDownloadFile(): FileMuxer {
@@ -94,14 +144,26 @@ export class FileObject extends EventEmitter {
       length: this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
     })
 
-    eachLimit(this.rawShards, 1, (shard, nextItem) => {
+    eachLimit(this.rawShards, 1, async (shard, nextItem) => {
       if (this.fileInfo && shard) {
+
+
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
         this.shards.push(shardObject)
 
         // axios --> hasher
-        const buffer = shardObject.StartDownloadShard()
-        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+        // const buffer = shardObject.StartDownloadShard()
+
+        // We add the stream buffer to the muxer, and will be downloaded to the main stream.
+        // We should download the shard isolated, and check if its ok.
+        // If it fails, try another mirror.
+        // If its ok, add it to the muxer.
+        const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard)
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+
+
+
+        // fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
         fileMuxer.once('drain', () => nextItem())
       }
     }, () => {

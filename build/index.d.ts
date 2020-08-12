@@ -23,5 +23,8 @@ export interface EnvironmentConfig {
     encryptionKey?: string;
     logLevel?: number;
     webProxy?: string;
+    config?: {
+        shardRetry: number;
+    };
 }
 export {};

@@ -63,6 +63,13 @@ var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var crypto_2 = require("crypto");
 var filemuxer_1 = __importDefault(require("../lib/filemuxer"));
+var stream_1 = require("stream");
+function BufferToStream(buffer) {
+    var stream = new stream_1.Duplex();
+    stream.push(buffer);
+    stream.push(null);
+    return stream;
+}
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -130,14 +137,68 @@ var FileObject = /** @class */ (function (_super) {
         }
         var shardIndex = this.rawShards.map(function (x) { return x.index; }).indexOf(index);
         var shard = this.rawShards[shardIndex];
-        var fileMuxer = new filemuxer_1.default({
-            shards: 1,
-            length: shard.size
-        });
+        var fileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
         var shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
         var buffer = shardObject.StartDownloadShard();
         fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
         return fileMuxer;
+    };
+    FileObject.prototype.TryDownloadShardWithFileMuxer = function (shard, excluded) {
+        if (excluded === void 0) { excluded = []; }
+        return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                return [2 /*return*/, new Promise(function (resolve, reject) {
+                        var _a;
+                        async_1.retry({ times: ((_a = _this.config.config) === null || _a === void 0 ? void 0 : _a.shardRetry) || 3, interval: 1000 }, function (nextTry) {
+                            var downloadHasError = false;
+                            var downloadError = null;
+                            var oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
+                            var shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
+                            oneFileMuxer.on('error', function (err) {
+                                downloadHasError = true;
+                                downloadError = err;
+                                // Should emit Exchange Report?
+                            });
+                            var buffs = [];
+                            oneFileMuxer.on('data', function (data) { buffs.push(data); });
+                            oneFileMuxer.once('drain', function () {
+                                if (downloadHasError) {
+                                    nextTry(downloadError);
+                                }
+                                else {
+                                    nextTry(null, Buffer.concat(buffs));
+                                }
+                            });
+                            var buffer = shardObject.StartDownloadShard();
+                            oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        }, function (err, result) { return __awaiter(_this, void 0, void 0, function () {
+                            var newShard;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        if (!err) return [3 /*break*/, 2];
+                                        excluded.push(shard.farmer.nodeID);
+                                        return [4 /*yield*/, fileinfo_1.GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)];
+                                    case 1:
+                                        newShard = _a.sent();
+                                        if (!newShard[0].farmer) {
+                                            reject(Error('File missing shard error'));
+                                        }
+                                        else {
+                                            return [2 /*return*/, this.TryDownloadShardWithFileMuxer(newShard[0], excluded)];
+                                        }
+                                        return [3 /*break*/, 3];
+                                    case 2:
+                                        resolve(result);
+                                        _a.label = 3;
+                                    case 3: return [2 /*return*/];
+                                }
+                            });
+                        }); });
+                    })];
+            });
+        });
     };
     FileObject.prototype.StartDownloadFile = function () {
         var _this = this;
@@ -150,16 +211,25 @@ var FileObject = /** @class */ (function (_super) {
             shards: this.rawShards.length,
             length: this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size
         });
-        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
-            if (_this.fileInfo && shard) {
-                shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
-                _this.shards.push(shardObject);
-                // axios --> hasher
-                var buffer = shardObject.StartDownloadShard();
-                fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
-                fileMuxer.once('drain', function () { return nextItem(); });
-            }
-        }, function () {
+        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) { return __awaiter(_this, void 0, void 0, function () {
+            var shardBuffer;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!(this.fileInfo && shard)) return [3 /*break*/, 2];
+                        shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+                        this.shards.push(shardObject);
+                        return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
+                    case 1:
+                        shardBuffer = _a.sent();
+                        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        // fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
+                        fileMuxer.once('drain', function () { return nextItem(); });
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        }); }, function () {
             _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
             console.log('ALL SHARDS FINISHED');
             _this.emit('end');
@@ -171,7 +241,7 @@ var FileObject = /** @class */ (function (_super) {
 exports.FileObject = FileObject;
 
 }).call(this,require("buffer").Buffer)
-},{"../lib/crypto":7,"../lib/decryptstream":8,"../lib/filemuxer":10,"./ShardObject":2,"./fileinfo":3,"async":31,"buffer":117,"crypto":126,"events":153}],2:[function(require,module,exports){
+},{"../lib/crypto":7,"../lib/decryptstream":8,"../lib/filemuxer":10,"./ShardObject":2,"./fileinfo":3,"async":31,"buffer":117,"crypto":126,"events":153,"stream":244}],2:[function(require,module,exports){
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
@@ -210,29 +280,6 @@ var ShardObject = /** @class */ (function (_super) {
     }
     ShardObject.prototype.StartDownloadShard = function () {
         var downloader = shard_1.DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID);
-        /*
-        this.hasher.on('end', () => {
-          this.shardHash = ripemd160(this.hasher.read())
-          console.log('Result: %s, Expected: %s', this.shardHash.toString('hex'), this.shardInfo.hash)
-          if (this.shardHash.toString('hex') !== this.shardInfo.hash) {
-            console.error('Hash shard corrupt')
-            this._isErrored = true
-            this.emit('error', new Error('Invalid shard hash'))
-          }
-        })
-        */
-        /*
-    
-        res.on('end', () => {
-          this.hasher.end()
-          this._isFinished = true
-          if (!this._isErrored) {
-            this.emit('end')
-          }
-        })
-    
-        res.on('data', () => {})
-        */
         return downloader;
     };
     ShardObject.prototype.isFinished = function () { return this._isFinished; };
