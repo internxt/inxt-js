@@ -3,3 +3,6 @@ node_modules/
 
 # My common test filenames
 PEPA.*
+
+# Dev files
+notes.*
