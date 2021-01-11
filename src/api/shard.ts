@@ -62,3 +62,15 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
     }
   }
 }
+
+
+
+export async function UploadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+  // TODO
+  /*
+    1. Files are encrypted
+    2. Encrypted files are split into shards
+    3. Audit pre-processing
+    4. Transmit shards to the network
+  */
+}

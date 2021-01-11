@@ -28,3 +28,8 @@ export function computeShardSize(fileSize: number): number {
   }
   return 0
 }
+
+export function totalDataShards(fileSize: number): number {
+  const totalShards = Math.ceil(fileSize / computeShardSize(fileSize));
+  return totalShards;
+}
