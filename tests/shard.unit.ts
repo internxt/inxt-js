@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { computeShardSize } from '../src/lib/utils/shard'
+import { computeShardSize, totalDataShards } from '../src/lib/utils/shard'
 import assert from 'assert'
 
 describe('# ShardSize Function', () => {
@@ -30,4 +30,9 @@ describe('# ShardSize Function', () => {
     let fileSize = 0;
     assert.strictEqual(0, computeShardSize(fileSize))
   });
+
+  it('Compute number of shards in a file.' , () => {
+    let fileSize = 268435457;
+    assert.strictEqual(9, totalDataShards(268435457));
+  })
 })
