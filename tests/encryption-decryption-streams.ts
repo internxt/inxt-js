@@ -4,7 +4,11 @@ import { createCipheriv, randomBytes, createDecipheriv, createHash } from 'crypt
 import stream from 'stream'
 import expect from 'chai'
 import assert from 'assert'
-
+import fs from 'fs'
+import { Readable } from 'stream'
+import crypto from 'crypto'
+import { ripemd160, sha256 } from '../src/lib/crypto'
+import path from 'path'
 // Crypto encryption mock
 
 describe('# Encryption - Decryption logic', () => {
@@ -59,6 +63,40 @@ describe('# Encryption - Decryption logic', () => {
       .pipe(contentStream)
   })
 
+  it('Check that preleave is generated correctly', () => {
 
+    const fileBuffer = fs.readFileSync(path.resolve(__dirname, '../54.txt'))
+    const readableStream = Readable.from(fileBuffer.toString())
+
+    const limit = 100
+    const shard = Buffer.alloc(limit)
+    const cipher = createCipheriv(algorithm, key, iv)
+
+    let preleave:string
+
+    readableStream.on('data', (chunk: Buffer) => {
+      if(shard.length < limit) {
+        cipher.write(chunk)
+        Buffer.concat([shard, chunk])
+      } else {
+        console.log('readable paused')
+        console.log('current shard length', shard.length)
+        readableStream.pause()
+
+        const challenge = crypto.randomBytes(32)
+        const shardEncrypted = cipher.final()
+
+        // concatenate with the challenge
+        const preleaveBuffer = Buffer.concat([challenge, shardEncrypted])
+
+        // calculate hash
+        preleave = ripemd160(sha256(preleaveBuffer)).toString('hex')
+        console.log(`preleave hash: ${preleave}`)
+
+        // readableStream.resume()
+      }
+      
+    })  
+  })
 
 })
