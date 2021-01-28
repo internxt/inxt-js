@@ -13,10 +13,10 @@ import path from 'path'
 
 describe('# Encryption - Decryption logic', () => {
   const algorithm = 'aes-256-ctr'
-  const secret = '12345678123456781234567812345678'
+  const secret = '00000000000000000000000000000000'
   const keyRaw = createHash('sha256').update(String(secret)).digest('base64').substr(0, 32);
   const key = Buffer.from(keyRaw, 'utf-8')
-  const iv = randomBytes(16)
+  const iv = Buffer.alloc(16) //randomBytes(16)
 
   const cipher = createCipheriv(algorithm, key, iv);
 
@@ -65,7 +65,7 @@ describe('# Encryption - Decryption logic', () => {
 
   it('Check that preleave is generated correctly', () => {
 
-    const fileBuffer = fs.readFileSync(path.resolve(__dirname, '../54.txt'))
+    const fileBuffer = fs.readFileSync('./54.txt')
     const readableStream = Readable.from(fileBuffer.toString())
 
     const limit = 100
@@ -83,7 +83,7 @@ describe('# Encryption - Decryption logic', () => {
         console.log('current shard length', shard.length)
         readableStream.pause()
 
-        const challenge = crypto.randomBytes(32)
+        const challenge = Buffer.alloc(32)//crypto.randomBytes(32)
         const shardEncrypted = cipher.final()
 
         // concatenate with the challenge
@@ -91,11 +91,11 @@ describe('# Encryption - Decryption logic', () => {
 
         // calculate hash
         const preleave = ripemd160(sha256(preleaveBuffer)) // .toString('hex')
-        console.log(`preleave hash: ${preleave}`)
+        //console.log(`preleave hash: ${preleave}`)
 
         const leaf = ripemd160(sha256(preleave)).toString('hex')
 
-        console.log(`preleave hash: ${leaf}`)
+        console.log(`leaf hash: ${leaf}`)
 
         // readableStream.resume()
       }
