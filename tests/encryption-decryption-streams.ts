@@ -83,7 +83,7 @@ describe('# Encryption - Decryption logic', () => {
         console.log('current shard length', shard.length)
         readableStream.pause()
 
-        const challenge = Buffer.alloc(32)//crypto.randomBytes(32)
+        const challenge = Buffer.alloc(32, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')//crypto.randomBytes(32)
         const shardEncrypted = cipher.final()
 
         // concatenate with the challenge
