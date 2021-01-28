@@ -90,13 +90,16 @@ describe('# Encryption - Decryption logic', () => {
         const preleaveBuffer = Buffer.concat([challenge, shardEncrypted])
 
         // calculate hash
-        preleave = ripemd160(sha256(preleaveBuffer)).toString('hex')
+        const preleave = ripemd160(sha256(preleaveBuffer)) // .toString('hex')
         console.log(`preleave hash: ${preleave}`)
+
+        const leaf = ripemd160(sha256(preleave)).toString('hex')
+
+        console.log(`preleave hash: ${leaf}`)
 
         // readableStream.resume()
       }
-      
-    })  
+    });
   })
 
 })
