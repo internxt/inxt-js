@@ -14,10 +14,10 @@ import { MerkleTree } from '../src/lib/merkleTree'
 
 describe('# Encryption - Decryption logic', () => {
   const algorithm = 'aes-256-ctr'
-  const secret = '12345678123456781234567812345678'
+  const secret = '00000000000000000000000000000000'
   const keyRaw = createHash('sha256').update(String(secret)).digest('base64').substr(0, 32);
   const key = Buffer.from(keyRaw, 'utf-8')
-  const iv = randomBytes(16)
+  const iv = Buffer.alloc(16) //randomBytes(16)
 
   const cipher = createCipheriv(algorithm, key, iv);
 
@@ -66,7 +66,7 @@ describe('# Encryption - Decryption logic', () => {
 
   it('Check that preleave is generated correctly', () => {
 
-    const fileBuffer = fs.readFileSync(path.resolve(__dirname, '../54.txt'))
+    const fileBuffer = fs.readFileSync('./54.txt')
     const readableStream = Readable.from(fileBuffer.toString())
 
     new MerkleTree(readableStream).generate()
