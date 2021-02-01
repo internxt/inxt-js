@@ -1,4 +1,6 @@
 import { expect } from 'chai'
+import { Stream } from 'stream'
+
 import * as m from '../../src/lib/utils/mocks'
 
 const HTTPStatusCodes = m.HTTPStatusCodes
@@ -22,31 +24,43 @@ const req = new NodeRequest(hostname, path, port, reqHeaders, token, hash)
 
 describe('# Node Mock', () => {
 
-    it('Setted and received responses are the same', async () => {
-        const res = m.generateResponse(HTTPStatusCodes.OK, 2000)
-        node.nodeResponse = res
-        expect(await node.get(req)).to.deep.equal(res)
+    describe('get()', () => {
+        it('Setted and received responses are the same', async () => {
+            const res = m.generateResponse(HTTPStatusCodes.OK, 2000)
+            node.nodeResponse = res
+            expect(await node.get(req)).to.deep.equal(res)
+        })
+    
+        it('Setted and received response readables sizes are the same', async () => {
+            const responseSize = 2000
+            const nodeRes = m.generateResponse(HTTPStatusCodes.OK, responseSize)
+            node.nodeResponse = nodeRes
+    
+            const res = await node.get(req)
+            expect(res instanceof NodeResponse).to.be.true
+    
+            if(res instanceof NodeResponse) {
+                res.on('end', () => {
+                    expect(res.content.readableLength).to.be.equal(responseSize)
+                }) 
+            }
+        })
     })
 
-    it('Setted and received response readables sizes are the same', async () => {
-        const responseSize = 2000
-        const nodeRes = m.generateResponse(HTTPStatusCodes.OK, responseSize)
-        node.nodeResponse = nodeRes
-
-        const res = await node.get(req)
-        expect(res instanceof NodeResponse).to.be.true
-
-        if(res instanceof NodeResponse) {
-            res.on('end', () => {
-                expect(res.content.readableLength).to.be.equal(responseSize)
-            }) 
-        }
+    describe('generateResponse()', () => {
+        it('Throws error when a case is not implemented yet', () => {
+            // no content is not implemented
+            expect(() => m.generateResponse(HTTPStatusCodes.NO_CONTENT, 2000))
+                .to.throw(new CaseNotImplementedError().message)
+        })
     })
-  
-    it('Throws error when a case is not implemented yet', () => {
-        // no content is not implemented
-        expect(() => m.generateResponse(HTTPStatusCodes.NO_CONTENT, 2000))
-            .to.throw(new CaseNotImplementedError().message)
+
+    describe('send()', () => {
+        it('Resolves with same node response', async () => {
+            const nodeRes = m.generateResponse(HTTPStatusCodes.OK, 2000)
+            node.nodeResponse = nodeRes
+            expect(await node.send(new Stream())).to.deep.equal(nodeRes)
+        })
     })
-  
+
 })

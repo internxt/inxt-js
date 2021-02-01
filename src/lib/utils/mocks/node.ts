@@ -1,7 +1,7 @@
-import { assert } from "chai"
 import { Readable } from 'stream'
 import { randomBytes } from 'crypto'
 import { HTTPStatusCodes, HTTPHeaders, ContentType } from './http'
+import { Stream } from 'stream'
 
 export class NodeMock {
     public port: number;
@@ -24,6 +24,10 @@ export class NodeMock {
 
     get (nr: NodeRequest): Promise<NodeResponse | string> {
         return new Promise((resolve) => resolve(this._nodeResponse))
+    }
+
+    send (shardStream: Stream) : Promise <NodeResponse> {
+        return Promise.resolve(this._nodeResponse)
     }
 }
 
