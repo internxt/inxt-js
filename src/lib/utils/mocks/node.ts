@@ -10,6 +10,7 @@ export class NodeMock {
     public hostname: string;
 
     private _nodeResponse: NodeResponse
+    private _shard: Readable
 
     constructor (port: number, path: string, ID: string, hostname: string) {
         this.port = port
@@ -18,12 +19,16 @@ export class NodeMock {
         this.hostname = hostname
     }
 
+    set shard (s: Readable) {
+        this._shard = this.shard
+    }
+
     set nodeResponse (nr: NodeResponse) {
         this._nodeResponse = nr
     }
 
-    get (nr: NodeRequest): Promise<NodeResponse | string> {
-        return new Promise((resolve) => resolve(this._nodeResponse))
+    get (nr: NodeRequest): NodeResponse {
+        return this._nodeResponse
     }
 
     send (shardStream: Stream) : Promise <NodeResponse> {
