@@ -2,7 +2,7 @@ import { EnvironmentConfig } from '../../../..'
 import { Shard } from '../../../../api/shard'
 import { randomBytes } from 'crypto'
 
-interface ShardReferenced extends Shard {
+export interface ShardReferenced extends Shard {
     fileId: string,
     bucketId: string
 }
