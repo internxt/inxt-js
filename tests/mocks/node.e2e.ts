@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import * as m from '../src/lib/utils/mocks'
+import * as m from '../../src/lib/utils/mocks'
 
 const HTTPStatusCodes = m.HTTPStatusCodes
 const NodeResponse = m.NodeResponse
