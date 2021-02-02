@@ -137,7 +137,10 @@ interface CreateFrameResponse {
   /* frame id */
   id: string,
   /* user email */
-  user: string,
+  user: {
+    id: string,
+    email: string
+  },
   shards: [],
   storageSize: number,
   /* frame size */
@@ -166,7 +169,7 @@ export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jw
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams).then((res: AxiosResponse) => res.data)
+  return request(config, 'post', targetUrl, finalParams).then<>((res: AxiosResponse) => res.data)
 }
 
 interface CreateEntryFromFrameBody {
