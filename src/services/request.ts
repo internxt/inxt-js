@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
 import { Readable } from 'stream'
@@ -60,7 +60,28 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
   })
 }
 
-export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+interface CheckBucketExistanceResponse {
+  user: string,
+  encryptionKey: string,
+  publicPermissions: string[],
+  created: string,
+  name: string,
+  pubkeys: string[],
+  status: string,
+  transfer: number,
+  storage: number, 
+  id: string
+} 
+
+/**
+ * Checks if a bucket exists given its id
+ * @param config App config
+ * @param bucketId 
+ * @param token 
+ * @param jwt JSON Web Token
+ * @param params 
+ */
+export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params: AxiosRequestConfig): Promise<CheckBucketExistanceResponse> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -71,7 +92,17 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
   }
 
   const finalParams = { ...defParams, ...params }
+  
   return request(config, 'get', targetUrl, finalParams)
+    .then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
+    .catch((err: AxiosError) => {
+      switch (err.response?.status) {
+        case 404:
+          throw Error(err.response.data.error)
+        default:
+          throw Error('Unhandled error: ' + err.message)
+      }
+    })
 }
 
 
