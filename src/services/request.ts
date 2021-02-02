@@ -69,7 +69,7 @@ interface CheckBucketExistanceResponse {
   created: string,
   name: string,
   pubkeys: string[],
-  status: string,
+  status: 'Active' | 'Inactive',
   transfer: number,
   storage: number, 
   id: string
@@ -169,7 +169,7 @@ export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jw
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams).then<>((res: AxiosResponse) => res.data)
+  return request(config, 'post', targetUrl, finalParams).then((res: AxiosResponse) => res.data)
 }
 
 interface CreateEntryFromFrameBody {
