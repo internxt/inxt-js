@@ -54,16 +54,7 @@ function challengeArray(): Buffer[] {
   return challengeArray
 }
 
-
-function hashPreleaf(preleaf: Buffer): Buffer {
-  return ripemd160(sha256(preleaf))
-}
-
-function hashLeaf(preleafHash: Buffer) {
-  return ripemd160(sha256(preleafHash))
-}
-
-export default function merkleTree(encrypted: Buffer): MerkleTree {
+function merkleTree(encrypted: Buffer): MerkleTree {
   // set the challenges randomnly
   const challenges = challengeArray()
 
@@ -78,6 +69,23 @@ export default function merkleTree(encrypted: Buffer): MerkleTree {
 
   return merkleTree
 }
+
+
+function getChallenges(mT: MerkleTree): string[] {
+  const challenges = mT.challenge.map(challengeBuffer => {
+    return challengeBuffer.toString("hex")
+  })
+  return challenges
+}
+
+function getTree(mT: MerkleTree): string[] {
+  const tree = mT.leaf.map(leafBuffer => {
+    return leafBuffer.toString()
+  })
+  return tree
+}
+
+export { merkleTree, getChallenges, getTree, MerkleTree }
 
 
 
