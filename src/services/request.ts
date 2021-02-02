@@ -226,3 +226,66 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   const finalParams = { ...defParams, ...params }
   return request(config, 'post', targetUrl, finalParams)
 }
+
+interface AddShardToFrameBody {
+  /* shard hash */
+  hash: string,
+  /* shard size */
+  size: number, 
+  /* shard index */
+  index: number,
+  /* if exists a shard parity for this shard */
+  parity: boolean,
+  /* shard challenges */
+  challenges: string[],
+  tree: string[], 
+  /* nodes excluded from being the shard's node */
+  exclude: string[]
+}
+
+interface AddShardToFrameResponse {
+  hash: string,
+  token: string,
+  operation: 'PUSH',
+  farmer: {
+    userAgent: string,
+    protocol: string,
+    address: string,
+    port: number,
+    nodeID: string,
+    lastSeen: number
+  }
+}
+
+/**
+ * Negotiates a storage contract and adds the shard to the frame
+ * @param {EnvironmentConfig} config App config
+ * @param {string} bucketId
+ * @param {CreateEntryFromFrameBody} body
+ * @param {string} jwt JSON Web Token
+ * @param {AxiosRequestConfig} params
+ */
+export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AddShardToFrameResponse> {
+  const targetUrl = `${INXT_API_URL}/frames/${frameId}`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      Authorization: `Basic ${jwt}`,
+    },
+    data: body
+  }
+
+  const finalParams = { ...defParams, ...params }
+
+  return request(config, 'put', targetUrl, finalParams)
+    .then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
+    .catch((err: AxiosError) => {
+      switch (err.response?.status) {
+        case 404:
+          throw Error(err.response.data.error)
+        default:
+          throw Error('Unhandled error: ' + err.message)
+      }
+    })
+}
