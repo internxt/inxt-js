@@ -6,6 +6,8 @@ import https from 'https'
 import { ClientRequest, IncomingMessage } from 'http'
 import url from 'url'
 
+const INXT_API_URL = 'https://api.internxt.com'
+
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
@@ -59,7 +61,7 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
 }
 
 export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  const targetUrl = `https://api.internxt.com/buckets/${bucketId}?token=${token}`
+  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -74,7 +76,7 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
 
 
 export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  const targetUrl = `https://api.internxt.com/buckets/${bucketId}/file-ids/${fileId}`
+  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
