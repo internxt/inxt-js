@@ -95,16 +95,7 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'get', targetUrl, finalParams)
-    .then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
-      switch (err.response?.status) {
-        case 404:
-          throw Error(err.response.data.error)
-        default:
-          throw Error('Unhandled error: ' + err.message)
-      }
-    })
+  return request(config, 'get', targetUrl, finalParams).then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
 }
 
 interface CheckFileExistanceResponse {
@@ -131,16 +122,7 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'get', targetUrl, finalParams)
-    .then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
-      switch (err.response?.status) {
-        case 404:
-          throw Error(err.response.data.error)
-        default:
-          throw Error('Unhandled error: ' + err.message)
-      }
-    })
+  return request(config, 'get', targetUrl, finalParams).then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
 }
 
 interface CreateFrameBody {
@@ -184,16 +166,7 @@ export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jw
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams)
-    .then((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
-      switch (err.response?.status) {
-        case 404:
-          throw Error(err.response.data.error)
-        default:
-          throw Error('Unhandled error: ' + err.message)
-      }
-    })
+  return request(config, 'post', targetUrl, finalParams).then((res: AxiosResponse) => res.data)
 }
 
 interface CreateEntryFromFrameBody {
@@ -247,16 +220,7 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams)
-    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
-      switch (err.response?.status) {
-        case 404:
-          throw Error(err.response.data.error)
-        default:
-          throw Error('Unhandled error: ' + err.message)
-      }
-    })
+  return request(config, 'post', targetUrl, finalParams).then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
 }
 
 interface AddShardToFrameBody {
@@ -310,16 +274,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'put', targetUrl, finalParams)
-    .then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
-      switch (err.response?.status) {
-        case 404:
-          throw Error(err.response.data.error)
-        default:
-          throw Error('Unhandled error: ' + err.message)
-      }
-    })
+  return request(config, 'put', targetUrl, finalParams).then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
 }
 
 /**
