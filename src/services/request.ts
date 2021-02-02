@@ -128,7 +128,7 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   }
 
   const finalParams = { ...defParams, ...params }
-  
+
   return request(config, 'get', targetUrl, finalParams)
     .then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
     .catch((err: AxiosError) => {
@@ -141,19 +141,57 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
     })
 }
 
+interface CreateFrameBody {
+  user: {
+    id: string,
+    email: string,
+    uuid: string,
+  }
+}
 
-export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <AxiosResponse<JSON>> {
+interface CreateFrameResponse {
+  /* frame id */
+  id: string,
+  /* user email */
+  user: string,
+  shards: [],
+  storageSize: number,
+  /* frame size */
+  size: number,
+  locked: boolean,
+  /* created timestamp stringified */
+  created: string,
+}
+
+/**
+ * Creates a file staging frame
+ * @param config App config
+ * @param jwt JSON Web Token
+ * @param params 
+ */
+export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
       Authorization: `Basic ${jwt}`,
+      data: body
     }
   }
 
   const finalParams = { ...defParams, ...params }
+
   return request(config, 'post', targetUrl, finalParams)
+    .then((res: AxiosResponse) => res.data)
+    .catch((err: AxiosError) => {
+      switch (err.response?.status) {
+        case 404:
+          throw Error(err.response.data.error)
+        default:
+          throw Error('Unhandled error: ' + err.message)
+      }
+    })
 }
 
 interface CreateEntryFromFrameBody {
