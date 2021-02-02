@@ -206,6 +206,26 @@ interface CreateEntryFromFrameBody {
   }
 }
 
+interface CreateEntryFromFrameResponse {
+  index: string,
+  /* frame id */
+  frame: string,
+  /* bucket id */
+  bucket: string,
+  mimetype: string
+  name: string,
+  renewal: string,
+  created: string,
+  hmac: {
+    value: string,
+    type: string
+  },
+  erasure: {
+    type: string
+  },
+  size: number
+}
+
 /**
  * Creates a bucket entry from the given frame object
  * @param {EnvironmentConfig} config App config
@@ -214,7 +234,7 @@ interface CreateEntryFromFrameBody {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AxiosResponse<JSON>> {
+export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -226,7 +246,17 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   }
 
   const finalParams = { ...defParams, ...params }
+
   return request(config, 'post', targetUrl, finalParams)
+    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
+    .catch((err: AxiosError) => {
+      switch (err.response?.status) {
+        case 404:
+          throw Error(err.response.data.error)
+        default:
+          throw Error('Unhandled error: ' + err.message)
+      }
+    })
 }
 
 interface AddShardToFrameBody {
