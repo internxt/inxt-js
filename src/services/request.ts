@@ -92,7 +92,7 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
   }
 
   const finalParams = { ...defParams, ...params }
-  
+
   return request(config, 'get', targetUrl, finalParams)
     .then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
     .catch((err: AxiosError) => {
@@ -105,8 +105,19 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
     })
 }
 
+interface CheckFileExistanceResponse {
+  id: string
+}
 
-export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+/**
+ * Checks if a file exists given its id and a bucketId 
+ * @param config App config
+ * @param bucketId 
+ * @param fileId 
+ * @param jwt JSON Web Token
+ * @param params 
+ */
+export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<CheckFileExistanceResponse> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -117,7 +128,17 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   }
 
   const finalParams = { ...defParams, ...params }
+  
   return request(config, 'get', targetUrl, finalParams)
+    .then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
+    .catch((err: AxiosError) => {
+      switch (err.response?.status) {
+        case 404:
+          throw Error(err.response.data.error)
+        default:
+          throw Error('Unhandled error: ' + err.message)
+      }
+    })
 }
 
 
