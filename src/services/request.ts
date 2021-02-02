@@ -88,3 +88,18 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   const finalParams = { ...defParams, ...params }
   return request(config, 'get', targetUrl, finalParams)
 }
+
+
+export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <AxiosResponse<JSON>> {
+  const targetUrl = `${INXT_API_URL}/frames`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      Authorization: `Basic ${jwt}`,
+    }
+  }
+
+  const finalParams = { ...defParams, ...params }
+  return request(config, 'post', targetUrl, finalParams)
+}
