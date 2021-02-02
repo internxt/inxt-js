@@ -103,3 +103,36 @@ export function createFrame(config: EnvironmentConfig, jwt:string, params: Axios
   const finalParams = { ...defParams, ...params }
   return request(config, 'post', targetUrl, finalParams)
 }
+
+interface CreateEntryFromFrameBody {
+  frame: string,
+  filename: string,
+  index: string,
+  hmac: {
+    type: string,
+    value: string
+  }
+}
+
+/**
+ * Creates a bucket entry from the given frame object
+ * @param {EnvironmentConfig} config App config
+ * @param {string} bucketId
+ * @param {CreateEntryFromFrameBody} body
+ * @param {string} jwt JSON Web Token
+ * @param {AxiosRequestConfig} params
+ */
+export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AxiosResponse<JSON>> {
+  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      Authorization: `Basic ${jwt}`,
+    },
+    data: body
+  }
+
+  const finalParams = { ...defParams, ...params }
+  return request(config, 'post', targetUrl, finalParams)
+}
