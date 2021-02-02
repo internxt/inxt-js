@@ -1,10 +1,12 @@
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
-import { EnvironmentConfig } from '..'
-import { sha256 } from '../lib/crypto'
+import url from 'url'
 import { Readable } from 'stream'
 import https from 'https'
 import { ClientRequest, IncomingMessage } from 'http'
-import url from 'url'
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+
+import { EnvironmentConfig } from '..'
+import { sha256 } from '../lib/crypto'
+import { ExchangeReport, ExchangeReportParams } from '../api/reports'
 
 const INXT_API_URL = 'https://api.internxt.com'
 
@@ -288,4 +290,15 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
           throw Error('Unhandled error: ' + err.message)
       }
     })
+}
+
+/**
+ * Sends an upload exchange report
+ * @param config App config
+ * @param body 
+ */
+export function sendUploadExchangeReport(config: EnvironmentConfig, body: ExchangeReportParams): Promise<AxiosResponse<JSON>> {
+  const exchangeReport = new ExchangeReport(config)
+  exchangeReport.params = body
+  return exchangeReport.sendReport()
 }
