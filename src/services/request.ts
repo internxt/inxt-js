@@ -57,3 +57,18 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
     }
   })
 }
+
+export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+  const targetUrl = `https://api.internxt.com/buckets/${bucketId}?token=${token}`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      Authorization: `Basic ${jwt}`,
+    }
+  }
+
+  const finalParams = { ...defParams, ...params }
+  return request(config, 'get', targetUrl, finalParams)
+}
+
