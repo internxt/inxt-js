@@ -72,3 +72,17 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
   return request(config, 'get', targetUrl, finalParams)
 }
 
+
+export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+  const targetUrl = `https://api.internxt.com/buckets/${bucketId}/file-ids/${fileId}`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      Authorization: `Basic ${jwt}`,
+    }
+  }
+
+  const finalParams = { ...defParams, ...params }
+  return request(config, 'get', targetUrl, finalParams)
+}
