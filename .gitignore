@@ -6,3 +6,5 @@ PEPA.*
 
 # Dev files
 notes.*
+
+build/
