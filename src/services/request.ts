@@ -125,22 +125,11 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   return request(config, 'get', targetUrl, finalParams).then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
 }
 
-interface CreateFrameBody {
-  user: {
-    id: string,
-    email: string,
-    uuid: string,
-  }
-}
-
 interface CreateFrameResponse {
   /* frame id */
   id: string,
   /* user email */
-  user: {
-    id: string,
-    email: string
-  },
+  user: string,
   shards: [],
   storageSize: number,
   /* frame size */
@@ -156,14 +145,13 @@ interface CreateFrameResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
+export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
       Authorization: `Basic ${jwt}`,
-      data: body
     }
   }
 
