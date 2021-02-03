@@ -62,6 +62,15 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
   })
 }
 
+export function extractErrorMsg(err: AxiosError) : void {
+  if(err.response) {
+    const errorMsg = err.response.data.error
+    throw new Error(errorMsg)
+  } else {
+    throw new Error('empty error message')
+  }
+} 
+
 interface CheckBucketExistanceResponse {
   user: string,
   encryptionKey: string,
@@ -83,7 +92,7 @@ interface CheckBucketExistanceResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params: AxiosRequestConfig): Promise<CheckBucketExistanceResponse> {
+export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params?: AxiosRequestConfig): Promise<CheckBucketExistanceResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -95,7 +104,9 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'get', targetUrl, finalParams).then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
+  return request(config, 'get', targetUrl, finalParams)
+    .then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
 
 interface CheckFileExistanceResponse {
@@ -111,7 +122,7 @@ interface CheckFileExistanceResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<CheckFileExistanceResponse> {
+export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<CheckFileExistanceResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -123,7 +134,9 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'get', targetUrl, finalParams).then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
+  return request(config, 'get', targetUrl, finalParams)
+    .then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
 
 interface CreateFrameResponse {
@@ -146,7 +159,7 @@ interface CreateFrameResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
+export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -158,7 +171,9 @@ export function createFrame(config: EnvironmentConfig, jwt:string, params: Axios
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams).then((res: AxiosResponse) => res.data)
+  return request(config, 'post', targetUrl, finalParams)
+    .then((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
 
 interface CreateEntryFromFrameBody {
@@ -199,7 +214,7 @@ interface CreateEntryFromFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse> {
+export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -212,7 +227,9 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'post', targetUrl, finalParams).then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
+  return request(config, 'post', targetUrl, finalParams)
+    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
 
 interface AddShardToFrameBody {
@@ -253,7 +270,7 @@ interface AddShardToFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AddShardToFrameResponse> {
+export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AddShardToFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -266,7 +283,9 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 
   const finalParams = { ...defParams, ...params }
 
-  return request(config, 'put', targetUrl, finalParams).then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
+  return request(config, 'put', targetUrl, finalParams)
+    .then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
 
 /**
@@ -294,7 +313,7 @@ interface SendShardToNodeResponse {
  * @param nodeID 
  * @param content Buffer with shard content
  */
-export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse> {
+export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse | void> {
   const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -305,5 +324,7 @@ export function sendShardToNode (config: EnvironmentConfig, shardHash: string, t
     data: content
   }
 
-  return request(config, 'post', targetUrl, defParams).then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
+  return request(config, 'post', targetUrl, defParams)
+    .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
+    .catch(extractErrorMsg)
 }
