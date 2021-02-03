@@ -99,6 +99,7 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
 }
 
 interface CheckFileExistanceResponse {
+  /* file-id */
   id: string
 }
 
