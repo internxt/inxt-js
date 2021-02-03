@@ -99,6 +99,7 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
 }
 
 interface CheckFileExistanceResponse {
+  /* file-id */
   id: string
 }
 
@@ -125,22 +126,11 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   return request(config, 'get', targetUrl, finalParams).then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
 }
 
-interface CreateFrameBody {
-  user: {
-    id: string,
-    email: string,
-    uuid: string,
-  }
-}
-
 interface CreateFrameResponse {
   /* frame id */
   id: string,
   /* user email */
-  user: {
-    id: string,
-    email: string
-  },
+  user: string,
   shards: [],
   storageSize: number,
   /* frame size */
@@ -156,14 +146,13 @@ interface CreateFrameResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function createFrame(config: EnvironmentConfig, body: CreateFrameBody, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
+export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
       Authorization: `Basic ${jwt}`,
-      data: body
     }
   }
 
@@ -259,8 +248,8 @@ interface AddShardToFrameResponse {
 /**
  * Negotiates a storage contract and adds the shard to the frame
  * @param {EnvironmentConfig} config App config
- * @param {string} bucketId
- * @param {CreateEntryFromFrameBody} body
+ * @param {string} frameId
+ * @param {AddShardToFrameBody} body
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
@@ -287,6 +276,34 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, body: ExchangeReportParams): Promise<AxiosResponse<JSON>> {
   const exchangeReport = new ExchangeReport(config)
-  exchangeReport.params = body
+  exchangeReport.params = { ...exchangeReport.params, ...body }
   return exchangeReport.sendReport()
+}
+
+interface SendShardToNodeResponse {
+  result: string
+}
+
+/**
+ * Stores a shard in a node
+ * @param config App config
+ * @param shardHash 
+ * @param token Node token
+ * @param hostname Node url
+ * @param port Node xcore port
+ * @param nodeID 
+ * @param content Buffer with shard content
+ */
+export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse> {
+  const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      'x-storj-node-id': nodeID,
+    },
+    data: content
+  }
+
+  return request(config, 'post', targetUrl, defParams).then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
 }
