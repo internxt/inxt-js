@@ -276,6 +276,6 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, body: ExchangeReportParams): Promise<AxiosResponse<JSON>> {
   const exchangeReport = new ExchangeReport(config)
-  exchangeReport.params = body
+  exchangeReport.params = { ...exchangeReport.params, ...body }
   return exchangeReport.sendReport()
 }
