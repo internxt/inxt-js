@@ -248,8 +248,8 @@ interface AddShardToFrameResponse {
 /**
  * Negotiates a storage contract and adds the shard to the frame
  * @param {EnvironmentConfig} config App config
- * @param {string} bucketId
- * @param {CreateEntryFromFrameBody} body
+ * @param {string} frameId
+ * @param {AddShardToFrameBody} body
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
