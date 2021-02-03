@@ -279,3 +279,31 @@ export function sendUploadExchangeReport(config: EnvironmentConfig, body: Exchan
   exchangeReport.params = { ...exchangeReport.params, ...body }
   return exchangeReport.sendReport()
 }
+
+interface SendShardToNodeResponse {
+  result: string
+}
+
+/**
+ * Stores a shard in a node
+ * @param config App config
+ * @param shardHash 
+ * @param token Node token
+ * @param hostname Node url
+ * @param port Node xcore port
+ * @param nodeID 
+ * @param content Buffer with shard content
+ */
+export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse> {
+  const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
+  const defParams: AxiosRequestConfig = {
+    headers: {
+      'User-Agent': 'libstorj-2.0.0-beta2',
+      'Content-Type': 'application/octet-stream',
+      'x-storj-node-id': nodeID,
+    },
+    data: content
+  }
+
+  return request(config, 'post', targetUrl, defParams).then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
+}
