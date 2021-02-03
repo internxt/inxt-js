@@ -122,7 +122,7 @@ interface CheckFileExistanceResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params: AxiosRequestConfig): Promise<CheckFileExistanceResponse | void> {
+export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params?: AxiosRequestConfig): Promise<CheckFileExistanceResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -159,7 +159,7 @@ interface CreateFrameResponse {
  * @param jwt JSON Web Token
  * @param params 
  */
-export function createFrame(config: EnvironmentConfig, jwt:string, params: AxiosRequestConfig): Promise <CreateFrameResponse | void> {
+export function createFrame(config: EnvironmentConfig, jwt:string, params?: AxiosRequestConfig): Promise <CreateFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -214,7 +214,7 @@ interface CreateEntryFromFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
+export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -270,7 +270,7 @@ interface AddShardToFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params: AxiosRequestConfig): Promise <AddShardToFrameResponse | void> {
+export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params?: AxiosRequestConfig): Promise <AddShardToFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
