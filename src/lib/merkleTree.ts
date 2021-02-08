@@ -2,14 +2,21 @@ import { ripemd160, sha256 } from './crypto'
 import { randomBytes } from 'crypto'
 
 interface MerkleTree {
-  leaf: Buffer[],
-  challenge: Buffer[],
+  leaf: string[],
+  challenges: Buffer[],
+  challenges_as_str: string[],
   preleaf: Buffer[]
 }
 
 
 
 const SHARD_CHALLENGES = 4;
+
+function arrayBufferToString(array: Buffer[]) : string[] {
+  return array.map( b => {
+    return b.toString("hex")
+  })
+}
 
 export function preleaf(challenge: Buffer, encrypted: Buffer): Buffer {
   const preleafContent = Buffer.concat([challenge, encrypted])
@@ -62,8 +69,9 @@ function merkleTree(encrypted: Buffer): MerkleTree {
   const leaves = leafArray(preleaves)
 
   const merkleTree: MerkleTree = {
-    leaf: leaves,
-    challenge: challenges,
+    leaf: arrayBufferToString(leaves),
+    challenges: challenges,
+    challenges_as_str: arrayBufferToString(challenges),
     preleaf: preleaves
   }
 
@@ -72,7 +80,7 @@ function merkleTree(encrypted: Buffer): MerkleTree {
 
 
 function getChallenges(mT: MerkleTree): string[] {
-  const challenges = mT.challenge.map(challengeBuffer => {
+  const challenges = mT.challenges.map(challengeBuffer => {
     return challengeBuffer.toString("hex")
   })
   return challenges
