@@ -8,7 +8,7 @@ import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
 import { ExchangeReport, ExchangeReportParams } from '../api/reports'
 
-const INXT_API_URL = 'https://api.internxt.com'
+const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
@@ -69,9 +69,9 @@ export function extractErrorMsg(err: AxiosError) : void {
   } else {
     throw new Error('empty error message')
   }
-} 
+}
 
-interface CheckBucketExistanceResponse {
+interface getBucketByIdResponse {
   user: string,
   encryptionKey: string,
   publicPermissions: string[],
@@ -80,19 +80,19 @@ interface CheckBucketExistanceResponse {
   pubkeys: string[],
   status: 'Active' | 'Inactive',
   transfer: number,
-  storage: number, 
+  storage: number,
   id: string
-} 
+}
 
 /**
  * Checks if a bucket exists given its id
  * @param config App config
- * @param bucketId 
- * @param token 
+ * @param bucketId
+ * @param token
  * @param jwt JSON Web Token
- * @param params 
+ * @param params
  */
-export function checkBucketExistance(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params?: AxiosRequestConfig): Promise<CheckBucketExistanceResponse | void> {
+export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -105,24 +105,24 @@ export function checkBucketExistance(config: EnvironmentConfig, bucketId: string
   const finalParams = { ...defParams, ...params }
 
   return request(config, 'get', targetUrl, finalParams)
-    .then<CheckBucketExistanceResponse>((res: AxiosResponse) => res.data)
+    .then<getBucketByIdResponse>((res: AxiosResponse) => res.data)
     .catch(extractErrorMsg)
 }
 
-interface CheckFileExistanceResponse {
+interface getFileByIdResponse {
   /* file-id */
   id: string
 }
 
 /**
- * Checks if a file exists given its id and a bucketId 
+ * Checks if a file exists given its id and a bucketId
  * @param config App config
- * @param bucketId 
- * @param fileId 
+ * @param bucketId
+ * @param fileId
  * @param jwt JSON Web Token
- * @param params 
+ * @param params
  */
-export function checkFileExistance(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params?: AxiosRequestConfig): Promise<CheckFileExistanceResponse | void> {
+export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -135,7 +135,7 @@ export function checkFileExistance(config: EnvironmentConfig, bucketId: string, 
   const finalParams = { ...defParams, ...params }
 
   return request(config, 'get', targetUrl, finalParams)
-    .then<CheckFileExistanceResponse>((res: AxiosResponse) => res.data)
+    .then<getFileByIdResponse>((res: AxiosResponse) => res.data)
     .catch(extractErrorMsg)
 }
 
@@ -157,7 +157,7 @@ interface CreateFrameResponse {
  * Creates a file staging frame
  * @param config App config
  * @param jwt JSON Web Token
- * @param params 
+ * @param params
  */
 export function createFrame(config: EnvironmentConfig, jwt:string, params?: AxiosRequestConfig): Promise <CreateFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/frames`
@@ -236,14 +236,14 @@ interface AddShardToFrameBody {
   /* shard hash */
   hash: string,
   /* shard size */
-  size: number, 
+  size: number,
   /* shard index */
   index: number,
   /* if exists a shard parity for this shard */
   parity: boolean,
   /* shard challenges */
   challenges: string[],
-  tree: string[], 
+  tree: string[],
   /* nodes excluded from being the shard's node */
   exclude: string[]
 }
@@ -291,7 +291,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 /**
  * Sends an upload exchange report
  * @param config App config
- * @param body 
+ * @param body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, body: ExchangeReportParams): Promise<AxiosResponse<JSON>> {
   const exchangeReport = new ExchangeReport(config)
@@ -306,11 +306,11 @@ interface SendShardToNodeResponse {
 /**
  * Stores a shard in a node
  * @param config App config
- * @param shardHash 
+ * @param shardHash
  * @param token Node token
  * @param hostname Node url
  * @param port Node xcore port
- * @param nodeID 
+ * @param nodeID
  * @param content Buffer with shard content
  */
 export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse | void> {
