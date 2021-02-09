@@ -1,5 +1,5 @@
 import { ripemd160, sha256HashBuffer } from "../lib/crypto"
-import { request, streamRequest } from "../services/request"
+import { getBucketById, getFileById, request, streamRequest } from "../services/request"
 import { EnvironmentConfig } from ".."
 import { GetFileMirror, FileInfo } from "./fileinfo"
 import { ExchangeReport } from "./reports"
@@ -65,15 +65,67 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
 }
 
 /* Upload File here */
-export async function uploadFile(fileData, filename) {
+export function uploadFile(fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<void> {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
-  1. read source
-  2. sharding process (just tokenize the original data)
-  3. call upload shard -> pause the sharding process
-  4. When the upload resolves [Promise] resume stream
-  5. See 4.7 in UploadShard
+  1. Check if bucket-id exists
+  2. Check if file exists
+  3. read source
+  4. sharding process (just tokenize the original data)
+  5. call upload shard -> pause the sharding process
+  6. When the upload resolves [Promise] resume stream
+  7. See 4.7 in UploadShard
     */
+
+  return new Promise((resolve, reject) => {
+
+    const config : EnvironmentConfig = { 
+      bridgeUser: 'joanmora.internxt+28@gmail.com',
+      bridgePass: '$2a$08$Vbkq647EUDzZOe9BkLD4y.jbokrk7yF72QQVmayHdbCQvTZnNYapi',
+      encryptionKey: '490566575cf6d111c400dfc7bc9036a3eace7d636b6e39a0e7cf9dc5670381f9',
+    }
+  
+  
+    /* check if bucket-id exists */
+    /* Check if file exists */
+    const [bucketResponse, fileResponse] = await Promise.all([
+      getBucketById(config, bucketId, token, jwt),
+      getFileById(config, bucketId, fileId, jwt)
+    ])
+  
+    const shardSize = 100
+    const shard = Buffer.alloc(shardSize)
+    const excludedNodes = []
+  
+    /* read source */
+    fileData.on('data', async (chunk: Buffer) => {
+      if (shard.length < shardSize) {
+        /* sharding process */
+        Buffer.concat([shard, chunk])
+      } else {
+        /* pause the sharding process */
+        fileData.pause()
+        console.log('readable paused')
+  
+        /* call upload shard */
+        // TODO: deal with errors
+        await UploadShard(config, shard, bucketId, fileId, excludedNodes)
+  
+        /* continue sharding */
+        fileData.resume()
+        console.log('readable continues')
+      }
+    })
+  
+    fileData.on('error', () => reject())
+    fileData.on('end', async () => {
+      /* TODO: Save file in inxt network (End of upload) */
+      resolve()
+    })
+
+  })
+
+  
 }
 
 
