@@ -1,7 +1,7 @@
 import { request } from "../services/request"
 import { EnvironmentConfig } from ".."
 
-interface ExchangeReportParams {
+export interface ExchangeReportParams {
   dataHash: string | null
   reporterId: string
   farmerId: string | null

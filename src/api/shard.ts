@@ -8,6 +8,7 @@ import { Transform, Readable } from 'stream'
 
 export interface Shard {
   index: number
+  replaceCount: number
   hash: string
   size: number
   parity: boolean
@@ -63,14 +64,33 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
   }
 }
 
-
-
-export async function UploadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
-  // TODO
+/* Upload File here */
+export async function uploadFile(fileData, filename) {
+  // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
-    1. Files are encrypted
-    2. Encrypted files are split into shards
-    3. Audit pre-processing
-    4. Transmit shards to the network
-  */
+  1. read source
+  2. sharding process (just tokenize the original data)
+  3. call upload shard -> pause the sharding process
+  4. When the upload resolves [Promise] resume stream
+  5. See 4.7 in UploadShard
+    */
 }
+
+
+
+/* export async function UploadShard(config: EnvironmentConfig, shardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+
+    1. Sharding process
+    2. Encrypt shard
+    3. Set shardMeta
+    4. Begin req to bridge logic
+      4.1 Check if bucket-id exists // Per file
+      4.2 Check if file exists // Per file
+      4.3 Get frame-id (Staging) //
+      4.4 Retrieve pointers to node
+      4.5 Store shard in node (Post data to a node)
+      4.6 Send exchange report
+      4.7 Save file in inxt network (End of upload)
+
+    5. Success
+}*/

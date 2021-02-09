@@ -1,5 +1,4 @@
-export function computeShardSize(fileSize: number): number {
-
+function computeShardSizeBits(fileSize: number): number {
   // Check if fileSize == 0
   if (fileSize == 0) return 0;
 
@@ -29,7 +28,19 @@ export function computeShardSize(fileSize: number): number {
   return 0
 }
 
+// Returns the shard size in Bytes
+export function computeShardSize(fileSize: number): number {
+  const fileSizeBits = fileSize * 8
+  const shardSizeBits = computeShardSizeBits(fileSizeBits)
+  // return the number of bytes
+  const shardBytes = Math.ceil(shardSizeBits / 8)
+  return shardBytes
+}
+
+// Returns the number of shards
 export function totalDataShards(fileSize: number): number {
-  const totalShards = Math.ceil(fileSize / computeShardSize(fileSize));
+  // Convert to bits
+  const fileSizeBits = fileSize * 8
+  const totalShards = Math.ceil(fileSizeBits / computeShardSize(fileSizeBits));
   return totalShards;
 }

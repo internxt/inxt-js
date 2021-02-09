@@ -2,14 +2,21 @@ import { ripemd160, sha256 } from './crypto'
 import { randomBytes } from 'crypto'
 
 interface MerkleTree {
-  leaf: Buffer[],
-  challenge: Buffer[],
+  leaf: string[],
+  challenges: Buffer[],
+  challenges_as_str: string[],
   preleaf: Buffer[]
 }
 
 
 
 const SHARD_CHALLENGES = 4;
+
+function arrayBufferToString(array: Buffer[]) : string[] {
+  return array.map( b => {
+    return b.toString("hex")
+  })
+}
 
 export function preleaf(challenge: Buffer, encrypted: Buffer): Buffer {
   const preleafContent = Buffer.concat([challenge, encrypted])
@@ -54,16 +61,7 @@ function challengeArray(): Buffer[] {
   return challengeArray
 }
 
-
-function hashPreleaf(preleaf: Buffer): Buffer {
-  return ripemd160(sha256(preleaf))
-}
-
-function hashLeaf(preleafHash: Buffer) {
-  return ripemd160(sha256(preleafHash))
-}
-
-export default function merkleTree(encrypted: Buffer): MerkleTree {
+function merkleTree(encrypted: Buffer): MerkleTree {
   // set the challenges randomnly
   const challenges = challengeArray()
 
@@ -71,13 +69,31 @@ export default function merkleTree(encrypted: Buffer): MerkleTree {
   const leaves = leafArray(preleaves)
 
   const merkleTree: MerkleTree = {
-    leaf: leaves,
-    challenge: challenges,
+    leaf: arrayBufferToString(leaves),
+    challenges: challenges,
+    challenges_as_str: arrayBufferToString(challenges),
     preleaf: preleaves
   }
 
   return merkleTree
 }
+
+
+function getChallenges(mT: MerkleTree): string[] {
+  const challenges = mT.challenges.map(challengeBuffer => {
+    return challengeBuffer.toString("hex")
+  })
+  return challenges
+}
+
+function getTree(mT: MerkleTree): string[] {
+  const tree = mT.leaf.map(leafBuffer => {
+    return leafBuffer.toString()
+  })
+  return tree
+}
+
+export { merkleTree, getChallenges, getTree, MerkleTree }
 
 
 

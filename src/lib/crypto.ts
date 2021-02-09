@@ -40,3 +40,7 @@ export async function GenerateFileKey(mnemonic: string, bucketId: string, index:
 export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipher {
   return crypto.createDecipheriv('aes-256-ctr', key, iv)
 }
+
+export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipher {
+  return crypto.createCipheriv('aes-256-ctr', key, iv)
+}
