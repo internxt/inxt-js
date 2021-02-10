@@ -1,4 +1,4 @@
-import { ripemd160, sha256HashBuffer } from "../lib/crypto"
+import { GenerateFileKey, ripemd160, sha256HashBuffer } from "../lib/crypto"
 import { createEntryFromFrame, getBucketById, getFileById, request, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody } from "../services/request"
 import { EnvironmentConfig } from ".."
 import { GetFileMirror, FileInfo } from "./fileinfo"
@@ -8,6 +8,7 @@ import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
 import { createFrame, AddShardToFrame } from '../services/request'
 import Environment from "../lib/browser"
+import EncryptStream from "../lib/encryptStream"
 
 export interface Shard {
   index: number
@@ -79,16 +80,21 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
   6. When the upload resolves [Promise] resume stream
   7. See 4.7 in UploadShard
     */
+
+  // init required vars
   const config : EnvironmentConfig = {
     bridgeUser: process.env.TEST_USER ? process.env.TEST_USER : '',
     bridgePass: process.env.TEST_PASS ? process.env.TEST_PASS : '',
     encryptionKey: process.env.TEST_KEY ? process.env.TEST_KEY : '',
   }
 
+  const mnemonic = config.encryptionKey ? config.encryptionKey : ''
+  const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
+
   /* check if bucket-id exists */
-  const bucketPromise = getBucketById(config, bucketId, token, jwt)
+  const bucketRequest = getBucketById(config, bucketId, token, jwt)
   /* Check if file exists */
-  const filePromise = getFileById(config, bucketId, fileId, jwt)
+  const fileRequest = getFileById(config, bucketId, fileId, jwt)
 
   // try {
   //   const [bucketResponse, fileResponse] = await Promise.all([bucketPromise, filePromise])
@@ -98,7 +104,17 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
 
   const shardSize = 100
   const shard = Buffer.alloc(shardSize)
-  const excludedNodes = []
+  const encryptedShard = Buffer.alloc(shardSize)
+
+  const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
+  const iv = Buffer.from(process.env.TEST_IV ? process.env.TEST_IV : '', 'utf8')
+  const encryptStream = new EncryptStream(fileEncryptionKey, iv)
+
+  encryptStream.on('data', (chunk: Buffer) => {
+    Buffer.concat([encryptedShard, chunk])
+  })
+
+  // TODO: encryptStream.on('error')
 
   return new Promise((
     resolve: ((res: CreateEntryFromFrameResponse) => void),
@@ -109,21 +125,27 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
       if (shard.length < shardSize) {
         /* sharding process */
         Buffer.concat([shard, chunk])
+        /* encrypt */
+        encryptStream.push(chunk)
       } else {
         /* pause the sharding process */
         fileData.pause()
+
         console.log('readable paused')
+        console.log(`shard size ${shard.length}`)
+        console.log(`encrypted shard size ${encryptedShard.length}`)
 
         /* call upload shard */
-        // TODO: deal with errors
-        await UploadShard(config, shard, bucketId, fileId, excludedNodes)
+        await UploadShard(config, encryptedShard, bucketId, fileId, [])
+
+        clean([shard, encryptedShard])
 
         /* continue sharding */
         fileData.resume()
         console.log('readable continues')
       }
     })
-    fileData.on('error', (reason: any) => reject(Error(`reading stream error: ${reason}`)))
+    fileData.on('error', (reason: string) => reject(Error(`reading stream error: ${reason}`)))
     fileData.on('end', async () => {
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: '',
@@ -145,6 +167,7 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
 }
 
 
+const clean = (bufs: Buffer[]) : void => { bufs.map(buf => buf.fill(0)) }
 
 export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
