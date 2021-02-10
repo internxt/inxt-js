@@ -68,11 +68,14 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
 export async function uploadFile(fileData, filename) {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
-  1. read source
-  2. sharding process (just tokenize the original data)
-  3. call upload shard -> pause the sharding process
-  4. When the upload resolves [Promise] resume stream
-  5. See 4.7 in UploadShard
+  1. Check if bucket-id exists // Per file
+  2. Check if file exists // Per file
+  3. read source
+  4. encryption
+  5. sharding process (just tokenize the original data)
+  6. call upload shard -> pause the sharding process
+  7. When the upload resolves [Promise] resume stream
+  8. See 4.7 in UploadShard
     */
 }
 
@@ -80,17 +83,14 @@ export async function uploadFile(fileData, filename) {
 
 /* export async function UploadShard(config: EnvironmentConfig, shardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
-    1. Sharding process
-    2. Encrypt shard
+    1. Sharding process -> It is delegated to uploadFile
+    2. Encrypt shard -> It is delegated to uploadFile
     3. Set shardMeta
     4. Begin req to bridge logic
-      4.1 Check if bucket-id exists // Per file
-      4.2 Check if file exists // Per file
-      4.3 Get frame-id (Staging) //
-      4.4 Retrieve pointers to node
-      4.5 Store shard in node (Post data to a node)
-      4.6 Send exchange report
-      4.7 Save file in inxt network (End of upload)
-
+      4.1 Get frame-id (Staging) //
+      4.2 Retrieve pointers to node
+      4.3 Store shard in node (Post data to a node)
+      4.4 Send exchange report
+      4.5 Save file in inxt network (End of upload)
     5. Success
 }*/
