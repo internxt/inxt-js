@@ -160,6 +160,18 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
 
   // TODO: encryptStream.on('error')
 
+  const stop = fileData.pause
+  const resume = fileData.resume
+  const encrypt = encryptStream.push
+  const save = (chunk: Buffer) => {
+    return {
+      in: (place: Buffer) => {
+        Buffer.concat([place, chunk])
+      }
+    }
+  }
+  const clean = (bufs: Buffer[]) : void => { bufs.map(buf => buf.fill(0)) }
+
   return new Promise((
     resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
@@ -167,25 +179,21 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
     /* read source */
     fileData.on('data', async (chunk: Buffer) => {
       if (shard.length < shardSize) {
-        /* sharding process */
-        Buffer.concat([shard, chunk])
-        /* encrypt */
-        encryptStream.push(chunk)
+        save(chunk).in(shard)
+        encrypt(chunk)
       } else {
-        /* pause the sharding process */
-        fileData.pause()
-
+        stop()
         console.log('readable paused')
+
         console.log(`shard size ${shard.length}`)
         console.log(`encrypted shard size ${encryptedShard.length}`)
 
-        /* call upload shard */
+        /* TODO: Handle errors */
         await UploadShard(config, encryptedShard, bucketId, fileId, [])
 
         clean([shard, encryptedShard])
 
-        /* continue sharding */
-        fileData.resume()
+        resume()
         console.log('readable continues')
       }
     })
@@ -204,6 +212,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       }
 
       const savingFileRequest = createEntryFromFrame(config, bucketId, saveFileBody, jwt)
+      /* TODO: Handle errors */
       const savingFileResponse = await savingFileRequest
 
       if(savingFileResponse) {
@@ -212,9 +221,6 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
     })
   })
 }
-
-
-const clean = (bufs: Buffer[]) : void => { bufs.map(buf => buf.fill(0)) }
 
 export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
