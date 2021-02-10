@@ -96,11 +96,25 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
   /* Check if file exists */
   const fileRequest = getFileById(config, bucketId, fileId, jwt)
 
-  // try {
-  //   const [bucketResponse, fileResponse] = await Promise.all([bucketPromise, filePromise])
-  // } catch (e) {
+  try {
+    await bucketRequest
+    await fileRequest
+  } catch (err) {
+    console.log(`Initial requests error: ${err}`)
 
-  // }
+    const fileExists = err.message !== 'File not found'
+    const bucketNotFound = err.message === 'Bucket not found'
+
+    if (bucketNotFound) {
+      // handle it
+      return
+    } 
+
+    if (fileExists) {
+      // handle it
+      return
+    }
+  }
 
   const shardSize = 100
   const shard = Buffer.alloc(shardSize)
