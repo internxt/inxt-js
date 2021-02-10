@@ -90,4 +90,13 @@ export class ExchangeReport {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE
     this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR
   }
+  UploadOk() {
+    this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS
+    this.params.exchangeResultMessage =ExchangeReport.INXT_REPORT_SHARD_UPLOADED
+  }
+
+  UploadError() {
+    this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE
+    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR
+  }
 }
