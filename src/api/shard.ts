@@ -90,6 +90,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
 
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
+  const ivStringified = process.env.TEST_IV ? process.env.TEST_IV : ''
 
   const bucketNotExists = () : Promise<boolean> => {
     return getBucketById(config, bucketId, fileId, jwt)
@@ -150,7 +151,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   const encryptedShard = Buffer.alloc(shardSize)
 
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
-  const iv = Buffer.from(process.env.TEST_IV ? process.env.TEST_IV : '', 'utf8')
+  const iv = Buffer.from(ivStringified, 'utf8')
   const encryptStream = new EncryptStream(fileEncryptionKey, iv)
 
   encryptStream.on('data', (chunk: Buffer) => {
