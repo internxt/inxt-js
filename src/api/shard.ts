@@ -70,7 +70,7 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
 }
 
 /* Upload File here */
-export async function uploadFile(fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<CreateEntryFromFrameResponse> {
+export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<CreateEntryFromFrameResponse> {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
   1. Check if bucket-id exists
@@ -80,39 +80,67 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
   5. call upload shard -> pause the sharding process
   6. When the upload resolves [Promise] resume stream
   7. See 4.7 in UploadShard
-    */
+  */
 
-  // init required vars
-  const config : EnvironmentConfig = {
-    bridgeUser: process.env.TEST_USER ? process.env.TEST_USER : '',
-    bridgePass: process.env.TEST_PASS ? process.env.TEST_PASS : '',
-    encryptionKey: process.env.TEST_KEY ? process.env.TEST_KEY : '',
+  enum ERRORS {
+    FILE_ALREADY_EXISTS = 'File already exists',
+    FILE_NOT_FOUND = 'File not found',
+    BUCKET_NOT_FOUND = 'Bucket not found',
   }
 
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
 
-  /* check if bucket-id exists */
-  const bucketRequest = getBucketById(config, bucketId, token, jwt)
-  /* Check if file exists */
-  const fileRequest = getFileById(config, bucketId, fileId, jwt)
+  const bucketNotExists = () : Promise<boolean> => {
+    return getBucketById(config, bucketId, fileId, jwt)
+      .then(() => false)
+      .catch((err) => {
+        if(err.message === ERRORS.BUCKET_NOT_FOUND) {
+          return true
+        } else {
+          throw err
+        }
+      })
+  }
+
+  const fileExists = () : Promise<boolean> => {
+    return getFileById(config, bucketId, fileId, jwt)
+      .then(() => true)
+      .catch((err) => {
+        if(err.message === ERRORS.FILE_NOT_FOUND) {
+          return false
+        } else {
+          throw err
+        }
+      })
+  }
 
   try {
-    await bucketRequest
-    await fileRequest
+    if(await fileExists()) {
+      throw new Error(ERRORS.FILE_ALREADY_EXISTS)
+    }
+
+    if(await bucketNotExists()) {
+      throw new Error(ERRORS.BUCKET_NOT_FOUND)
+    }
   } catch (err) {
     console.log(`Initial requests error: ${err}`)
 
-    const fileExists = err.message !== 'File not found'
-    const bucketNotFound = err.message === 'Bucket not found'
+    switch (err.message) {
+      case ERRORS.FILE_NOT_FOUND:
+        // continue
+        break
 
-    if (bucketNotFound) {
-      // handle it
+      case ERRORS.FILE_ALREADY_EXISTS:
+        // handle it 
+      return 
+
+      case ERRORS.BUCKET_NOT_FOUND:
+        // handle it
       return
-    } 
 
-    if (fileExists) {
-      // handle it
+      default: 
+        // handle it
       return
     }
   }
@@ -160,7 +188,9 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
         console.log('readable continues')
       }
     })
+
     fileData.on('error', (reason: string) => reject(Error(`reading stream error: ${reason}`)))
+
     fileData.on('end', async () => {
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: '',
