@@ -170,11 +170,12 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
           value: ''
         }
       }
-      /* TODO: Save file in inxt network (End of upload) */
-      const savedFileResponse = await createEntryFromFrame(config, bucketId, saveFileBody, jwt)
 
-      if(savedFileResponse) {
-        resolve(savedFileResponse)
+      const savingFileRequest = createEntryFromFrame(config, bucketId, saveFileBody, jwt)
+      const savingFileResponse = await savingFileRequest
+
+      if(savingFileResponse) {
+        resolve(savingFileResponse)
       }
     })
   })
