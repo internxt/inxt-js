@@ -6,9 +6,10 @@ import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
-import { createFrame, AddShardToFrame } from '../services/request'
+import { createFrame, addShardToFrame } from '../services/request'
 import Environment from "../lib/browser"
 import EncryptStream from "../lib/encryptStream"
+import { ContractNegotiated } from '../lib/contracts'
 
 export interface Shard {
   index: number
@@ -195,7 +196,7 @@ export async function UploadShard(config: EnvironmentConfig, encryptedShardData:
     // 3. Set shardMeta
     const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, parity, exclude)
     //  4.2 Retrieve pointers to node
-    const negotiatedContract = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
+    const negotiatedContract: ContractNegotiated = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
     //  4.3 Store shard in node (Post data to a node)
     //  4.4 Send exchange report
     //  4.5 Save file in inxt network (End of upload)
