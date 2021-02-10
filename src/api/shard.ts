@@ -124,7 +124,6 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
         console.log('readable continues')
       }
     })
-
     fileData.on('error', (reason: any) => reject(Error(`reading stream error: ${reason}`)))
     fileData.on('end', async () => {
       const saveFileBody: CreateEntryFromFrameBody = {
@@ -142,7 +141,6 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
       if(savedFileResponse) {
         resolve(savedFileResponse)
       }
-
     })
   })
 }
