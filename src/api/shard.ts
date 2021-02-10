@@ -5,6 +5,9 @@ import { GetFileMirror, FileInfo } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
+import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
+import { createFrame, AddShardToFrame } from '../services/request'
+import Environment from "../lib/browser"
 
 export interface Shard {
   index: number
@@ -81,16 +84,20 @@ export async function uploadFile(fileData, filename) {
 
 
 
-/* export async function UploadShard(config: EnvironmentConfig, shardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
-    1. Sharding process -> It is delegated to uploadFile
-    2. Encrypt shard -> It is delegated to uploadFile
-    3. Set shardMeta
-    4. Begin req to bridge logic
-      4.1 Get frame-id (Staging) //
-      4.2 Retrieve pointers to node
-      4.3 Store shard in node (Post data to a node)
-      4.4 Send exchange report
-      4.5 Save file in inxt network (End of upload)
-    5. Success
-}*/
+    // 1. Sharding process -> It is delegated to uploadFile
+    // 2. Encrypt shard -> It is delegated to uploadFile
+    //4. Begin req to bridge logic
+    // 4.1 Get frame-id (Staging)
+    const frameStaging = await createFrame(EnvironmentConfig, jwt)
+    const frameId = frameStaging.id
+    // 3. Set shardMeta
+    const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, parity, exclude)
+    //  4.2 Retrieve pointers to node
+    const negotiatedContract = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
+    //  4.3 Store shard in node (Post data to a node)
+    //  4.4 Send exchange report
+    //  4.5 Save file in inxt network (End of upload)
+    // 5. Success
+}
