@@ -8,6 +8,9 @@ import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
 import { ExchangeReport, ExchangeReportParams } from '../api/reports'
 
+import { ShardMeta } from '../lib/shardMeta'
+import { ContractNegotiated } from '../lib/contracts'
+
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
@@ -139,7 +142,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
     .catch(extractErrorMsg)
 }
 
-interface CreateFrameResponse {
+interface FrameStaging {
   /* frame id */
   id: string,
   /* user email */
@@ -159,7 +162,7 @@ interface CreateFrameResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function createFrame(config: EnvironmentConfig, jwt:string, params?: AxiosRequestConfig): Promise <CreateFrameResponse | void> {
+export function createFrame(config: EnvironmentConfig, jwt:string, params?: AxiosRequestConfig): Promise <FrameStaging> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -248,20 +251,6 @@ interface AddShardToFrameBody {
   exclude: string[]
 }
 
-interface AddShardToFrameResponse {
-  hash: string,
-  token: string,
-  operation: 'PUSH',
-  farmer: {
-    userAgent: string,
-    protocol: string,
-    address: string,
-    port: number,
-    nodeID: string,
-    lastSeen: number
-  }
-}
-
 /**
  * Negotiates a storage contract and adds the shard to the frame
  * @param {EnvironmentConfig} config App config
@@ -270,7 +259,7 @@ interface AddShardToFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: AddShardToFrameBody, jwt: string, params?: AxiosRequestConfig): Promise <AddShardToFrameResponse | void> {
+export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, jwt: string, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
   const targetUrl = `${INXT_API_URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
