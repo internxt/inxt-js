@@ -1,5 +1,5 @@
 import { ripemd160, sha256HashBuffer } from "../lib/crypto"
-import { getBucketById, getFileById, request, streamRequest } from "../services/request"
+import { createEntryFromFrame, getBucketById, getFileById, request, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody } from "../services/request"
 import { EnvironmentConfig } from ".."
 import { GetFileMirror, FileInfo } from "./fileinfo"
 import { ExchangeReport } from "./reports"
@@ -68,39 +68,42 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
 }
 
 /* Upload File here */
-export function uploadFile(fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<void> {
+export async function uploadFile(fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<CreateEntryFromFrameResponse> {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
-  1. Check if bucket-id exists // Per file
-  2. Check if file exists // Per file
+  1. Check if bucket-id exists
+  2. Check if file exists
   3. read source
-  4. encryption
-  5. sharding process (just tokenize the original data)
-  6. call upload shard -> pause the sharding process
-  7. When the upload resolves [Promise] resume stream
-  8. See 4.7 in UploadShard
+  4. sharding process (just tokenize the original data)
+  5. call upload shard -> pause the sharding process
+  6. When the upload resolves [Promise] resume stream
+  7. See 4.7 in UploadShard
     */
+  const config : EnvironmentConfig = {
+    bridgeUser: process.env.TEST_USER ? process.env.TEST_USER : '',
+    bridgePass: process.env.TEST_PASS ? process.env.TEST_PASS : '',
+    encryptionKey: process.env.TEST_KEY ? process.env.TEST_KEY : '',
+  }
 
-  return new Promise((resolve, reject) => {
+  /* check if bucket-id exists */
+  const bucketPromise = getBucketById(config, bucketId, token, jwt)
+  /* Check if file exists */
+  const filePromise = getFileById(config, bucketId, fileId, jwt)
 
-    const config : EnvironmentConfig = {
-      bridgeUser: 'joanmora.internxt+28@gmail.com',
-      bridgePass: '$2a$08$Vbkq647EUDzZOe9BkLD4y.jbokrk7yF72QQVmayHdbCQvTZnNYapi',
-      encryptionKey: '490566575cf6d111c400dfc7bc9036a3eace7d636b6e39a0e7cf9dc5670381f9',
-    }
+  // try {
+  //   const [bucketResponse, fileResponse] = await Promise.all([bucketPromise, filePromise])
+  // } catch (e) {
 
+  // }
 
-    /* check if bucket-id exists */
-    /* Check if file exists */
-    const [bucketResponse, fileResponse] = await Promise.all([
-      getBucketById(config, bucketId, token, jwt),
-      getFileById(config, bucketId, fileId, jwt)
-    ])
+  const shardSize = 100
+  const shard = Buffer.alloc(shardSize)
+  const excludedNodes = []
 
-    const shardSize = 100
-    const shard = Buffer.alloc(shardSize)
-    const excludedNodes = []
-
+  return new Promise((
+    resolve: ((res: CreateEntryFromFrameResponse) => void),
+    reject:  ((reason: Error) => void)
+  ) => {
     /* read source */
     fileData.on('data', async (chunk: Buffer) => {
       if (shard.length < shardSize) {
@@ -121,15 +124,26 @@ export function uploadFile(fileData: Readable, filename: string, bucketId: strin
       }
     })
 
-    fileData.on('error', () => reject())
+    fileData.on('error', (reason: any) => reject(Error(`reading stream error: ${reason}`)))
     fileData.on('end', async () => {
+      const saveFileBody: CreateEntryFromFrameBody = {
+        frame: '',
+        filename: '',
+        index: '',
+        hmac: {
+          type: '',
+          value: ''
+        }
+      }
       /* TODO: Save file in inxt network (End of upload) */
-      resolve()
+      const savedFileResponse = await createEntryFromFrame(config, bucketId, saveFileBody, jwt)
+
+      if(savedFileResponse) {
+        resolve(savedFileResponse)
+      }
+
     })
-
   })
-
-
 }
 
 
