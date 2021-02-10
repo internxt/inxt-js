@@ -5,6 +5,9 @@ import { GetFileMirror, FileInfo } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
+import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
+import { createFrame, AddShardToFrame } from '../services/request'
+import Environment from "../lib/browser"
 
 export interface Shard {
   index: number
@@ -76,7 +79,7 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
   6. When the upload resolves [Promise] resume stream
   7. See 4.7 in UploadShard
     */
-  const config : EnvironmentConfig = { 
+  const config : EnvironmentConfig = {
     bridgeUser: process.env.TEST_USER ? process.env.TEST_USER : '',
     bridgePass: process.env.TEST_PASS ? process.env.TEST_PASS : '',
     encryptionKey: process.env.TEST_KEY ? process.env.TEST_KEY : '',
@@ -98,7 +101,7 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
   const excludedNodes = []
 
   return new Promise((
-    resolve: ((res: CreateEntryFromFrameResponse) => void), 
+    resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
     /* read source */
@@ -110,17 +113,16 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
         /* pause the sharding process */
         fileData.pause()
         console.log('readable paused')
-  
+
         /* call upload shard */
         // TODO: deal with errors
         await UploadShard(config, shard, bucketId, fileId, excludedNodes)
-  
+
         /* continue sharding */
         fileData.resume()
         console.log('readable continues')
       }
     })
-  
     fileData.on('error', (reason: any) => reject(Error(`reading stream error: ${reason}`)))
     fileData.on('end', async () => {
       const saveFileBody: CreateEntryFromFrameBody = {
@@ -138,26 +140,26 @@ export async function uploadFile(fileData: Readable, filename: string, bucketId:
       if(savedFileResponse) {
         resolve(savedFileResponse)
       }
-      
     })
   })
 }
 
 
 
-/* export async function UploadShard(config: EnvironmentConfig, shardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
 
-    1. Sharding process
-    2. Encrypt shard
-    3. Set shardMeta
-    4. Begin req to bridge logic
-      4.1 Check if bucket-id exists // Per file
-      4.2 Check if file exists // Per file
-      4.3 Get frame-id (Staging) //
-      4.4 Retrieve pointers to node
-      4.5 Store shard in node (Post data to a node)
-      4.6 Send exchange report
-      4.7 Save file in inxt network (End of upload)
-
-    5. Success
-}*/
+    // 1. Sharding process -> It is delegated to uploadFile
+    // 2. Encrypt shard -> It is delegated to uploadFile
+    //4. Begin req to bridge logic
+    // 4.1 Get frame-id (Staging)
+    const frameStaging = await createFrame(EnvironmentConfig, jwt)
+    const frameId = frameStaging.id
+    // 3. Set shardMeta
+    const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, parity, exclude)
+    //  4.2 Retrieve pointers to node
+    const negotiatedContract = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
+    //  4.3 Store shard in node (Post data to a node)
+    //  4.4 Send exchange report
+    //  4.5 Save file in inxt network (End of upload)
+    // 5. Success
+}
