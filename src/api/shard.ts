@@ -125,9 +125,9 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
     }
   } catch (err) {
-    console.log(`Initial requests error: ${err}`)
+    console.log(`Initial requests error:`, err.message)
 
-    switch (err.message) {
+    switch (err.statusText) {
       case ERRORS.FILE_NOT_FOUND:
         // continue
         break
@@ -146,61 +146,24 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
     }
   }
 
-  const shardSize = 100
-  const shard = Buffer.alloc(shardSize)
-  const encryptedShard = Buffer.alloc(shardSize)
-
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
   const iv = Buffer.from(ivStringified, 'utf8')
   const encryptStream = new EncryptStream(fileEncryptionKey, iv)
-
-  encryptStream.on('data', (chunk: Buffer) => {
-    Buffer.concat([encryptedShard, chunk])
-  })
-
-  // TODO: encryptStream.on('error')
-
-  const stop = fileData.pause
-  const resume = fileData.resume
-  const encrypt = encryptStream.push
-  const save = (chunk: Buffer) => {
-    return {
-      in: (place: Buffer) => {
-        Buffer.concat([place, chunk])
-      }
-    }
-  }
-  const clean = (bufs: Buffer[]) : void => { bufs.map(buf => buf.fill(0)) }
 
   return new Promise((
     resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
-    /* read source */
-    fileData.on('data', async (chunk: Buffer) => {
-      if (shard.length < shardSize) {
-        save(chunk).in(shard)
-        encrypt(chunk)
-      } else {
-        stop()
-        console.log('readable paused')
+    const outputStream: EncryptStream = fileData.pipe(encryptStream)
 
-        console.log(`shard size ${shard.length}`)
-        console.log(`encrypted shard size ${encryptedShard.length}`)
-
-        /* TODO: Handle errors */
-        await UploadShard(config, encryptedShard, bucketId, fileId, [])
-
-        clean([shard, encryptedShard])
-
-        resume()
-        console.log('readable continues')
-      }
+    outputStream.on('data', async (encryptedShard: Buffer) => {
+      /* TODO: add retry attempts */
+      await UploadShard(config, encryptedShard, bucketId, fileId, [])
     })
 
-    fileData.on('error', (reason: string) => reject(Error(`reading stream error: ${reason}`)))
+    outputStream.on('error', reject)
 
-    fileData.on('end', async () => {
+    outputStream.on('end', async () => {
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: '',
         filename: '',
