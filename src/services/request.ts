@@ -67,8 +67,10 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
 
 export function extractErrorMsg(err: AxiosError) : Promise<any> {
   if(err.response) {
-    const errorMsg = err.response.data.error
-    throw new Error(errorMsg)
+    return Promise.reject({
+      err: err.response, 
+      message: err.response.data.error
+    })
   } else {
     throw new Error('empty error message')
   }
