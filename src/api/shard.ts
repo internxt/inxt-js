@@ -7,9 +7,9 @@ import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
 import { createFrame, addShardToFrame } from '../services/request'
-import Environment from "../lib/browser"
+import Environment from "../lib/browser" 
 import EncryptStream from "../lib/encryptStream"
-import { ContractNegotiated } from '../lib/contracts'
+import { FunnelStream } from "../lib/funnelStream"
 
 export interface Shard {
   index: number
@@ -150,11 +150,14 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   const iv = Buffer.from(ivStringified, 'utf8')
   const encryptStream = new EncryptStream(fileEncryptionKey, iv)
 
+  const shardSize = 50
+  const funnel = new FunnelStream(shardSize)
+
   return new Promise((
     resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
-    const outputStream: EncryptStream = fileData.pipe(encryptStream)
+    const outputStream: EncryptStream = fileData.pipe(funnel).pipe(encryptStream)
 
     outputStream.on('data', async (encryptedShard: Buffer) => {
       /* TODO: add retry attempts */
