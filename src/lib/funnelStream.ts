@@ -3,6 +3,7 @@ import { Transform } from 'stream'
 export class FunnelStream extends Transform {
     private limit: number;
     private chunk: Buffer;
+    public totalShards = 0
 
     constructor (limit = 1) {
         super()
@@ -24,6 +25,7 @@ export class FunnelStream extends Transform {
             }
 
             this.push(chunk.slice(start, offset))
+            this.totalShards++
 
             start += this.limit
         }
