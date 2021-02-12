@@ -1,6 +1,6 @@
-import url from 'url'
+import * as url from 'url'
 import { Readable } from 'stream'
-import https from 'https'
+import * as https from 'https'
 import { ClientRequest, IncomingMessage } from 'http'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
@@ -65,7 +65,7 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
   })
 }
 
-export function extractErrorMsg(err: AxiosError) : void {
+export function extractErrorMsg(err: AxiosError) : Promise<any> {
   if(err.response) {
     const errorMsg = err.response.data.error
     throw new Error(errorMsg)
@@ -179,7 +179,7 @@ export function createFrame(config: EnvironmentConfig, jwt:string, params?: Axio
     .catch(extractErrorMsg)
 }
 
-interface CreateEntryFromFrameBody {
+export interface CreateEntryFromFrameBody {
   frame: string,
   filename: string,
   index: string,
@@ -189,7 +189,7 @@ interface CreateEntryFromFrameBody {
   }
 }
 
-interface CreateEntryFromFrameResponse {
+export interface CreateEntryFromFrameResponse {
   index: string,
   /* frame id */
   frame: string,
@@ -273,7 +273,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
   const finalParams = { ...defParams, ...params }
 
   return request(config, 'put', targetUrl, finalParams)
-    .then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
+    .then<ContractNegotiated>((res: AxiosResponse) => res.data)
     .catch(extractErrorMsg)
 }
 
