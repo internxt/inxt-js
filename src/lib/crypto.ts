@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import * as crypto from 'crypto'
 import { mnemonicToSeed } from 'bip39'
 
 export function sha256(input: Buffer): Buffer {

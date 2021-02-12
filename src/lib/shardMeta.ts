@@ -18,7 +18,7 @@ function getShardHash(encryptedShardData: Buffer) : Buffer {
   return shardHash
 }
 
-function getShardMeta(encryptedShardData: Buffer, fileSize: number, index: number, is_parity: boolean, exclude: any): ShardMeta {
+export function getShardMeta(encryptedShardData: Buffer, fileSize: number, index: number, is_parity: boolean, exclude: any): ShardMeta {
   const mT: MerkleTree = merkleTree(encryptedShardData)
   const shardMeta: ShardMeta = {
     hash: getShardHash(encryptedShardData).toString("hex"),
@@ -35,7 +35,5 @@ function getShardMerkleTree(encryptedShardData: Buffer): MerkleTree {
   const mT: MerkleTree = merkleTree(encryptedShardData)
   return mT
 }
-
-module.exports = { getShardMeta }
 
 

@@ -1,5 +1,5 @@
 import Download from './lib/download'
-import fs from 'fs'
+import * as fs from 'fs'
 import StreamToBlob from 'stream-to-blob'
 
 interface OnlyErrorCallback {
