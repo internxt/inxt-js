@@ -273,22 +273,96 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   })
 }
 
-export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+export async function UploadShard(config: EnvironmentConfig, fileSize: number, index: number, encryptedShardData: Buffer, frameId: string): Promise<ShardMeta> {  
+  // Generate shardMeta
+  const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, false)
 
-  // 1. Sharding process -> It is delegated to uploadFile
-  // 2. Encrypt shard -> It is delegated to uploadFile
-  //4. Begin req to bridge logic
-  // 4.1 Get frame-id (Staging)
-  const frameStaging = await createFrame(EnvironmentConfig, jwt)
-  const frameId = frameStaging.id
-  // 3. Set shardMeta
-  const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, parity, exclude)
-  //  4.2 Retrieve pointers to node
-  const negotiatedContract: ContractNegotiated = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
-  //  4.3 Store shard in node (Post data to a node)
-  //  4.4 Send exchange report
-  //  4.5 Save file in inxt network (End of upload)
-  // 5. Success
+  // Debug
+  const printHeader = `UploadShard(Shard: ${shardMeta.hash})`
+
+  // Prepare exchange report
+  const exchangeReport = new ExchangeReport(config)
+
+  const negotiateContract = () => {
+    return addShardToFrame(config, frameId, shardMeta)
+  } 
+
+  let negotiatedContract: ContractNegotiated | void
+  let token, farmer, operation
+
+  try {
+    if(negotiatedContract = await negotiateContract()) {
+
+      token = negotiatedContract.token
+      operation = negotiatedContract.operation
+      farmer = { ...negotiatedContract.farmer, lastSeen: new Date() }
+
+      print.green(`${printHeader}: Contract negotiated with auth token ${token}`)
+    } else {
+      throw new Error('Null negotiated contract')
+    }
+  } catch (e) {
+    error(`${printHeader}: Negotiated contract went wrong, received ${e.err.status} response status`)
+
+    if (e.message === CONTRACT_ERRORS.INVALID_SHARD_SIZES) {
+      // TODO: Handle it
+      error('It seems that the shard size is invalid')
+    } else if (e.message === CONTRACT_ERRORS.NULL_NEGOTIATED_CONTRACT) {
+      // TODO: Handle it
+      error('It seems that the negotiated contract is null')
+    } else {
+      // TODO: Handle it
+      error(`Unknown error ${e.message}`)
+    }
+
+    return
+  }
+
+  const hash = shardMeta.hash
+  const size = encryptedShardData.length
+  const parity = false // TODO: When is true in this context?
+  // TODO: Replace count
+  const shard: Shard = { index, replaceCount: 0, hash, size, parity, token, farmer, operation }
+
+  print.blue(`${printHeader}: Sending shard to node`)
+
+  const nodeRejectedShard = () : Promise<boolean> => {
+    return sendShardToNode(config, shard.hash, shard.token, shard.farmer.address, shard.farmer.port, shard.farmer.nodeID, encryptedShardData)
+      .then(() => {
+        print.green(`${printHeader}: Node accepted shard`)
+        return false
+      })
+      .catch((err) => {
+        print.red(`${printHeader}: Node rejected Shard because ${err.message.toLowerCase()}`)
+        const knownError = err.message in NODE_ERRORS
+        if(knownError) {
+          return true
+        } else {
+          throw err
+        }
+      })
+  }
+
+  exchangeReport.params.dataHash = shard.hash
+  exchangeReport.params.exchangeEnd = new Date()
+  exchangeReport.params.farmerId = shard.farmer.nodeID
+
+  try {
+    if(await nodeRejectedShard()) {
+      exchangeReport.DownloadError()
+      // await exchangeReport.sendReport()
+      throw new Error(NODE_ERRORS.REJECTED_SHARD)
+    } else {
+      exchangeReport.DownloadOk()
+      // await exchangeReport.sendReport()
+    }  
+    await sendUploadExchangeReport(config, exchangeReport)
+  } catch (e) {
+    error(`${printHeader}: error for shard with index ${index}`)
+    error(`${printHeader}: Error is ${e.message}`)
+  }
+
+  return shardMeta
 }
 
 const error = print.red
