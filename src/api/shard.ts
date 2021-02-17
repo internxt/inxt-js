@@ -225,13 +225,37 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
     })
 
     outputStream.on('end', async () => {
+      print.green(`Encrypt Stream: Finished`)
+
+      const uploadShardResponses = await Promise.all(uploadShardPromises)
+
+      if(uploadShardResponses.length === 0) {
+        reject(Error('No upload request has been made'))
+      }
+
+      const { totalShards } = funnel
+
+      const generateHmac = () => {
+        const hmacBuf = sha512HmacBuffer(fileEncryptionKey)
+
+        if(uploadShardResponses) {
+          for (let i = 0; i < totalShards; i++) {
+            hmacBuf.update(uploadShardResponses[i].hash)
+          }
+        }        
+  
+        return hmacBuf.digest().toString('hex')
+      }
+
+      print.blue(`hmac ${generateHmac()}`)
+
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: frameId,
         filename,
         index: INDEX,
         hmac: {
           type: 'sha512',
-          value: ''
+          value: generateHmac()
         }
       }
 
