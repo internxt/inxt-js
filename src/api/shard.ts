@@ -1,13 +1,12 @@
-import { GenerateFileKey, ripemd160, sha256HashBuffer, sha512HmacBuffer } from "../lib/crypto"
-import { createEntryFromFrame, getBucketById, getFileById, request, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
+import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
+import { createEntryFromFrame, getBucketById, getFileById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
 import { EnvironmentConfig } from ".."
-import { GetFileMirror, FileInfo } from "./fileinfo"
+import { GetFileMirror } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
 import { createFrame, addShardToFrame, FrameStaging } from '../services/request'
-import Environment from "../lib/browser" 
 import EncryptStream from "../lib/encryptStream"
 import { FunnelStream } from "../lib/funnelStream"
 import { ContractNegotiated } from '../lib/contracts'
