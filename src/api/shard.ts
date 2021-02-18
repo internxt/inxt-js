@@ -210,8 +210,8 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
 
       if(shardRaw) {
         const { size, index } = shardRaw
-        print.green(`Encrypt Stream: Raw shard size is ${size} bytes, index ${index}`)
-        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId))
+        print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
+        uploadShardPromises.push(UploadShard(config, shardSize, index, encryptedShard, frameId))
       } else {
         print.red(`Encrypt Stream: Shardraw is null`)
       }
@@ -272,9 +272,9 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   })
 }
 
-export async function UploadShard(config: EnvironmentConfig, fileSize: number, index: number, encryptedShardData: Buffer, frameId: string): Promise<ShardMeta> {  
+export async function UploadShard(config: EnvironmentConfig, shardSize: number, index: number, encryptedShardData: Buffer, frameId: string): Promise<ShardMeta> {  
   // Generate shardMeta
-  const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, false)
+  const shardMeta: ShardMeta = getShardMeta(encryptedShardData, shardSize, index, false)
 
   // Debug
   const printHeader = `UploadShard(Shard: ${shardMeta.hash})`
@@ -318,10 +318,9 @@ export async function UploadShard(config: EnvironmentConfig, fileSize: number, i
   }
 
   const hash = shardMeta.hash
-  const size = encryptedShardData.length
   const parity = false // TODO: When is true in this context?
   // TODO: Replace count
-  const shard: Shard = { index, replaceCount: 0, hash, size, parity, token, farmer, operation }
+  const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation }
 
   print.blue(`${printHeader}: Sending shard to node`)
 
@@ -332,9 +331,17 @@ export async function UploadShard(config: EnvironmentConfig, fileSize: number, i
         return false
       })
       .catch((err) => {
-        print.red(`${printHeader}: Node rejected Shard because ${err.message.toLowerCase()}`)
+        print.red(`${printHeader}: Node ${shard.farmer.nodeID} rejected Shard with index ${index} because ${err.message.toLowerCase()}`)
         const knownError = err.message in NODE_ERRORS
+
+        print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+
         if(knownError) {
+
+          if(err.message === NODE_ERRORS.SHARD_SIZE_BIGGER_THAN_CONTRACTED) {
+            print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+          }
+
           return true
         } else {
           throw err
@@ -357,8 +364,7 @@ export async function UploadShard(config: EnvironmentConfig, fileSize: number, i
     }  
     await sendUploadExchangeReport(config, exchangeReport)
   } catch (e) {
-    error(`${printHeader}: error for shard with index ${index}`)
-    error(`${printHeader}: Error is ${e.message}`)
+    error(`${printHeader}: Error for shard with index ${index} is ${e.message}`)
   }
 
   return shardMeta

@@ -13,6 +13,7 @@ export class FunnelStream extends Transform {
     public shards: RawShard [];
     private buffer: Buffer
     private bufferOffset = 0
+    private lastChunkLength = 0
 
     constructor (limit = 1) {
         super()
@@ -93,6 +94,8 @@ export class FunnelStream extends Transform {
             if (remainingChunk.length) {
                 remainingChunk.copy(this.buffer)
 
+                this.lastChunkLength = remainingChunk.byteLength
+                
                 // last slice has to be added manually because we are going to fill it with zeroes at _flush
                 this.pushShard(remainingChunk.byteLength)
 
@@ -105,7 +108,8 @@ export class FunnelStream extends Transform {
 
     _flush (done: () => void) : void {
         if (this.bufferStillHasData()) {
-            this.push(this.buffer)
+            const removeZeroes = (buf: Buffer)  => buf.slice(0, this.lastChunkLength)
+            this.push(removeZeroes(this.buffer))
         }
         done()
     }
