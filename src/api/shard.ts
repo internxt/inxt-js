@@ -143,18 +143,7 @@ function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) 
   reject(err)
 }
 
-export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {
-  // https://nodejs.org/api/stream.html#stream_readable_readablelength
-  /*
-  1. Check if bucket-id exists
-  2. Check if file exists
-  3. read source
-  4. sharding process (just tokenize the original data)
-  5. call upload shard -> pause the sharding process
-  6. When the upload resolves [Promise] resume stream
-  7. See 4.7 in UploadShard
-  */
-  
+export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {  
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
   const ivStringified = process.env.TEST_IV ? process.env.TEST_IV : ''
