@@ -1,6 +1,8 @@
 import * as crypto from 'crypto'
 import { mnemonicToSeed } from 'bip39'
 
+import { BUCKET_NAME_MAGIC, BUCKET_META_MAGIC, GCM_DIGEST_SIZE, SHA256_DIGEST_SIZE } from './constants'
+
 export function sha256(input: Buffer): Buffer {
   return crypto.createHash('sha256').update(input).digest()
 }
@@ -37,10 +39,6 @@ export async function GenerateFileKey(mnemonic: string, bucketId: string, index:
   return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)
 }
 
-export const BUCKET_META_MAGIC = [66,150,71,16,50,114,88,160,163,35,154,65,162,213,226,215,70,138,57,61,52,19,210,170,38,164,162,200,86,201,2,81]
-export const BUCKET_NAME_MAGIC = "398734aab3c4c30c9f22590e83a95f7e43556a45fc2b3060e0c39fde31f50272"
-export const AES_BLOCK_SIZE = 16
-
 export async function EncryptFilename(mnemonic: string, bucketId: string, filename: string) : Promise<string> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId)
 
@@ -68,16 +66,49 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
   return EncryptMeta(filename, encryptionKey, encryptionIv)
 }
 
+export async function DecryptFileName(mnemonic: string, bucketId: string, encryptedName: string) {
+  const bucketKey = (await GenerateBucketKey(mnemonic, bucketId)).toString('hex')
+
+  if (!bucketKey) {
+    throw Error('Bucket key missing')
+  }
+
+  const key = crypto.createHmac('sha512', Buffer.from(bucketKey, 'hex')).update(Buffer.from(BUCKET_META_MAGIC)).digest('hex')
+
+  return decryptMeta(encryptedName, key)
+}
+
+function decryptMeta(bufferBase64: string, decryptKey: string) {
+  const data = Buffer.from(bufferBase64, 'base64')
+
+  const digest = data.slice(0, GCM_DIGEST_SIZE)
+  const iv = data.slice(GCM_DIGEST_SIZE, GCM_DIGEST_SIZE + SHA256_DIGEST_SIZE)
+  const buffer = data.slice(GCM_DIGEST_SIZE + SHA256_DIGEST_SIZE)
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(decryptKey, 'hex').slice(0, 32), iv)
+  decipher.setAuthTag(digest)
+
+  try {
+    const dec = Buffer.concat([decipher.update(buffer), decipher.final()])
+    return dec.toString('utf8')
+  } catch (e) {
+    return null
+  }
+}
+
+
 export function EncryptMeta (fileMeta: string, key: Buffer, iv: Buffer) : string {
-  const cipher = Aes256gcmEncrypter(key, iv)
+  const cipher : crypto.CipherCCM = Aes256gcmEncrypter(key, iv)
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()])
-  return Buffer.concat([cipherTextBuf, iv]).toString('base64')
+  const digest = cipher.getAuthTag()
+  return Buffer.concat([digest, iv, cipherTextBuf]).toString('base64')
 }
 
 export function EncryptMetaBuffer (fileMeta: string, encryptKey: Buffer, iv: Buffer) : Buffer {
-  const cipher = Aes256gcmEncrypter(encryptKey, iv)
+  const cipher: crypto.CipherGCM = Aes256gcmEncrypter(encryptKey, iv)
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()])
-  return Buffer.concat([cipherTextBuf, iv])
+  const digest = cipher.getAuthTag()
+  return Buffer.concat([digest, iv, cipherTextBuf])
 }
 
 export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipher {
@@ -88,6 +119,6 @@ export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipher {
   return crypto.createCipheriv('aes-256-ctr', key, iv)
 }
 
-export function Aes256gcmEncrypter(key: Buffer, iv: Buffer): crypto.Cipher {
+export function Aes256gcmEncrypter(key: Buffer, iv: Buffer): crypto.CipherGCM {
   return crypto.createCipheriv('aes-256-gcm', key, iv)
 }
