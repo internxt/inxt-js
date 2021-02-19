@@ -128,7 +128,7 @@ async function stageFile (config: EnvironmentConfig) : Promise<FrameStaging | vo
     print.red(`Stage file error ${err.message}`)
   }
 }
-
+ 
 async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bucketEntry: CreateEntryFromFrameBody) : Promise<void | CreateEntryFromFrameResponse> {
   try {
     return await createEntryFromFrame(config, bucketId, bucketEntry)
@@ -136,6 +136,18 @@ async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bu
     // TODO: Handle it
     print.red(e.message)
   }
+}
+
+function generateHmac (fileEncryptionKey: Buffer, shardMetas: ShardMeta[]) : string {
+  const hmacBuf = sha512HmacBuffer(fileEncryptionKey)
+
+  if(shardMetas) {
+    for (let i = 0; i < shardMetas.length; i++) {
+      hmacBuf.update(shardMetas[i].hash)
+    }
+  }
+
+  return hmacBuf.digest().toString('hex')
 }
 
 function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) : void {
@@ -183,7 +195,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       return Promise.reject('default error in switch')
     }
   }
-  
+
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
   const iv = Buffer.from(ivStringified, 'utf8')
   const encryptStream = new EncryptStream(fileEncryptionKey, iv)
@@ -226,21 +238,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
         reject(Error('No upload request has been made'))
       }
 
-      const { totalShards } = funnel
-
-      const generateHmac = () => {
-        const hmacBuf = sha512HmacBuffer(fileEncryptionKey)
-
-        if(uploadShardResponses) {
-          for (let i = 0; i < totalShards; i++) {
-            hmacBuf.update(uploadShardResponses[i].hash)
-          }
-        }        
-  
-        return hmacBuf.digest().toString('hex')
-      }
-
-      print.blue(`hmac ${generateHmac()}`)
+      print.blue(`hmac ${generateHmac(fileEncryptionKey, uploadShardResponses)}`)
 
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: frameId,
@@ -248,7 +246,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
         index: INDEX,
         hmac: {
           type: 'sha512',
-          value: generateHmac()
+          value: generateHmac(fileEncryptionKey, uploadShardResponses)
         }
       }
 
