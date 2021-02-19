@@ -148,6 +148,8 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
   const ivStringified = process.env.TEST_IV ? process.env.TEST_IV : ''
 
+  let response, frameId = ''
+
   try {
     if(await fileExists(config, bucketId, fileId)) {
       throw new Error(ERRORS.FILE_ALREADY_EXISTS)
@@ -155,6 +157,10 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
 
     if(await bucketNotExists(config, bucketId, fileId)) {
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
+    }
+
+    if(response = await stageFile(config)) {
+      frameId = response.id
     }
   } catch (err) {
     console.log(`Initial requests error:`, err.message)
@@ -177,21 +183,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       return Promise.reject('default error in switch')
     }
   }
-
-  let response, frameId = ''
-
-  try {
-    if(response = await stageFile(config)) {
-      frameId = response.id
-    } else {
-      throw new Error('Frame response empty')
-    } 
-  } catch (err) {
-    console.log(`staging file error: ${err.message}`)
-    // TODO: Handle errors
-    return Promise.reject(err.message)
-  }
-
+  
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
   const iv = Buffer.from(ivStringified, 'utf8')
   const encryptStream = new EncryptStream(fileEncryptionKey, iv)
