@@ -95,6 +95,54 @@ enum NODE_ERRORS {
   SHARD_SIZE_BIGGER_THAN_CONTRACTED = 'Shard exceeds the amount defined in the contract'
 }
 
+async function bucketNotExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
+  try {
+    await getBucketById(config, bucketId, fileId)
+    return false
+  } catch (err) {
+    if (err.message === ERRORS.BUCKET_NOT_FOUND) {
+      return true
+    } else {
+      return Promise.reject(err)
+    }
+  }
+}
+
+async function fileExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
+  try {
+    await getFileById(config, bucketId, fileId)
+    return true
+  } catch (err) {
+    if(err.message === ERRORS.FILE_NOT_FOUND) {
+      return false
+    } else {
+      return Promise.reject(err)
+    }
+  }
+}
+
+async function stageFile (config: EnvironmentConfig) : Promise<FrameStaging | void> {
+  try {
+    return await createFrame(config)
+  } catch (err) {
+    print.red(`Stage file error ${err.message}`)
+  }
+}
+
+async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bucketEntry: CreateEntryFromFrameBody) : Promise<void | CreateEntryFromFrameResponse> {
+  try {
+    return await createEntryFromFrame(config, bucketId, bucketEntry)
+  } catch (e) {
+    // TODO: Handle it
+    print.red(e.message)
+  }
+}
+
+function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) : void {
+  print.red(`Output stream error ${err}`)
+  reject(err)
+}
+
 export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
@@ -111,44 +159,12 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
   const ivStringified = process.env.TEST_IV ? process.env.TEST_IV : ''
 
-  const bucketNotExists = () : Promise<boolean> => {
-    return getBucketById(config, bucketId, fileId)
-      .then(() => false)
-      .catch((err) => {
-        if(err.message === ERRORS.BUCKET_NOT_FOUND) {
-          return true
-        } else {
-          throw err
-        }
-      })
-  }
-
-  const fileExists = () : Promise<boolean> => {
-    return getFileById(config, bucketId, fileId)
-      .then(() => true)
-      .catch((err) => {
-        if(err.message === ERRORS.FILE_NOT_FOUND) {
-          return false
-        } else {
-          throw err
-        }
-      })
-  }
-
-  const stageFile = () : Promise<FrameStaging | void> => {
-    return createFrame(config)
-      .catch((err) => {
-        console.log('staging file error:', err)
-        // handle errors
-      })
-  }
-
   try {
-    if(await fileExists()) {
+    if(await fileExists(config, bucketId, fileId)) {
       throw new Error(ERRORS.FILE_ALREADY_EXISTS)
     }
 
-    if(await bucketNotExists()) {
+    if(await bucketNotExists(config, bucketId, fileId)) {
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
     }
   } catch (err) {
@@ -176,7 +192,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   let response, frameId = ''
 
   try {
-    if(response = await stageFile()) {
+    if(response = await stageFile(config)) {
       frameId = response.id
     } else {
       throw new Error('Frame response empty')
@@ -218,10 +234,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
      
     })
 
-    outputStream.on('error', (err) => {
-      error(`Encrypt Stream: Error ${err}`)
-      reject(err)
-    })
+    outputStream.on('error', handleOutputStreamError)
 
     outputStream.on('end', async () => {
       print.green(`Encrypt Stream: Finished`)
@@ -258,23 +271,15 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
         }
       }
 
-      // save file in inxt network
-      const savingFileRequest = createEntryFromFrame(config, bucketId, saveFileBody)
-      /* TODO: Handle errors */
-      try {
-        const savingFileResponse = await savingFileRequest
+      const savingFileResponse = await saveFileInNetwork(config, bucketId, saveFileBody)
 
-        print.green('Completed!')
-
-        if(savingFileResponse) {
-          print.green('Completed!')
-          resolve(savingFileResponse)
-        }
-
-      } catch (e) {
-        print.red(e.message)
+      if(!savingFileResponse) { 
+        // handle it 
+        reject(Error('Empty saving file response'))
+      } else {
+        resolve(savingFileResponse)  
       }
-      
+          
     })
   })
 }
