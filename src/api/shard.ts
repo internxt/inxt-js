@@ -95,7 +95,7 @@ enum NODE_ERRORS {
   SHARD_SIZE_BIGGER_THAN_CONTRACTED = 'Shard exceeds the amount defined in the contract'
 }
 
-export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string, token: string) : Promise<CreateEntryFromFrameResponse> {
+export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {
   // https://nodejs.org/api/stream.html#stream_readable_readablelength
   /*
   1. Check if bucket-id exists
@@ -261,13 +261,20 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       // save file in inxt network
       const savingFileRequest = createEntryFromFrame(config, bucketId, saveFileBody)
       /* TODO: Handle errors */
-      const savingFileResponse = await savingFileRequest
+      try {
+        const savingFileResponse = await savingFileRequest
 
-      print.green('Completed!')
+        print.green('Completed!')
 
-      if(savingFileResponse) {
-        resolve(savingFileResponse)
+        if(savingFileResponse) {
+          print.green('Completed!')
+          resolve(savingFileResponse)
+        }
+
+      } catch (e) {
+        print.red(e.message)
       }
+      
     })
   })
 }
@@ -356,11 +363,11 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
   try {
     if(await nodeRejectedShard()) {
       exchangeReport.DownloadError()
-      // await exchangeReport.sendReport()
+      await exchangeReport.sendReport()
       throw new Error(NODE_ERRORS.REJECTED_SHARD)
     } else {
       exchangeReport.DownloadOk()
-      // await exchangeReport.sendReport()
+      await exchangeReport.sendReport()
     }  
     await sendUploadExchangeReport(config, exchangeReport)
   } catch (e) {
