@@ -12,6 +12,7 @@ import { FunnelStream } from "../lib/funnelStream"
 import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
 import { print } from "../lib/utils/print"
+import { randomBytes } from 'crypto'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 export interface Shard {
@@ -157,8 +158,7 @@ function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) 
 
 export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {  
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
-  const INDEX = process.env.TEST_INDEX ? process.env.TEST_INDEX : ''
-  const ivStringified = process.env.TEST_IV ? process.env.TEST_IV : ''
+  const INDEX = randomBytes(32)
 
   let response, frameId = ''
 
@@ -197,8 +197,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
   }
 
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
-  const iv = Buffer.from(ivStringified, 'utf8')
-  const encryptStream = new EncryptStream(fileEncryptionKey, iv)
+  const encryptStream = new EncryptStream(fileEncryptionKey, INDEX.slice(0,16))
 
   const shardSize = 50
   const funnel = new FunnelStream(shardSize)
@@ -243,7 +242,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: frameId,
         filename,
-        index: INDEX,
+        index: INDEX.toString('hex'),
         hmac: {
           type: 'sha512',
           value: generateHmac(fileEncryptionKey, uploadShardResponses)
