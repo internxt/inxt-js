@@ -219,7 +219,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
       if(shardRaw) {
         const { size, index } = shardRaw
         print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
-        uploadShardPromises.push(UploadShard(config, shardSize, index, encryptedShard, frameId))
+        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId))
       } else {
         print.red(`Encrypt Stream: Shardraw is null`)
       }
