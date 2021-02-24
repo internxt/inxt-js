@@ -13,6 +13,7 @@ import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
 import { print } from "../lib/utils/print"
 import { randomBytes } from 'crypto'
+import { computeShardSize } from "../lib/utils/shard"
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 export interface Shard {
@@ -206,7 +207,7 @@ export async function uploadFile(config: EnvironmentConfig, file: FileToUpload, 
   const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
   const encryptStream = new EncryptStream(fileEncryptionKey, INDEX.slice(0,16))
 
-  const shardSize = 50
+  const shardSize = computeShardSize(file.size)
   const funnel = new FunnelStream(shardSize)
 
   const uploadShardPromises: Promise<ShardMeta>[] = []
