@@ -1,14 +1,19 @@
-import { ripemd160, sha256HashBuffer } from "../lib/crypto"
-import { createEntryFromFrame, getBucketById, getFileById, request, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody } from "../services/request"
+import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
+import { createEntryFromFrame, getBucketById, getFileById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
 import { EnvironmentConfig } from ".."
-import { GetFileMirror, FileInfo } from "./fileinfo"
+import { GetFileMirror } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
 import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
-import { createFrame, addShardToFrame } from '../services/request'
-import Environment from "../lib/browser"
+import { createFrame, addShardToFrame, FrameStaging } from '../services/request'
+import EncryptStream from "../lib/encryptStream"
+import { FunnelStream } from "../lib/funnelStream"
 import { ContractNegotiated } from '../lib/contracts'
+import * as dotenv from 'dotenv'
+import { print } from "../lib/utils/print"
+import { randomBytes } from 'crypto'
+dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 export interface Shard {
   index: number
@@ -68,99 +73,291 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
   }
 }
 
-/* Upload File here */
-export async function uploadFile(fileData: Readable, filename: string, bucketId: string, fileId: string, token: string, jwt: string) : Promise<CreateEntryFromFrameResponse> {
-  // https://nodejs.org/api/stream.html#stream_readable_readablelength
-  /*
-  1. Check if bucket-id exists
-  2. Check if file exists
-  3. read source
-  4. sharding process (just tokenize the original data)
-  5. call upload shard -> pause the sharding process
-  6. When the upload resolves [Promise] resume stream
-  7. See 4.7 in UploadShard
-    */
-  const config : EnvironmentConfig = {
-    bridgeUser: process.env.TEST_USER ? process.env.TEST_USER : '',
-    bridgePass: process.env.TEST_PASS ? process.env.TEST_PASS : '',
-    encryptionKey: process.env.TEST_KEY ? process.env.TEST_KEY : '',
+enum ERRORS {
+  FILE_ALREADY_EXISTS = 'File already exists',
+  FILE_NOT_FOUND = 'File not found',
+  BUCKET_NOT_FOUND = 'Bucket not found',
+}
+
+enum CONTRACT_ERRORS {
+  INVALID_SHARD_SIZES = 'Invalid shard sizes',
+  NULL_NEGOTIATED_CONTRACT = 'Null negotiated contract'
+}
+
+enum NODE_ERRORS {
+  INVALID_TOKEN = 'The supplied token is not accepted',
+  REJECTED_SHARD = 'Node rejected shard',
+  NO_SPACE_LEFT = 'No space left',
+  NOT_CONNECTED_TO_BRIDGE = 'Not connected to bridge',
+  UNABLE_TO_LOCATE_CONTRACT = 'Unable to locate contract',
+  DATA_SIZE_IS_NOT_AN_INTEGER = 'Data size is not an integer',
+  UNABLE_TO_DETERMINE_FREE_SPACE = 'Unable to determine free space',
+  SHARD_HASH_NOT_MATCHES = 'Calculated hash does not match the expected result',
+  SHARD_SIZE_BIGGER_THAN_CONTRACTED = 'Shard exceeds the amount defined in the contract'
+}
+
+async function bucketNotExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
+  try {
+    await getBucketById(config, bucketId, fileId)
+    return false
+  } catch (err) {
+    if (err.message === ERRORS.BUCKET_NOT_FOUND) {
+      return true
+    } else {
+      return Promise.reject(err)
+    }
+  }
+}
+
+async function fileExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
+  try {
+    await getFileById(config, bucketId, fileId)
+    return true
+  } catch (err) {
+    if(err.message === ERRORS.FILE_NOT_FOUND) {
+      return false
+    } else {
+      return Promise.reject(err)
+    }
+  }
+}
+
+async function stageFile (config: EnvironmentConfig) : Promise<FrameStaging | void> {
+  try {
+    return await createFrame(config)
+  } catch (err) {
+    print.red(`Stage file error ${err.message}`)
+  }
+}
+ 
+async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bucketEntry: CreateEntryFromFrameBody) : Promise<void | CreateEntryFromFrameResponse> {
+  try {
+    return await createEntryFromFrame(config, bucketId, bucketEntry)
+  } catch (e) {
+    // TODO: Handle it
+    print.red(e.message)
+  }
+}
+
+function generateHmac (fileEncryptionKey: Buffer, shardMetas: ShardMeta[]) : string {
+  const hmacBuf = sha512HmacBuffer(fileEncryptionKey)
+
+  if(shardMetas) {
+    for (let i = 0; i < shardMetas.length; i++) {
+      hmacBuf.update(shardMetas[i].hash)
+    }
   }
 
-  /* check if bucket-id exists */
-  const bucketPromise = getBucketById(config, bucketId, token, jwt)
-  /* Check if file exists */
-  const filePromise = getFileById(config, bucketId, fileId, jwt)
+  return hmacBuf.digest().toString('hex')
+}
 
-  // try {
-  //   const [bucketResponse, fileResponse] = await Promise.all([bucketPromise, filePromise])
-  // } catch (e) {
+function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) : void {
+  print.red(`Output stream error ${err}`)
+  reject(err)
+}
 
-  // }
+export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {  
+  const mnemonic = config.encryptionKey ? config.encryptionKey : ''
+  const INDEX = randomBytes(32)
 
-  const shardSize = 100
-  const shard = Buffer.alloc(shardSize)
-  const excludedNodes = []
+  let response, frameId = ''
+
+  try {
+    if(await fileExists(config, bucketId, fileId)) {
+      throw new Error(ERRORS.FILE_ALREADY_EXISTS)
+    }
+
+    if(await bucketNotExists(config, bucketId, fileId)) {
+      throw new Error(ERRORS.BUCKET_NOT_FOUND)
+    }
+
+    if(response = await stageFile(config)) {
+      frameId = response.id
+    }
+  } catch (err) {
+    console.log(`Initial requests error:`, err.message)
+
+    switch (err.statusText) {
+      case ERRORS.FILE_NOT_FOUND:
+        // continue
+        break
+
+      case ERRORS.FILE_ALREADY_EXISTS:
+        // handle it 
+      return Promise.reject(ERRORS.FILE_ALREADY_EXISTS)
+
+      case ERRORS.BUCKET_NOT_FOUND:
+        // handle it
+      return Promise.reject(ERRORS.BUCKET_NOT_FOUND)
+
+      default: 
+        // handle it
+      return Promise.reject('default error in switch')
+    }
+  }
+
+  const fileEncryptionKey = await GenerateFileKey(mnemonic, bucketId, INDEX)
+  const encryptStream = new EncryptStream(fileEncryptionKey, INDEX.slice(0,16))
+
+  const shardSize = 50
+  const funnel = new FunnelStream(shardSize)
+
+  const uploadShardPromises: Promise<ShardMeta>[] = []
 
   return new Promise((
     resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
-    /* read source */
-    fileData.on('data', async (chunk: Buffer) => {
-      if (shard.length < shardSize) {
-        /* sharding process */
-        Buffer.concat([shard, chunk])
+    const outputStream: EncryptStream = fileData.pipe(funnel).pipe(encryptStream)
+
+    outputStream.on('data', async (encryptedShard: Buffer) => {
+      /* TODO: add retry attempts */
+      print.green(`Encrypt Stream->callback: Encrypted chunk ${encryptedShard.toString('hex')}`)
+
+      const shardRaw = funnel.shards.pop()
+
+      if(shardRaw) {
+        const { size, index } = shardRaw
+        print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
+        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId))
       } else {
-        /* pause the sharding process */
-        fileData.pause()
-        console.log('readable paused')
-
-        /* call upload shard */
-        // TODO: deal with errors
-        await UploadShard(config, shard, bucketId, fileId, excludedNodes)
-
-        /* continue sharding */
-        fileData.resume()
-        console.log('readable continues')
+        print.red(`Encrypt Stream: Shardraw is null`)
       }
+     
     })
-    fileData.on('error', (reason: any) => reject(Error(`reading stream error: ${reason}`)))
-    fileData.on('end', async () => {
+
+    outputStream.on('error', handleOutputStreamError)
+
+    outputStream.on('end', async () => {
+      print.green(`Encrypt Stream: Finished`)
+
+      const uploadShardResponses = await Promise.all(uploadShardPromises)
+
+      if(uploadShardResponses.length === 0) {
+        reject(Error('No upload request has been made'))
+      }
+
+      print.blue(`hmac ${generateHmac(fileEncryptionKey, uploadShardResponses)}`)
+
       const saveFileBody: CreateEntryFromFrameBody = {
-        frame: '',
-        filename: '',
-        index: '',
+        frame: frameId,
+        filename,
+        index: INDEX.toString('hex'),
         hmac: {
-          type: '',
-          value: ''
+          type: 'sha512',
+          value: generateHmac(fileEncryptionKey, uploadShardResponses)
         }
       }
-      /* TODO: Save file in inxt network (End of upload) */
-      const savedFileResponse = await createEntryFromFrame(config, bucketId, saveFileBody, jwt)
 
-      if(savedFileResponse) {
-        resolve(savedFileResponse)
+      const savingFileResponse = await saveFileInNetwork(config, bucketId, saveFileBody)
+
+      if(!savingFileResponse) { 
+        // handle it 
+        reject(Error('Empty saving file response'))
+      } else {
+        resolve(savingFileResponse)  
       }
+          
     })
   })
 }
 
+export async function UploadShard(config: EnvironmentConfig, shardSize: number, index: number, encryptedShardData: Buffer, frameId: string): Promise<ShardMeta> {  
+  // Generate shardMeta
+  const shardMeta: ShardMeta = getShardMeta(encryptedShardData, shardSize, index, false)
 
+  // Debug
+  const printHeader = `UploadShard(Shard: ${shardMeta.hash})`
 
-export async function UploadShard(config: EnvironmentConfig, encryptedShardData: Buffer, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+  // Prepare exchange report
+  const exchangeReport = new ExchangeReport(config)
 
-    // 1. Sharding process -> It is delegated to uploadFile
-    // 2. Encrypt shard -> It is delegated to uploadFile
-    //4. Begin req to bridge logic
-    // 4.1 Get frame-id (Staging)
-    const frameStaging = await createFrame(EnvironmentConfig, jwt)
-    const frameId = frameStaging.id
-    // 3. Set shardMeta
-    const shardMeta: ShardMeta = getShardMeta(encryptedShardData, fileSize, index, parity, exclude)
-    //  4.2 Retrieve pointers to node
-    const negotiatedContract: ContractNegotiated = addShardToFrame(EnvironmentConfig, frameId, shardMeta, jwt)
-    //  4.3 Store shard in node (Post data to a node)
-    //  4.4 Send exchange report
-    //  4.5 Save file in inxt network (End of upload)
-    // 5. Success
+  const negotiateContract = () => {
+    return addShardToFrame(config, frameId, shardMeta)
+  } 
+
+  let negotiatedContract: ContractNegotiated | void
+  let token, farmer, operation
+
+  try {
+    if(negotiatedContract = await negotiateContract()) {
+
+      token = negotiatedContract.token
+      operation = negotiatedContract.operation
+      farmer = { ...negotiatedContract.farmer, lastSeen: new Date() }
+
+      print.green(`${printHeader}: Contract negotiated with auth token ${token}`)
+    } else {
+      throw new Error('Null negotiated contract')
+    }
+  } catch (e) {
+    error(`${printHeader}: Negotiated contract went wrong, received ${e.err.status} response status`)
+
+    if (e.message === CONTRACT_ERRORS.INVALID_SHARD_SIZES) {
+      // TODO: Handle it
+      error('It seems that the shard size is invalid')
+    } else if (e.message === CONTRACT_ERRORS.NULL_NEGOTIATED_CONTRACT) {
+      // TODO: Handle it
+      error('It seems that the negotiated contract is null')
+    } else {
+      // TODO: Handle it
+      error(`Unknown error ${e.message}`)
+    }
+
+    return
+  }
+
+  const hash = shardMeta.hash
+  const parity = false // TODO: When is true in this context?
+  // TODO: Replace count
+  const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation }
+
+  print.blue(`${printHeader}: Sending shard to node`)
+
+  const nodeRejectedShard = () : Promise<boolean> => {
+    return sendShardToNode(config, shard.hash, shard.token, shard.farmer.address, shard.farmer.port, shard.farmer.nodeID, encryptedShardData)
+      .then(() => {
+        print.green(`${printHeader}: Node accepted shard`)
+        return false
+      })
+      .catch((err) => {
+        print.red(`${printHeader}: Node ${shard.farmer.nodeID} rejected Shard with index ${index} because ${err.message.toLowerCase()}`)
+        const knownError = err.message in NODE_ERRORS
+
+        print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+
+        if(knownError) {
+
+          if(err.message === NODE_ERRORS.SHARD_SIZE_BIGGER_THAN_CONTRACTED) {
+            print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+          }
+
+          return true
+        } else {
+          throw err
+        }
+      })
+  }
+
+  exchangeReport.params.dataHash = shard.hash
+  exchangeReport.params.exchangeEnd = new Date()
+  exchangeReport.params.farmerId = shard.farmer.nodeID
+
+  try {
+    if(await nodeRejectedShard()) {
+      exchangeReport.DownloadError()
+      await exchangeReport.sendReport()
+      throw new Error(NODE_ERRORS.REJECTED_SHARD)
+    } else {
+      exchangeReport.DownloadOk()
+      await exchangeReport.sendReport()
+    }  
+    await sendUploadExchangeReport(config, exchangeReport)
+  } catch (e) {
+    error(`${printHeader}: Error for shard with index ${index} is ${e.message}`)
+  }
+
+  return shardMeta
 }
+
+const error = print.red

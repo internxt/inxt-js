@@ -1,6 +1,6 @@
-import url from 'url'
+import * as url from 'url'
 import { Readable } from 'stream'
-import https from 'https'
+import * as https from 'https'
 import { ClientRequest, IncomingMessage } from 'http'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
@@ -10,10 +10,13 @@ import { ExchangeReport, ExchangeReportParams } from '../api/reports'
 
 import { ShardMeta } from '../lib/shardMeta'
 import { ContractNegotiated } from '../lib/contracts'
+import * as dotenv from 'dotenv'
+dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+  // console.log(`request to: ${targetUrl}`)
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -65,10 +68,13 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
   })
 }
 
-export function extractErrorMsg(err: AxiosError) : void {
+export function extractErrorMsg(err: AxiosError) : Promise<any> {
   if(err.response) {
-    const errorMsg = err.response.data.error
-    throw new Error(errorMsg)
+    return Promise.reject({
+      err: err.response, 
+      message: err.response.data.error ? err.response.data.error : err.response.data.result,
+      status: err.response.status
+    })
   } else {
     throw new Error('empty error message')
   }
@@ -95,13 +101,12 @@ interface getBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, jwt: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
+export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      Authorization: `Basic ${jwt}`,
     }
   }
 
@@ -125,13 +130,12 @@ interface getFileByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, jwt: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
+export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      Authorization: `Basic ${jwt}`,
     }
   }
 
@@ -142,7 +146,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
     .catch(extractErrorMsg)
 }
 
-interface FrameStaging {
+export interface FrameStaging {
   /* frame id */
   id: string,
   /* user email */
@@ -162,24 +166,23 @@ interface FrameStaging {
  * @param jwt JSON Web Token
  * @param params
  */
-export function createFrame(config: EnvironmentConfig, jwt:string, params?: AxiosRequestConfig): Promise <FrameStaging> {
+export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
   const targetUrl = `${INXT_API_URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      Authorization: `Basic ${jwt}`,
     }
   }
 
   const finalParams = { ...defParams, ...params }
 
   return request(config, 'post', targetUrl, finalParams)
-    .then((res: AxiosResponse) => res.data)
+    .then<FrameStaging>((res: AxiosResponse) => res.data)
     .catch(extractErrorMsg)
 }
 
-interface CreateEntryFromFrameBody {
+export interface CreateEntryFromFrameBody {
   frame: string,
   filename: string,
   index: string,
@@ -189,7 +192,7 @@ interface CreateEntryFromFrameBody {
   }
 }
 
-interface CreateEntryFromFrameResponse {
+export interface CreateEntryFromFrameResponse {
   index: string,
   /* frame id */
   frame: string,
@@ -217,13 +220,12 @@ interface CreateEntryFromFrameResponse {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, jwt: string, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
+export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
   const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      Authorization: `Basic ${jwt}`,
     },
     data: body
   }
@@ -259,21 +261,20 @@ interface AddShardToFrameBody {
  * @param {string} jwt JSON Web Token
  * @param {AxiosRequestConfig} params
  */
-export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, jwt: string, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
+export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
   const targetUrl = `${INXT_API_URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      Authorization: `Basic ${jwt}`,
     },
-    data: body
+    data: { ...body, challenges: body.challenges_as_str }
   }
 
   const finalParams = { ...defParams, ...params }
 
   return request(config, 'put', targetUrl, finalParams)
-    .then<AddShardToFrameResponse>((res: AxiosResponse) => res.data)
+    .then<ContractNegotiated>((res: AxiosResponse) => res.data)
     .catch(extractErrorMsg)
 }
 
@@ -282,10 +283,9 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  * @param config App config
  * @param body
  */
-export function sendUploadExchangeReport(config: EnvironmentConfig, body: ExchangeReportParams): Promise<AxiosResponse<JSON>> {
-  const exchangeReport = new ExchangeReport(config)
-  exchangeReport.params = { ...exchangeReport.params, ...body }
+export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
   return exchangeReport.sendReport()
+    .catch(extractErrorMsg)
 }
 
 interface SendShardToNodeResponse {

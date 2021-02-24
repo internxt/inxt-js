@@ -54,7 +54,7 @@ function challenge(): Buffer {
 }
 
 function challengeArray(): Buffer[] {
-  let challengeArray = new Array(SHARD_CHALLENGES)
+  const challengeArray = []
   for(let i=0; i<SHARD_CHALLENGES; i++) {
     challengeArray.push(challenge())
   }

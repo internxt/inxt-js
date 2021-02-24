@@ -1,5 +1,5 @@
 import { Transform } from 'stream'
-import crypto from 'crypto'
+import * as crypto from 'crypto'
 import { sha256HashBuffer } from './crypto'
 
 export class HashStream extends Transform {
