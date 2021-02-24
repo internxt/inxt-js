@@ -156,18 +156,25 @@ function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) 
   reject(err)
 }
 
-export async function uploadFile(config: EnvironmentConfig, fileData: Readable, filename: string, bucketId: string, fileId: string) : Promise<CreateEntryFromFrameResponse> {  
+export interface FileToUpload {
+  size: number
+  id: string,
+  name: string,
+  content: Readable
+}
+
+export async function uploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string) : Promise<CreateEntryFromFrameResponse> {    
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = randomBytes(32)
 
   let response, frameId = ''
 
   try {
-    if(await fileExists(config, bucketId, fileId)) {
+    if(await fileExists(config, bucketId, file.id)) {
       throw new Error(ERRORS.FILE_ALREADY_EXISTS)
     }
 
-    if(await bucketNotExists(config, bucketId, fileId)) {
+    if(await bucketNotExists(config, bucketId, file.id)) {
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
     }
 
@@ -208,7 +215,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
     resolve: ((res: CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
-    const outputStream: EncryptStream = fileData.pipe(funnel).pipe(encryptStream)
+    const outputStream: EncryptStream = file.content.pipe(funnel).pipe(encryptStream)
 
     outputStream.on('data', async (encryptedShard: Buffer) => {
       /* TODO: add retry attempts */
@@ -241,7 +248,7 @@ export async function uploadFile(config: EnvironmentConfig, fileData: Readable, 
 
       const saveFileBody: CreateEntryFromFrameBody = {
         frame: frameId,
-        filename,
+        filename: file.name,
         index: INDEX.toString('hex'),
         hmac: {
           type: 'sha512',
