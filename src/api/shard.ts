@@ -164,16 +164,13 @@ export interface FileToUpload {
   content: Readable
 }
 
-export async function uploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string) : Promise<CreateEntryFromFrameResponse> {    
+export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string) : Promise<CreateEntryFromFrameResponse> {    
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = randomBytes(32)
 
   let response, frameId = ''
 
   try {
-    if(await fileExists(config, bucketId, file.id)) {
-      throw new Error(ERRORS.FILE_ALREADY_EXISTS)
-    }
 
     if(await bucketNotExists(config, bucketId, file.id)) {
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
@@ -312,7 +309,7 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
       error(`Unknown error ${e.message}`)
     }
 
-    return
+    return shardMeta
   }
 
   const hash = shardMeta.hash
