@@ -53,6 +53,7 @@ export class BridgeMock {
 export const generateShardReferenced = (index: number, hash: string, nodeID: string, fileId: string, bucketId: string) : ShardReferenced => {
     return {
         index,
+        replaceCount: 0,
         hash: randomBytes(32).toString('hex'),
         size: 10000,
         parity: true ,

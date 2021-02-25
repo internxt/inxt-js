@@ -16,7 +16,7 @@ dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  // console.log(`request to: ${targetUrl}`)
+  console.log(`request to: ${targetUrl}`)
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -102,7 +102,8 @@ interface getBucketByIdResponse {
  * @param params
  */
 export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${URL}/buckets/${bucketId}?token=${token}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -131,7 +132,8 @@ interface getFileByIdResponse {
  * @param params
  */
 export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -167,7 +169,8 @@ export interface FrameStaging {
  * @param params
  */
 export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
-  const targetUrl = `${INXT_API_URL}/frames`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -193,6 +196,8 @@ export interface CreateEntryFromFrameBody {
 }
 
 export interface CreateEntryFromFrameResponse {
+  /* bucket entry id */
+  id: string,
   index: string,
   /* frame id */
   frame: string,
@@ -221,7 +226,8 @@ export interface CreateEntryFromFrameResponse {
  * @param {AxiosRequestConfig} params
  */
 export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -262,7 +268,8 @@ interface AddShardToFrameBody {
  * @param {AxiosRequestConfig} params
  */
 export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
-  const targetUrl = `${INXT_API_URL}/frames/${frameId}`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -304,6 +311,9 @@ interface SendShardToNodeResponse {
  */
 export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse | void> {
   const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
+
+  console.log(content.byteLength)
+  // console.log('target', targetUrl)
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -312,6 +322,8 @@ export function sendShardToNode (config: EnvironmentConfig, shardHash: string, t
     },
     data: content
   }
+
+  console.log('CONTENT', content.toString('utf8'))
 
   return request(config, 'post', targetUrl, defParams)
     .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)

@@ -1,4 +1,4 @@
-import { Readable } from 'stream'
+import { Readable, Transform } from 'stream'
 
 import { ExchangeReport } from '../../../../api/reports'
 import { HashStream } from '../../../hashstream'

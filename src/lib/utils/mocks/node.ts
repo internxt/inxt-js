@@ -17,6 +17,8 @@ export class NodeMock {
         this.path = path
         this.ID = ID
         this.hostname = hostname
+        this._nodeResponse = new NodeResponse(true, 200, 'response', 8)
+        this._shard = Readable.from('')
     }
 
     set shard (s: Readable) {
@@ -70,6 +72,7 @@ export class NodeResponse {
     constructor (status: boolean, statusCode: HTTPStatusCodes, content?:Buffer | string, responseSize?: number) {
         this.status = status
         this.statusCode = statusCode
+        this.content = Readable.from('')
 
         if(responseSize) {
             this.content = Readable.from(randomBytes(responseSize))
