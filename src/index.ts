@@ -1,6 +1,10 @@
-import Download from './lib/download'
+import { Download } from './lib/download'
 import * as fs from 'fs'
 import StreamToBlob from 'stream-to-blob'
+import BlobToStream from 'blob-to-stream'
+
+import { FileToUpload, UploadFile as Upload } from "./api/shard"
+import { CreateEntryFromFrameResponse } from './services/request'
 
 interface OnlyErrorCallback {
   (err: Error | null): void
@@ -28,6 +32,17 @@ export class Environment {
     return Download(this.config, bucketId, fileId).then(stream => {
       return StreamToBlob(stream, 'application/octet-stream')
     })
+  }
+
+  uploadFile(bukcetId: string, filename: string, filesize: number, fileId: string, content: Blob) : Promise<CreateEntryFromFrameResponse> {
+    const file: FileToUpload = {
+      content: BlobToStream(content),
+      id: fileId,
+      name: filename,
+      size: filesize
+    }
+
+    return Upload(this.config, file, bukcetId)
   }
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
