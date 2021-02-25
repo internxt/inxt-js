@@ -2,7 +2,7 @@ import { EnvironmentConfig } from '../index'
 import { FileObject } from '../api/FileObject'
 import { Readable, Transform } from 'stream'
 
-export default async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Readable> {
+export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Readable> {
   if (!config.encryptionKey) {
     throw Error('Encryption key required')
   }
