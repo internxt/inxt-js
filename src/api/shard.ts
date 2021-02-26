@@ -97,26 +97,13 @@ enum NODE_ERRORS {
   SHARD_SIZE_BIGGER_THAN_CONTRACTED = 'Shard exceeds the amount defined in the contract'
 }
 
-async function bucketNotExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
+async function bucketNotExists (config: EnvironmentConfig, bucketId: string) : Promise<boolean> {
   try {
-    await getBucketById(config, bucketId, fileId)
+    await getBucketById(config, bucketId)
     return false
   } catch (err) {
     if (err.message === ERRORS.BUCKET_NOT_FOUND) {
       return true
-    } else {
-      return Promise.reject(err)
-    }
-  }
-}
-
-async function fileExists (config: EnvironmentConfig, bucketId: string, fileId: string) : Promise<boolean> {
-  try {
-    await getFileById(config, bucketId, fileId)
-    return true
-  } catch (err) {
-    if(err.message === ERRORS.FILE_NOT_FOUND) {
-      return false
     } else {
       return Promise.reject(err)
     }
@@ -159,7 +146,6 @@ function handleOutputStreamError(err: Error, reject: ((reason: Error) => void)) 
 
 export interface FileToUpload {
   size: number
-  id: string,
   name: string,
   content: Readable
 }
@@ -171,8 +157,8 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
   let response, frameId = ''
 
   try {
-
-    if(await bucketNotExists(config, bucketId, file.id)) {
+    // TODO: Check if file already exists by its name
+    if(await bucketNotExists(config, bucketId)) {
       throw new Error(ERRORS.BUCKET_NOT_FOUND)
     }
 

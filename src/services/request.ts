@@ -101,9 +101,9 @@ interface getBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
+export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/buckets/${bucketId}?token=${token}`
+  const targetUrl = `${URL}/buckets/${bucketId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
