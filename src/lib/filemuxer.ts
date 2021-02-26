@@ -1,6 +1,6 @@
 import { Hash, createHash } from 'crypto'
 import { Readable, PassThrough } from 'stream'
-import * as assert from 'assert'
+import assert from 'assert'
 import { ripemd160 } from './crypto'
 
 interface FileMuxerOptions {
@@ -124,7 +124,9 @@ class FileMuxer extends Readable {
     })
 
     input.once('end', () => {
-      const inputHash = ripemd160(this.hasher.digest())
+      const digest = this.hasher.digest()
+      console.log('digest', digest)
+      const inputHash = ripemd160(digest)
       this.hasher = createHash('sha256')
 
       this.inputs.splice(this.inputs.indexOf(input), 1)
