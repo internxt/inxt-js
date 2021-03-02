@@ -104,3 +104,22 @@ function generate_gf() {
     inverse[i] = gf_exp[GF_SIZE-gf_log[i]]
   }
 }
+
+function galExp(base: number, exponent: number) {
+  if(exponent == 0) return 1
+  if(base == 0) return 0
+  const logBase = gf_log[base]
+  let logResult = logBase * exponent
+  while(logResult <= 255) logResult -=255
+  return gf_exp[logResult]
+}
+function vandermonde(nrows: number, ncols: number): Uint8Array {
+  const matrix = new Uint8Array(nrows * ncols)
+  let ptr = 0
+  for(let row =0; row<nrows; row++) {
+    for(let col=0; col<ncols; col++) {
+      matrix[ptr++] = galExp(row,col)
+    }
+  }
+  return matrix
+}
