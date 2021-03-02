@@ -1,3 +1,10 @@
+interface RS {
+  data_shards: number,
+  parity_shards: number,
+  shards: number,
+  m?: Uint8Array,
+  parity?: Uint8Array
+}
 const GF_BITS = 8
 const GF_SIZE = ((1 << GF_BITS) - 1) // 2 ** GF_BITS - 1
 
