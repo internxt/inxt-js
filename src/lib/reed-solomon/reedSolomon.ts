@@ -5,6 +5,8 @@ const gf_exp = new Uint8Array(2 * GF_SIZE)
 const gf_log = new Uint8Array(GF_SIZE + 1)
 const inverse = new Uint8Array(GF_SIZE + 1)
 
+const gf_mul_table = new Uint8Array(Math.pow(GF_SIZE + 1, 2))
+
 /*
   Primitive Polynomials
 */
@@ -34,7 +36,15 @@ function modnn(x:number) {
 
 function SWAP(){}
 
-// const gf_mul_table = new Uint8Array(Math.pow(GF_SIZE + 1, 2))
+function init_mul_table() {
+
+  for (let i = 0; i < GF_SIZE + 1; i++)
+    for (let j = 0; j < GF_SIZE + 1; j++)
+      gf_mul_table[(i << 8) + j] = gf_exp[modnn(gf_log[i] + gf_log[j])];
+
+  for (let j = 0; j < GF_SIZE + 1; j++)
+    gf_mul_table[j] = gf_mul_table[j << 8] = 0;
+}
 
 function generate_gf() {
   /*
@@ -83,7 +93,4 @@ function generate_gf() {
   for(let i = 2; i<= GF_SIZE; i++) {
     inverse[i] = gf_exp[GF_SIZE-gf_log[i]]
   }
-
 }
-
-
