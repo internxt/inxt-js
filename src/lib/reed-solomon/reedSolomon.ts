@@ -30,20 +30,30 @@ const primitivePolynomial = [
   "11010000000010001"     /* 16   1+x+x^3+x^12+x^16   */
 ]
 
+/*
+*
+*/
 function modnn(x:number) {
-  return x % GF_SIZE
+  while (x >= GF_SIZE) {
+    x -= GF_SIZE
+    x = (x >> GF_BITS) + (x & GF_SIZE)
+  }
+  return x
 }
 
 function SWAP(){}
 
 function init_mul_table() {
 
-  for (let i = 0; i < GF_SIZE + 1; i++)
-    for (let j = 0; j < GF_SIZE + 1; j++)
-      gf_mul_table[(i << 8) + j] = gf_exp[modnn(gf_log[i] + gf_log[j])];
+  for (let i = 0; i < GF_SIZE + 1; i++) {
+    for (let j = 0; j < GF_SIZE + 1; j++) {
+      gf_mul_table[(i << 8) + j] = gf_exp[modnn(gf_log[i] + gf_log[j])]
+    }
+  }
 
-  for (let j = 0; j < GF_SIZE + 1; j++)
-    gf_mul_table[j] = gf_mul_table[j << 8] = 0;
+  for (let j = 0; j < GF_SIZE + 1; j++) {
+    gf_mul_table[j] = gf_mul_table[j << 8] = 0
+  }
 }
 
 function generate_gf() {
