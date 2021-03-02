@@ -130,3 +130,14 @@ function vandermonde(nrows: number, ncols: number): Uint8Array {
   }
   return matrix
 }
+
+function sub_matrix(matrix, rmin, cmin, rmax, cmax, nrows, ncols) {
+  const new_m = new Uint8Array((rmax - rmin) * (cmax-cmin))
+  let ptr = 0
+  for(let i = rmin; i < rmax; i++) {
+    for(let j = cmin; j < cmax; j++) {
+      new_m[ptr++] = matrix[i*ncols + j]
+    }
+  }
+  return new_m
+}
