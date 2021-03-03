@@ -6,6 +6,7 @@ import BlobToStream from 'blob-to-stream'
 import { FileToUpload, UploadFile as Upload } from "./api/shard"
 import { CreateEntryFromFrameResponse } from './services/request'
 import { Readable } from 'stream'
+import { EncryptFilename } from './lib/crypto'
 export * from './lib/crypto'
 export * from './api/shard'
 
@@ -52,13 +53,18 @@ export class Environment {
     })
   }
 
-  uploadFile(bucketId: string, data:UploadFileParams) : Promise<CreateEntryFromFrameResponse> {
-    const { filename: name, fileSize: size, fileContent } = data
-    const content = BlobToStream(fileContent)
+  async uploadFile(bucketId: string, data:UploadFileParams) : Promise<CreateEntryFromFrameResponse> {
+    if (this.config.encryptionKey) {
+      const { filename, fileSize: size, fileContent } = data
+      const name = await EncryptFilename(this.config.encryptionKey, bucketId, filename)
+      const content = BlobToStream(fileContent)
 
-    const fileToUpload: FileToUpload = { content, name, size }
+      const fileToUpload: FileToUpload = { content, name, size }
 
-    return Upload(this.config, fileToUpload, bucketId)
+      return Upload(this.config, fileToUpload, bucketId)
+    } else {
+      return Promise.reject('Encryption key was not provided')
+    }
   }
 
   /**
@@ -77,8 +83,14 @@ export class Environment {
    * @param bucketId Bucket id where file is
    * @param fileId File id to download
    */
-  labUpload (bucketId: string, file: FileToUpload) : Promise<CreateEntryFromFrameResponse> {
-    return Upload(this.config, file, bucketId)
+  async labUpload (bucketId: string, file: FileToUpload) : Promise<CreateEntryFromFrameResponse> {
+    if (this.config.encryptionKey) {
+      const encryptedFilename = await EncryptFilename(this.config.encryptionKey, bucketId, file.name)
+      file.name = encryptedFilename
+      return Upload(this.config, file, bucketId)
+    } else {
+      return Promise.reject('Encryption key was not provided')
+    }
   }
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
