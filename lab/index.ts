@@ -26,8 +26,7 @@ const rightPathToTestFile = resolve(__dirname, routeToTestFile)
 
 const { size } = statSync(rightPathToTestFile)
 
-async function up (fileSize: number) {    
-    // const encryptedFilename = await EncryptFilename(mnemonic, bucketId, filename)
+async function up (fileSize: number) {
     const content = createReadStream(rightPathToTestFile)
 
     const labUploadParams = { content, name: filename, size: fileSize }
