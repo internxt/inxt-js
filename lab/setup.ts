@@ -1,4 +1,4 @@
-import { Environment, EnvironmentConfig } from 'inxt-js'
+import { Environment, EnvironmentConfig } from '../src'
 
 import * as dotenv from 'dotenv'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
