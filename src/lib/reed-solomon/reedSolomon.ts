@@ -141,3 +141,10 @@ function sub_matrix(matrix, rmin, cmin, rmax, cmax, nrows, ncols) {
   }
   return new_m
 }
+
+function invert_mat(matrix:Uint8Array, dimention:number) {
+  try {
+    matrix = Uint8Array.from(flatten(mathjs.inv(chunk(matrix, dimention))))
+  }
+  catch { return 'Matrix is not singular error' }
+}
