@@ -148,3 +148,24 @@ function invert_mat(matrix:Uint8Array, dimention:number) {
   }
   catch { return 'Matrix is not singular error' }
 }
+
+function reed_solomon_new(data_shards: number, parity_shards: number) {
+  const rs:RS = {
+    data_shards: data_shards,
+    parity_shards: parity_shards,
+    shards: (data_shards + parity_shards),
+    m: undefined,
+    parity: undefined
+  }
+
+  const vm = vandermonde(rs.shards, rs.data_shards)
+  const top = sub_matrix(vm, 0, 0, data_shards, data_shards, rs.shards, data_shards)
+
+  // A matrix can be singular
+  const err = invert_mat(top, data_shards) // data_shards are the size of the matrix, take care of singular
+  rs.m = multiply1(vm, rs.shards, data_shards, top, data_shards, data_shards)
+  rs.parity = sub_matrix(rs.m, data_shards, 0, rs.shards, data_shards, rs.shards, data_shards)
+
+  return rs
+
+}
