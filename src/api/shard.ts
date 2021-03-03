@@ -127,12 +127,12 @@ async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bu
   }
 }
 
-function generateHmac (fileEncryptionKey: Buffer, shardMetas: ShardMeta[]) : string {
+function generateHmac(fileEncryptionKey: Buffer, shardMetas: ShardMeta[]) : string {
   const hmacBuf = sha512HmacBuffer(fileEncryptionKey)
 
   if(shardMetas) {
     for (let i = 0; i < shardMetas.length; i++) {
-      hmacBuf.update(shardMetas[i].hash)
+      hmacBuf.update(Buffer.from(shardMetas[i].hash, 'hex'))
     }
   }
 
@@ -203,14 +203,14 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
 
     outputStream.on('data', async (encryptedShard: Buffer) => {
       /* TODO: add retry attempts */
-      print.green(`Encrypt Stream->callback: Encrypted chunk ${encryptedShard.toString('hex')}`)
+      // print.green(`Encrypt Stream->callback: Encrypted chunk ${encryptedShard.toString('hex')}`)
 
       const shardRaw = funnel.shards.pop()
 
       if(shardRaw) {
         const { size, index } = shardRaw
         print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
-        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId))
+        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId, 3))
       } else {
         print.red(`Encrypt Stream: Shardraw is null`)
       }
@@ -222,38 +222,36 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
     outputStream.on('end', async () => {
       print.green(`Encrypt Stream: Finished`)
 
-      const uploadShardResponses = await Promise.all(uploadShardPromises)
+      try {
+        const uploadShardResponses = await Promise.all(uploadShardPromises) || []
 
-      if(uploadShardResponses.length === 0) {
-        reject(Error('No upload request has been made'))
-      }
+        if (uploadShardResponses.length == 0) throw new Error('No upload requests has been made')
 
-      print.blue(`hmac ${generateHmac(fileEncryptionKey, uploadShardResponses)}`)
+        print.blue(`hmac ${generateHmac(fileEncryptionKey, uploadShardResponses)}`)
 
-      const saveFileBody: CreateEntryFromFrameBody = {
-        frame: frameId,
-        filename: file.name,
-        index: INDEX.toString('hex'),
-        hmac: {
-          type: 'sha512',
-          value: generateHmac(fileEncryptionKey, uploadShardResponses)
+        const saveFileBody: CreateEntryFromFrameBody = {
+          frame: frameId,
+          filename: file.name,
+          index: INDEX.toString('hex'),
+          hmac: {
+            type: 'sha512',
+            value: generateHmac(fileEncryptionKey, uploadShardResponses)
+          }
         }
-      }
 
-      const savingFileResponse = await saveFileInNetwork(config, bucketId, saveFileBody)
+        const savingFileResponse = await saveFileInNetwork(config, bucketId, saveFileBody)
 
-      if(!savingFileResponse) { 
-        // handle it 
-        reject(Error('Empty saving file response'))
-      } else {
-        resolve(savingFileResponse)  
-      }
-          
+        if(!savingFileResponse) throw new Error('Saving file response was null')
+
+        resolve(savingFileResponse)
+      } catch (e) {
+        reject(e)
+      }          
     })
   })
 }
 
-export async function UploadShard(config: EnvironmentConfig, shardSize: number, index: number, encryptedShardData: Buffer, frameId: string): Promise<ShardMeta> {  
+export async function UploadShard(config: EnvironmentConfig, shardSize: number, index: number, encryptedShardData: Buffer, frameId: string, attemps: number): Promise<ShardMeta> {  
   // Generate shardMeta
   const shardMeta: ShardMeta = getShardMeta(encryptedShardData, shardSize, index, false)
 
@@ -267,8 +265,16 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
     return addShardToFrame(config, frameId, shardMeta)
   } 
 
+  const abort = () => Promise.reject('Retry attempts to upload shard failed')
+
+  const retry = async () => {
+    attemps--
+    return await UploadShard(config, shardSize, index, encryptedShardData, frameId, attemps)
+  }
+
   let negotiatedContract: ContractNegotiated | void
-  let token, farmer, operation
+  let token = "", operation = ""
+  let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() }
 
   try {
     if(negotiatedContract = await negotiateContract()) {
@@ -295,7 +301,11 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
       error(`Unknown error ${e.message}`)
     }
 
-    return shardMeta
+    if(attemps > 1) {
+      return await retry()
+    } else {
+      return await abort()
+    }
   }
 
   const hash = shardMeta.hash
@@ -346,6 +356,13 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
     await sendUploadExchangeReport(config, exchangeReport)
   } catch (e) {
     error(`${printHeader}: Error for shard with index ${index} is ${e.message}`)
+
+    if(attemps > 1) {
+      return await retry()
+    } else {
+      return await abort()
+    }
+
   }
 
   return shardMeta
