@@ -211,6 +211,7 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
         uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId, 3))
       } else {
         print.red(`Encrypt Stream: Shardraw is null`)
+        reject(Error('Shard encrypted was null'))
       }
      
     })
@@ -246,7 +247,21 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
         reject(e)
       }          
     })
+
   })
+}
+
+function inferContractError(err: Error) {
+  if (err.message === CONTRACT_ERRORS.INVALID_SHARD_SIZES) {
+    // TODO: Handle it
+    error('It seems that the shard size is invalid')
+  } else if (err.message === CONTRACT_ERRORS.NULL_NEGOTIATED_CONTRACT) {
+    // TODO: Handle it
+    error('It seems that the negotiated contract is null')
+  } else {
+    // TODO: Handle it
+    error(`Unknown contract error ${err.message}`)
+  }
 }
 
 export async function UploadShard(config: EnvironmentConfig, shardSize: number, index: number, encryptedShardData: Buffer, frameId: string, attemps: number): Promise<ShardMeta> {  
@@ -259,16 +274,11 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
   // Prepare exchange report
   const exchangeReport = new ExchangeReport(config)
 
-  const negotiateContract = () => {
-    return addShardToFrame(config, frameId, shardMeta)
-  } 
+  const negotiateContract = () => addShardToFrame(config, frameId, shardMeta)
 
   const abort = () => Promise.reject('Retry attempts to upload shard failed')
-
-  const retry = async () => {
-    attemps--
-    return await UploadShard(config, shardSize, index, encryptedShardData, frameId, attemps)
-  }
+  const shouldRetry = () => attemps > 1
+  const retry = () => UploadShard(config, shardSize, index, encryptedShardData, frameId, --attemps)
 
   let negotiatedContract: ContractNegotiated | void
   let token = "", operation = ""
@@ -285,25 +295,14 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
     } else {
       throw new Error('Null negotiated contract')
     }
-  } catch (e) {
-    error(`${printHeader}: Negotiated contract went wrong, received ${e.err.status} response status`)
+  } catch (err) {
+    error(`${printHeader}: Negotiated contract went wrong, received ${err.err.status} response status`)
 
-    if (e.message === CONTRACT_ERRORS.INVALID_SHARD_SIZES) {
-      // TODO: Handle it
-      error('It seems that the shard size is invalid')
-    } else if (e.message === CONTRACT_ERRORS.NULL_NEGOTIATED_CONTRACT) {
-      // TODO: Handle it
-      error('It seems that the negotiated contract is null')
-    } else {
-      // TODO: Handle it
-      error(`Unknown error ${e.message}`)
-    }
+    inferContractError(err)
 
-    if(attemps > 1) {
-      return await retry()
-    } else {
-      return await abort()
-    }
+    if(shouldRetry()) return await retry()
+
+    return await abort()
   }
 
   const hash = shardMeta.hash
@@ -311,56 +310,43 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
   // TODO: Replace count
   const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation }
 
-  print.blue(`${printHeader}: Sending shard to node`)
-
-  const nodeRejectedShard = () : Promise<boolean> => {
-    return sendShardToNode(config, shard.hash, shard.token, shard.farmer.address, shard.farmer.port, shard.farmer.nodeID, encryptedShardData)
-      .then(() => {
-        print.green(`${printHeader}: Node accepted shard`)
-        return false
-      })
-      .catch((err) => {
-        print.red(`${printHeader}: Node ${shard.farmer.nodeID} rejected Shard with index ${index} because ${err.message.toLowerCase()}`)
-        const knownError = err.message in NODE_ERRORS
-
-        print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
-
-        if(knownError) {
-
-          if(err.message === NODE_ERRORS.SHARD_SIZE_BIGGER_THAN_CONTRACTED) {
-            print.red(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
-          }
-
-          return true
-        } else {
-          throw err
-        }
-      })
-  }
-
   exchangeReport.params.dataHash = shard.hash
   exchangeReport.params.exchangeEnd = new Date()
   exchangeReport.params.farmerId = shard.farmer.nodeID
 
+  const nodeRejectedShard = (shard: Shard) : Promise<boolean> => {
+    print.blue(`${printHeader}: Sending shard ${shard.hash} to node ${shard.farmer.nodeID}...`)
+    print.blue(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+
+    return sendShardToNode(config, shard, encryptedShardData)
+      .then(() => false)
+      .catch((err) => {
+        if(err.message === NODE_ERRORS.SHARD_SIZE_BIGGER_THAN_CONTRACTED) error('Shard size is bigger than contracted')
+
+        if(err.message in NODE_ERRORS) { return true }
+
+        throw err        
+      })
+  }
+
   try {
-    if(await nodeRejectedShard()) {
+    if(await nodeRejectedShard(shard)) {
       exchangeReport.DownloadError()
-      await exchangeReport.sendReport()
+      await exchangeReport.sendReport()   
       throw new Error(NODE_ERRORS.REJECTED_SHARD)
     } else {
+      print.green(`${printHeader}: Node accepted shard ${shard.hash}`)
+
       exchangeReport.DownloadOk()
       await exchangeReport.sendReport()
     }  
     await sendUploadExchangeReport(config, exchangeReport)
-  } catch (e) {
-    error(`${printHeader}: Error for shard with index ${index} is ${e.message}`)
+  } catch (err) {
+    error(`${printHeader}: Node ${shard.farmer.nodeID} rejected shard ${shard.hash} with index ${index} because ${err.message}`)    
 
-    if(attemps > 1) {
-      return await retry()
-    } else {
-      return await abort()
-    }
+    if(shouldRetry()) return await retry()
 
+    return await abort()
   }
 
   return shardMeta
