@@ -11,12 +11,13 @@ import { ExchangeReport, ExchangeReportParams } from '../api/reports'
 import { ShardMeta } from '../lib/shardMeta'
 import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
+import { Shard } from '../api/shard'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  console.log(`request to: ${targetUrl}`)
+  // console.log(`request to: ${targetUrl}`)
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -302,15 +303,11 @@ interface SendShardToNodeResponse {
 /**
  * Stores a shard in a node
  * @param config App config
- * @param shardHash
- * @param token Node token
- * @param hostname Node url
- * @param port Node xcore port
- * @param nodeID
+ * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse | void> {
-  const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
+export function sendShardToNode (config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
+  const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
 
   console.log(content.byteLength)
   // console.log('target', targetUrl)
@@ -318,12 +315,10 @@ export function sendShardToNode (config: EnvironmentConfig, shardHash: string, t
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      'x-storj-node-id': nodeID,
+      'x-storj-node-id': shard.farmer.nodeID,
     },
     data: content
   }
-
-  console.log('CONTENT', content.toString('utf8'))
 
   return request(config, 'post', targetUrl, defParams)
     .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
