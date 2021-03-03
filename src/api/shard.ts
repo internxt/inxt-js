@@ -1,5 +1,5 @@
 import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
-import { createEntryFromFrame, getBucketById, getFileById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
+import { createEntryFromFrame, getBucketById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
 import { EnvironmentConfig } from ".."
 import { GetFileMirror } from "./fileinfo"
 import { ExchangeReport } from "./reports"
@@ -10,11 +10,9 @@ import { createFrame, addShardToFrame, FrameStaging } from '../services/request'
 import EncryptStream from "../lib/encryptStream"
 import { FunnelStream } from "../lib/funnelStream"
 import { ContractNegotiated } from '../lib/contracts'
-import * as dotenv from 'dotenv'
 import { print } from "../lib/utils/print"
 import { randomBytes } from 'crypto'
 import { computeShardSize } from "../lib/utils/shard"
-dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 export interface Shard {
   index: number
