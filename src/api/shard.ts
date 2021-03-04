@@ -200,13 +200,18 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
     const outputStream: EncryptStream = file.content.pipe(funnel).pipe(encryptStream)
 
     outputStream.on('data', async (encryptedShard: Buffer) => {
-      /* TODO: add retry attempts */
       // print.green(`Encrypt Stream->callback: Encrypted chunk ${encryptedShard.toString('hex')}`)
 
-      const shardRaw = funnel.shards.pop()
+      const shardRaw = outputStream.shards.pop()
 
       if(shardRaw) {
         const { size, index } = shardRaw
+
+        if(size !== encryptedShard.length) {
+          print.red('Be careful, size registered and size encrypted DO NOT MATCH')
+          print.red(`Size registered: ${size}, but encrypted shard has size of ${encryptedShard.length}`)
+        }
+
         print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
         uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId, 3))
       } else {
@@ -315,8 +320,8 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
   exchangeReport.params.farmerId = shard.farmer.nodeID
 
   const nodeRejectedShard = (shard: Shard) : Promise<boolean> => {
-    print.blue(`${printHeader}: Sending shard ${shard.hash} to node ${shard.farmer.nodeID}...`)
-    print.blue(`Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
+    print.green(`${printHeader}: Sending shard ${shard.hash} to node ${shard.farmer.nodeID}...`)
+    print.green(`${printHeader}: Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
 
     return sendShardToNode(config, shard, encryptedShardData)
       .then(() => false)

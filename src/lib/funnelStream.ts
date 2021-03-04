@@ -49,7 +49,6 @@ export class FunnelStream extends Transform {
     }
 
     _transform (chunk: Buffer, enc: string, done: (err: Error | null) => void) : void {
-
         if (this.bufferStillHasData()) {
             const bytesToPush = (this.limit - this.bufferOffset)
 
@@ -72,33 +71,30 @@ export class FunnelStream extends Transform {
             }
         }
 
-        const pushChunks = (buffer: Buffer, chunkSize: number) : Buffer => {
+        const pushChunks = (chunk: Buffer) : Buffer => {
             let offset = 0
-            let size = buffer.length
+            let chunkSize = chunk.length
 
-            const notIteratedEntireBuffer = () => size >= chunkSize
+            const notIteratedEntireBuffer = () => chunkSize >= this.limit
 
             while (notIteratedEntireBuffer()) {
-                this.pushToReadable(buffer.slice(offset, offset + chunkSize))
+                this.pushToReadable(chunk.slice(offset, offset + this.limit))
 
-                offset += chunkSize
-                size -= chunkSize
+                offset += this.limit
+                chunkSize -= this.limit
             }
 
-            return buffer.slice(offset, offset + size)
+            return chunk.slice(offset, offset + chunkSize)
         }
         
         if (this.bufferIsEmpty()) {
-            const remainingChunk = pushChunks(chunk, this.limit)
+            const remainingChunk = pushChunks(chunk)
 
             if (remainingChunk.length) {
+                // save remaining chunk for the next event
                 remainingChunk.copy(this.buffer)
 
                 this.lastChunkLength = remainingChunk.byteLength
-                
-                // last slice has to be added manually because we are going to fill it with zeroes at _flush
-                this.pushShard(remainingChunk.byteLength)
-
                 this.bufferOffset += remainingChunk.length
             }
         }
@@ -108,8 +104,7 @@ export class FunnelStream extends Transform {
 
     _flush (done: () => void) : void {
         if (this.bufferStillHasData()) {
-            const removeZeroes = (buf: Buffer)  => buf.slice(0, this.lastChunkLength)
-            this.push(removeZeroes(this.buffer))
+            this.pushToReadable(this.buffer.slice(0, this.lastChunkLength))
         }
         done()
     }
