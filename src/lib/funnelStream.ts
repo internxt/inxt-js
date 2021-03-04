@@ -1,16 +1,8 @@
 import { Transform } from 'stream'
 
-interface RawShard {
-    size: number
-    index: number
-}
-
 export class FunnelStream extends Transform {
     private limit: number;
-    public totalShards = 0
-    private indexCounter = 0
 
-    public shards: RawShard [];
     private buffer: Buffer
     private bufferOffset = 0
     private lastChunkLength = 0
@@ -18,7 +10,6 @@ export class FunnelStream extends Transform {
     constructor (limit = 1) {
         super()
         this.limit = limit
-        this.shards = []
         this.buffer = Buffer.alloc(limit)
     }
 
@@ -31,21 +22,11 @@ export class FunnelStream extends Transform {
     }
 
     private pushToReadable (b: Buffer) : void {
-        this.pushShard(b.byteLength)
         this.push(b)
     }
 
     private pushBuffer () : void {
         this.pushToReadable(this.buffer)
-    }
-
-    private pushShard (size: number) : void {
-        this.shards.push({ size, index: this.indexCounter })
-        this.incrementIndexCounter()
-    }
-
-    private incrementIndexCounter () : void {
-        this.indexCounter++
     }
 
     _transform (chunk: Buffer, enc: string, done: (err: Error | null) => void) : void {
