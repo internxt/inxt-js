@@ -135,12 +135,12 @@ function addmul(dst1: Uint8Array, src1: Uint8Array, c:number, sz: number, dst_ma
   for(let pos=0; dst <= lim; dst++, src++, pos++) {
     if(pos < src_max && pos < dst_max) {
       // PERFORM MULTIPLICATION GF dst*, src*
-      dst1[dst] = src1[src] ^ dst1[dst]
+      GF_ADDMULC(dst1, dst, src1[src], c)
     }
     else if(pos < dst_max) {
       /* assume zero when past the max */
       // ADD MUL dst*, 0
-      dst1[dst] = dst1[dst] ^ 0
+      GF_ADDMULC(dst1, dst, 0, c)
     }
   }
 }
