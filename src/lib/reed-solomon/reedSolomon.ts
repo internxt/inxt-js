@@ -149,14 +149,37 @@ function invert_mat(matrix:Uint8Array, dimention:number) {
   catch { return 'Matrix is not singular error' }
 }
 
-function reed_solomon_new(data_shards: number, parity_shards: number) {
-  const rs:RS = {
+/**
+ * Set reed solomon object data
+ *
+ * @param {number} data_shards
+ * @param {number} parity_shards
+ * @return {RS}
+ */
+function reed_solomon_new(data_shards: number, parity_shards: number): RS {
+
+  const total_number_of_shards = data_shards + parity_shards
+
+  const vm = vandermonde(total_number_of_shards, data_shards)
+  const top = sub_matrix(vm, 0, 0, data_shards, data_shards, total_number_of_shards, data_shards)
+
+  // A matrix can be singular -> Control possible errors here
+  const err = invert_mat(top, data_shards) // data_shards are the size of the matrix, take care of singular
+
+  const m = multiply1(vm, total_number_of_shards, data_shards, top, data_shards, data_shards)
+  const parity = sub_matrix(m, data_shards, 0, total_number_of_shards, data_shards, total_number_of_shards, data_shards)
+
+  const rs: RS = {
     data_shards: data_shards,
     parity_shards: parity_shards,
     shards: (data_shards + parity_shards),
-    m: undefined,
-    parity: undefined
+    m: m,
+    parity: parity
   }
+
+  return rs
+
+}
 
   const vm = vandermonde(rs.shards, rs.data_shards)
   const top = sub_matrix(vm, 0, 0, data_shards, data_shards, rs.shards, data_shards)
