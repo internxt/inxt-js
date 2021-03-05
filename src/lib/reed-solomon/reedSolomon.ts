@@ -218,3 +218,28 @@ function reed_solomon_encode(rs: RS, data_blocks: Array<Uint8Array>, fec_blocks:
   return rs
 
 }
+
+/**
+ *
+ *
+ * @param {Uint8Array} matrixRows
+ * @param {Array<Uint8Array>} inputs
+ * @param {Array<Uint8Array>} outputs
+ * @param {number} dataShards
+ * @param {number} outputCount
+ * @param {number} byteCount
+ * @param {Uint8Array} inputsMax
+ * @param {Uint8Array} outputsMax
+ */
+function code_some_shards(matrixRows: Uint8Array, inputs: Array<Uint8Array>, outputs: Array<Uint8Array>, dataShards: number, outputCount: number, byteCount: number, inputsMax: Uint8Array, outputsMax: Uint8Array) {
+  for(let c = 0; c< dataShards; c++) {
+    for(let iRow = 0; iRow < outputCount; iRow) {
+      if(c != 0) {
+        addmul(outputs[iRow], inputs[c], matrixRows[iRow * dataShards + c], byteCount, outputsMax[iRow], inputsMax[c])
+      }
+      else {
+        mul(outputs[iRow], inputs[c], matrixRows[iRow * dataShards + c], byteCount, outputsMax[iRow], inputsMax[c])
+      }
+    }
+  }
+}
