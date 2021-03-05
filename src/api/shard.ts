@@ -1,6 +1,6 @@
 import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
 import { createEntryFromFrame, getBucketById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
-import { EnvironmentConfig } from ".."
+import { EnvironmentConfig, UploadProgressCallback } from ".."
 import { GetFileMirror } from "./fileinfo"
 import { ExchangeReport } from "./reports"
 import { HashStream } from '../lib/hashstream'
@@ -148,7 +148,7 @@ export interface FileToUpload {
   content: Readable
 }
 
-export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string) : Promise<CreateEntryFromFrameResponse> {    
+export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string, progressCallback: UploadProgressCallback) : Promise<CreateEntryFromFrameResponse> {    
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = randomBytes(32)
 
@@ -199,8 +199,11 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
   ) => {
     const outputStream: EncryptStream = file.content.pipe(funnel).pipe(encryptStream)
 
+    const totalBytes = file.size
+    let uploadedBytes = 0
+    let progress = 0
+
     outputStream.on('data', async (encryptedShard: Buffer) => {
-      // print.green(`Encrypt Stream->callback: Encrypted chunk ${encryptedShard.toString('hex')}`)
 
       const shardRaw = outputStream.shards.pop()
 
@@ -210,10 +213,23 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
         if(size !== encryptedShard.length) {
           print.red('Be careful, size registered and size encrypted DO NOT MATCH')
           print.red(`Size registered: ${size}, but encrypted shard has size of ${encryptedShard.length}`)
+          reject(Error('size registered and size encrypted do not match'))
         }
 
         print.green(`Encrypt Stream: Raw shard size is ${size} bytes (without filling with zeroes), index ${index}`)
-        uploadShardPromises.push(UploadShard(config, size, index, encryptedShard, frameId, 3))
+
+        const generateShardPromise = async () : Promise<ShardMeta> => {
+          const response = await UploadShard(config, size, index, encryptedShard, frameId, 3)
+
+          uploadedBytes += shardSize
+          progress += (size / totalBytes) * 100
+          progressCallback(progress, uploadedBytes, totalBytes)
+
+          return response
+        }
+
+        uploadShardPromises.push(generateShardPromise())
+
       } else {
         print.red(`Encrypt Stream: Shardraw is null`)
         reject(Error('Shard encrypted was null'))
@@ -246,6 +262,8 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
         const savingFileResponse = await saveFileInNetwork(config, bucketId, saveFileBody)
 
         if(!savingFileResponse) throw new Error('Saving file response was null')
+
+        progressCallback(100, totalBytes, totalBytes)
 
         resolve(savingFileResponse)
       } catch (e) {

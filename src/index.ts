@@ -14,11 +14,11 @@ interface OnlyErrorCallback {
   (err: Error | null): void
 }
 
-interface DownloadProgressCallback {
+export interface DownloadProgressCallback {
   (progress: number, downloadedBytes: number | null, totalBytes: number | null): void
 }
 
-interface UploadProgressCallback {
+export interface UploadProgressCallback {
   (progress: number, uploadedBytes: number | null, totalBytes: number | null) : void
 }
 
@@ -61,7 +61,7 @@ export class Environment {
 
       const fileToUpload: FileToUpload = { content, name, size }
 
-      return Upload(this.config, fileToUpload, bucketId)
+      return Upload(this.config, fileToUpload, bucketId, data.progressCallback)
     } else {
       return Promise.reject('Encryption key was not provided')
     }
@@ -87,7 +87,10 @@ export class Environment {
     if (this.config.encryptionKey) {
       const encryptedFilename = await EncryptFilename(this.config.encryptionKey, bucketId, file.name)
       file.name = encryptedFilename
-      return Upload(this.config, file, bucketId)
+      return Upload(this.config, file, bucketId, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
+        console.log(`progress ${progress}%`)
+        console.log(`uploaded ${uploadedBytes} from ${totalBytes}`)
+      })
     } else {
       return Promise.reject('Encryption key was not provided')
     }
