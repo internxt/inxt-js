@@ -14,6 +14,13 @@ const inverse = new Uint8Array(GF_SIZE + 1)
 
 const gf_mul_table = new Uint8Array(Math.pow(GF_SIZE + 1, 2))
 
+function GF_ADDMULC(dst: Uint8Array, pos: number, x: number, c:number) {
+  dst[pos] ^= gf_mul_table[(c << 8) + x]
+}
+
+function GF_MULC(dst: Uint8Array, pos:number, x: number, c: number) {
+  dst[pos] = gf_mul_table[(c << 8) + x]
+}
 /*
   Primitive Polynomials
 */
