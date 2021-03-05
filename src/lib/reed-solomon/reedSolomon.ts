@@ -112,6 +112,29 @@ function generate_gf() {
   }
 }
 
+/**
+ * addmul() computes dst[] = dst[] + c * src[]
+ * C != 0
+ *
+ * @param {Uint8Array} dst
+ * @param {Uint8Array} src
+ * @param {number} c
+ * @return {*}
+ */
+function addmul(dst1: Uint8Array, src1: Uint8Array, c:number, sz: number, dst_max: number, src_max: number, iRow:number, dataShards: number) {
+  let dst = iRow, src = iRow*dataShards+c
+  const lim: number = dst_max < src_max ? dst_max : src_max;
+
+  for(let pos=0; dst <= lim; dst++, src++) {
+    if(pos < src_max && pos < dst_max) {
+      // PERFORM MULTIPLICATION GF dst*, src*
+    }
+    else if(pos < dst_max) {
+      /* assume zero when past the max */
+      // ADD MUL dst*, 0
+    }
+  }
+}
 function galExp(base: number, exponent: number) {
   if(exponent == 0) return 1
   if(base == 0) return 0
