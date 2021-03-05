@@ -181,13 +181,39 @@ function reed_solomon_new(data_shards: number, parity_shards: number): RS {
 
 }
 
-  const vm = vandermonde(rs.shards, rs.data_shards)
-  const top = sub_matrix(vm, 0, 0, data_shards, data_shards, rs.shards, data_shards)
+/**
+ * Reed Solomon Encoder
+ *
+ * @param {RS} rs
+ * @param {Array<Uint8Array>} data_blocks
+ * @param {Array<Uint8Array>} fec_blocks
+ * @param {number} block_size
+ * @param {number} total_bytes
+ */
+function reed_solomon_encode(rs: RS, data_blocks: Array<Uint8Array>, fec_blocks: Array<Uint8Array>, block_size: number, total_bytes: number) {
+  const data_blocks_max = new Uint8Array(rs.data_shards)
+  const fec_blocks_max = (new Uint8Array(rs.parity_shards))
 
-  // A matrix can be singular
-  const err = invert_mat(top, data_shards) // data_shards are the size of the matrix, take care of singular
-  rs.m = multiply1(vm, rs.shards, data_shards, top, data_shards, data_shards)
-  rs.parity = sub_matrix(rs.m, data_shards, 0, rs.shards, data_shards, rs.shards, data_shards)
+
+  // Calculate the max for each shard based on the total bytes
+  // the last shard may be less than the shard size
+
+  for(let c=0; c < rs.data_shards; c++) {
+    let bytes_remaining = total_bytes - c * block_size
+    let max = block_size
+    if(bytes_remaining < block_size) {
+      max = bytes_remaining
+    }
+    data_blocks_max[c] = max
+  }
+
+  // parity shards will be of block size
+  for(let c=0; c < rs.parity_shards; c++) {
+    fec_blocks_max[c] = block_size
+  }
+
+  code_some_shards(rs.parity, data_blocks, fec_blocks, rs.data_shards, rs.parity_shards, block_size, data_blocks_max, fec_blocks_max)
+}
 
   return rs
 
