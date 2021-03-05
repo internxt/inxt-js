@@ -1,19 +1,22 @@
-import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
-import { createEntryFromFrame, getBucketById, streamRequest, CreateEntryFromFrameResponse, CreateEntryFromFrameBody, sendShardToNode, sendUploadExchangeReport } from "../services/request"
-import { EnvironmentConfig, UploadProgressCallback } from ".."
+import { Transform, Readable } from 'stream'
+import { randomBytes } from 'crypto'
+
 import { GetFileMirror } from "./fileinfo"
 import { ExchangeReport } from "./reports"
+
+import * as api from '../services/request'
+
 import { HashStream } from '../lib/hashstream'
-import { Transform, Readable } from 'stream'
 import { ShardMeta,  getShardMeta } from '../lib/shardMeta'
-import { createFrame, addShardToFrame, FrameStaging } from '../services/request'
+import { GenerateFileKey, ripemd160, sha512HmacBuffer } from "../lib/crypto"
 import EncryptStream from "../lib/encryptStream"
 import { FunnelStream } from "../lib/funnelStream"
 import { ContractNegotiated } from '../lib/contracts'
-import { print } from "../lib/utils/print"
-import { randomBytes } from 'crypto'
 import { computeShardSize } from "../lib/utils/shard"
 import { ERRORS, NODE_ERRORS, CONTRACT_ERRORS } from "../lib/errors"
+import { print } from "../lib/utils/print"
+
+import { EnvironmentConfig, UploadProgressCallback } from ".."
 
 export interface Shard {
   index: number
@@ -35,7 +38,7 @@ export interface Shard {
 
 export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`
-  return streamRequest(`https://api.internxt.com:8081/${fetchUrl}`, nodeID)
+  return api.streamRequest(`https://api.internxt.com:8081/${fetchUrl}`, nodeID)
 }
 
 export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
@@ -75,7 +78,7 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
 
 async function bucketNotExists (config: EnvironmentConfig, bucketId: string) : Promise<boolean> {
   try {
-    await getBucketById(config, bucketId)
+    await api.getBucketById(config, bucketId)
     return false
   } catch (err) {
     if (err.message === ERRORS.BUCKET_NOT_FOUND) {
@@ -86,17 +89,17 @@ async function bucketNotExists (config: EnvironmentConfig, bucketId: string) : P
   }
 }
 
-async function stageFile (config: EnvironmentConfig) : Promise<FrameStaging | void> {
+async function stageFile (config: EnvironmentConfig) : Promise<api.FrameStaging | void> {
   try {
-    return await createFrame(config)
+    return await api.createFrame(config)
   } catch (err) {
     print.red(`Stage file error ${err.message}`)
   }
 }
  
-async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bucketEntry: CreateEntryFromFrameBody) : Promise<void | CreateEntryFromFrameResponse> {
+async function saveFileInNetwork(config: EnvironmentConfig, bucketId: string, bucketEntry: api.CreateEntryFromFrameBody) : Promise<void | api.CreateEntryFromFrameResponse> {
   try {
-    return await createEntryFromFrame(config, bucketId, bucketEntry)
+    return await api.createEntryFromFrame(config, bucketId, bucketEntry)
   } catch (e) {
     // TODO: Handle it
     print.red(e.message)
@@ -126,7 +129,7 @@ export interface FileToUpload {
   content: Readable
 }
 
-export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string, progressCallback: UploadProgressCallback) : Promise<CreateEntryFromFrameResponse> {    
+export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string, progressCallback: UploadProgressCallback) : Promise<api.CreateEntryFromFrameResponse> {    
   const mnemonic = config.encryptionKey ? config.encryptionKey : ''
   const INDEX = randomBytes(32)
 
@@ -172,7 +175,7 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
   const uploadShardPromises: Promise<ShardMeta>[] = []
 
   return new Promise((
-    resolve: ((res: CreateEntryFromFrameResponse) => void),
+    resolve: ((res: api.CreateEntryFromFrameResponse) => void),
     reject:  ((reason: Error) => void)
   ) => {
     const outputStream: EncryptStream = file.content.pipe(funnel).pipe(encryptStream)
@@ -227,7 +230,7 @@ export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, 
 
         print.blue(`hmac ${generateHmac(fileEncryptionKey, uploadShardResponses)}`)
 
-        const saveFileBody: CreateEntryFromFrameBody = {
+        const saveFileBody: api.CreateEntryFromFrameBody = {
           frame: frameId,
           filename: file.name,
           index: INDEX.toString('hex'),
@@ -275,7 +278,7 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
   // Prepare exchange report
   const exchangeReport = new ExchangeReport(config)
 
-  const negotiateContract = () => addShardToFrame(config, frameId, shardMeta)
+  const negotiateContract = () => api.addShardToFrame(config, frameId, shardMeta)
 
   const abort = () => Promise.reject('Retry attempts to upload shard failed')
   const shouldRetry = () => attemps > 1
@@ -319,7 +322,7 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
     print.green(`${printHeader}: Sending shard ${shard.hash} to node ${shard.farmer.nodeID}...`)
     print.green(`${printHeader}: Shard size is ${shardSize}, shard negotiated in contract ${encryptedShardData.length}`)
 
-    return sendShardToNode(config, shard, encryptedShardData)
+    return api.sendShardToNode(config, shard, encryptedShardData)
       .then(() => false)
       .catch((err) => {
         if(err.message === NODE_ERRORS.SHARD_SIZE_BIGGER_THAN_CONTRACTED) error('Shard size is bigger than contracted')
@@ -341,7 +344,7 @@ export async function UploadShard(config: EnvironmentConfig, shardSize: number, 
       exchangeReport.DownloadOk()
       await exchangeReport.sendReport()
     }  
-    await sendUploadExchangeReport(config, exchangeReport)
+    await api.sendUploadExchangeReport(config, exchangeReport)
   } catch (err) {
     error(`${printHeader}: Node ${shard.farmer.nodeID} rejected shard ${shard.hash} with index ${index} because ${err.message}`)    
 
