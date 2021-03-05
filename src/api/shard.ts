@@ -130,7 +130,9 @@ export interface FileToUpload {
 }
 
 export async function UploadFile(config: EnvironmentConfig, file: FileToUpload, bucketId: string, progressCallback: UploadProgressCallback) : Promise<api.CreateEntryFromFrameResponse> {    
-  const mnemonic = config.encryptionKey ? config.encryptionKey : ''
+  if (!config.encryptionKey) throw new Error('Mnemonic was not provided, please provide a mnemonic')
+  
+  const mnemonic = config.encryptionKey
   const INDEX = randomBytes(32)
 
   let response, frameId = ''
