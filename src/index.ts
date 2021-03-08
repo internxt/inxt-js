@@ -190,6 +190,13 @@ export class Environment {
       })
   }
 
+  /**
+   * Downloads a file, returns state object
+   * @param bucketId Bucket id where file is
+   * @param fileId Id of the file to be downloaded
+   * @param filePath File path where the file maybe already is
+   * @param options Options for resolve file case
+   */
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
     if (!options.overwritte && fs.existsSync(filePath)) {
       return options.finishedCallback(new Error('File already exists'))
@@ -210,6 +217,7 @@ export class Environment {
       })
     })
 
+    /* TODO: Returns state object */
     return
   }
 }
