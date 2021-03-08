@@ -220,6 +220,15 @@ export class Environment {
     /* TODO: Returns state object */
     return
   }
+
+  /**
+   * Cancels the upload
+   * @param state Download file state at the moment
+   */
+  resolveFileCancel(state: any) : void {
+    throw new Error('Not implemented yet')
+  }
+
 }
 
 export interface EnvironmentConfig {
