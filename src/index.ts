@@ -90,7 +90,7 @@ export class Environment {
    * @param bucketId Bucket id where file is
    * @param fileId File id to download
    */
-  labUpload (bucketId: string, file: FileToUpload) : void {
+  labUpload (bucketId: string, file: FileToUpload, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
     if (!this.config.encryptionKey) {
       throw new Error('Mnemonic was not provided, please, provide a mnemonic')
     }
@@ -99,16 +99,7 @@ export class Environment {
       .then((name: string) => {
         file.name = name
 
-        Upload(this.config, bucketId, file, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
-          console.log(`progress ${progress}%`)
-          console.log(`uploaded ${uploadedBytes} from ${totalBytes}`)
-        }, (err: Error | null) => {
-          if (err) {
-            console.error(`Error during upload due to ${err.message}`)
-          } else {
-            console.log('finished upload correctly!')
-          }
-        })
+        Upload(this.config, bucketId, file, progress, finish)
       })
   }
 
