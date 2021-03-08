@@ -8,3 +8,6 @@ PEPA.*
 notes.*
 
 build/
+
+# Files for testing
+lab/files
