@@ -103,7 +103,7 @@ export class Environment {
   /**
    * Creates a bucket
    * @param bucketName Name of the new bucket
-   * @param cb Callback that will receibe the response after creation
+   * @param cb Callback that will receive the response after creation
    */
   createBucket(bucketName:string, cb: CreateBucketCallback) : void {
     /* TODO */
@@ -111,9 +111,9 @@ export class Environment {
   }
 
   /**
-   * 
+   * Deletes a bucket
    * @param bucketId Id whose bucket is going to be deleted
-   * @param cb 
+   * @param cb Callback that will receive the response after deletion
    */
   deleteBucket(bucketId: string, cb: DeleteBucketCallback) : void {
     /* TODO */
