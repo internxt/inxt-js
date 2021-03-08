@@ -49,6 +49,10 @@ interface CreateBucketCallback {
   (err: Error | null, result: any) : void
 }
 
+interface DeleteBucketCallback {
+  (err: Error | null, result: any) : void
+}
+
 interface UploadFileParams {
   filename: string,
   fileSize: number,
@@ -88,6 +92,16 @@ export class Environment {
    * @param cb Callback that will receibe the response after creation
    */
   createBucket(bucketName:string, cb: CreateBucketCallback) : void {
+    /* TODO */
+    cb(Error('Not implemented yet'), null)
+  }
+
+  /**
+   * 
+   * @param bucketId Id whose bucket is going to be deleted
+   * @param cb 
+   */
+  deleteBucket(bucketId: string, cb: DeleteBucketCallback) : void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
