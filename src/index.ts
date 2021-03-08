@@ -45,6 +45,10 @@ interface GetBucketsCallback {
   (err: Error | null, result: any) : void
 }
 
+interface CreateBucketCallback {
+  (err: Error | null, result: any) : void
+}
+
 interface UploadFileParams {
   filename: string,
   fileSize: number,
@@ -74,6 +78,16 @@ export class Environment {
    * @param cb Callback that will receive the list of buckets
    */
   getBuckets(cb: GetBucketsCallback) : void {
+    /* TODO */
+    cb(Error('Not implemented yet'), null)
+  }
+
+  /**
+   * Creates a bucket
+   * @param bucketName Name of the new bucket
+   * @param cb Callback that will receibe the response after creation
+   */
+  createBucket(bucketName:string, cb: CreateBucketCallback) : void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
