@@ -37,6 +37,10 @@ export interface DownloadFileOptions {
   finishedCallback: OnlyErrorCallback
 }
 
+interface GetInfo {
+  (err: Error | null, result: any) : void
+}
+
 interface UploadFileParams {
   filename: string,
   fileSize: number,
@@ -50,6 +54,15 @@ export class Environment {
 
   constructor(config: EnvironmentConfig) {
     this.config = config
+  }
+
+  /**
+   * Gets general API info
+   * @param cb Callback that will receive api's info
+   */
+  getInfo(cb: GetInfo) : void {
+    /* TODO */
+    cb(null, 'Not implemented yet')
   }
 
   setEncryptionKey(newEncryptionKey: string): void {
