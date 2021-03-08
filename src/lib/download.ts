@@ -1,8 +1,8 @@
-import { EnvironmentConfig } from '../index'
+import { DownloadFileOptions, EnvironmentConfig } from '../index'
 import { FileObject } from '../api/FileObject'
 import { Readable, Transform } from 'stream'
 
-export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Readable> {
+export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
   if (!config.encryptionKey) {
     throw Error('Encryption key required')
   }
@@ -29,5 +29,5 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
     }
   })
 
-  return File.StartDownloadFile().pipe(File.decipher).pipe(t)
+  return File.StartDownloadFile(options.progressCallback).pipe(File.decipher).pipe(t)
 }

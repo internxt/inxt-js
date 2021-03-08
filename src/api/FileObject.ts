@@ -1,6 +1,6 @@
 import { ShardObject } from "./ShardObject"
 import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror } from "./fileinfo"
-import { EnvironmentConfig } from ".."
+import { DownloadProgressCallback, EnvironmentConfig } from ".."
 import { EventEmitter } from 'events'
 import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
 import { Shard } from "./shard"
@@ -130,8 +130,11 @@ export class FileObject extends EventEmitter {
 
   }
 
-  StartDownloadFile(): FileMuxer {
+  StartDownloadFile(cb: DownloadProgressCallback): FileMuxer {
     let shardObject
+    let downloadedBytes = 0
+    let progress = 0
+    const totalBytes = this.fileInfo ? this.fileInfo.size : 0
 
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo')
@@ -161,7 +164,9 @@ export class FileObject extends EventEmitter {
         const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard)
         fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
 
-
+        downloadedBytes += shardBuffer.length
+        progress = (downloadedBytes / totalBytes) * 100
+        cb(progress, downloadedBytes, totalBytes)
 
         // fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
         fileMuxer.once('drain', () => nextItem())
@@ -177,9 +182,9 @@ export class FileObject extends EventEmitter {
 
   /*
   private updateGlobalPercentage(): void {
-    const result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.size, shardsCompleted: 0 }
+    const result = { totalBytesDownloaded: 0, totalSize: this.totalSizeWithECs, totalShards: this.shards.length, shardsCompleted: 0 }
     eachSeries(this.shards.keys(), (shardIndex, nextShard) => {
-      const shard = this.shards.get(shardIndex)
+      const shard = this.shards[shardIndex]
       if (!shard) { return nextShard() }
       if (shard.isFinished()) { result.shardsCompleted++ }
       nextShard()

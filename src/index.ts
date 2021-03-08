@@ -33,6 +33,11 @@ export interface ResolveFileOptions {
   overwritte?: boolean
 }
 
+export interface DownloadFileOptions {
+  progressCallback: DownloadProgressCallback,
+  finishedCallback: OnlyErrorCallback
+}
+
 interface UploadFileParams {
   filename: string,
   fileSize: number,
@@ -52,8 +57,9 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey
   }
 
-  downloadFile(bucketId: string, fileId: string): Promise<Blob> {
-    return Download(this.config, bucketId, fileId).then(stream => {
+  downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Blob> {
+    return Download(this.config, bucketId, fileId, options).then(stream => {
+      options.finishedCallback(null)
       return StreamToBlob(stream, 'application/octet-stream')
     })
   }
@@ -80,8 +86,8 @@ export class Environment {
    * @param bucketId Bucket id where file is
    * @param fileId File id to download
    */
-  labDownload (bucketId: string, fileId: string) : Promise<Readable> {
-    return Download(this.config, bucketId, fileId)
+  labDownload (bucketId: string, fileId: string, options: DownloadFileOptions) : Promise<Readable> {
+    return Download(this.config, bucketId, fileId, options)
   }
 
   /**
@@ -110,7 +116,7 @@ export class Environment {
 
     const fileStream = fs.createWriteStream(filePath)
 
-    Download(this.config, bucketId, fileId).then(stream => {
+    Download(this.config, bucketId, fileId, options).then(stream => {
       console.log('START DUMPING FILE')
       const dump = stream.pipe(fileStream)
       dump.on('error', (err) => {
