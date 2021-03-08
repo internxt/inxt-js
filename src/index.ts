@@ -3,14 +3,14 @@ import * as fs from 'fs'
 import StreamToBlob from 'stream-to-blob'
 import BlobToStream from 'blob-to-stream'
 
-import { FileToUpload, UploadFile as Upload } from "./api/shard"
-import { CreateEntryFromFrameResponse } from './services/request'
+import { FileToUpload } from "./api/shard"
 import { Readable } from 'stream'
 import { EncryptFilename } from './lib/crypto'
+import { Upload } from './lib/upload'
 export * from './lib/crypto'
 export * from './api/shard'
 
-interface OnlyErrorCallback {
+export interface OnlyErrorCallback {
   (err: Error | null): void
 }
 
@@ -53,18 +53,20 @@ export class Environment {
     })
   }
 
-  async uploadFile(bucketId: string, data:UploadFileParams) : Promise<CreateEntryFromFrameResponse> {
-    if (this.config.encryptionKey) {
-      const { filename, fileSize: size, fileContent } = data
-      const name = await EncryptFilename(this.config.encryptionKey, bucketId, filename)
-      const content = BlobToStream(fileContent)
-
-      const fileToUpload: FileToUpload = { content, name, size }
-
-      return Upload(this.config, fileToUpload, bucketId, data.progressCallback)
-    } else {
-      return Promise.reject('Encryption key was not provided')
+  uploadFile(bucketId: string, data:UploadFileParams) : void {
+    if (!this.config.encryptionKey) {
+      throw new Error('Mnemonic was not provided, please, provide a mnemonic')
     }
+
+    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = data
+
+    EncryptFilename(this.config.encryptionKey, bucketId, filename)
+      .then((name: string) => {
+        const content = BlobToStream(fileContent) 
+        const fileToUpload: FileToUpload = { content, name, size }
+
+        Upload(this.config, bucketId, fileToUpload, progress, finished)
+      })
   }
 
   /**
@@ -83,17 +85,26 @@ export class Environment {
    * @param bucketId Bucket id where file is
    * @param fileId File id to download
    */
-  async labUpload (bucketId: string, file: FileToUpload) : Promise<CreateEntryFromFrameResponse> {
-    if (this.config.encryptionKey) {
-      const encryptedFilename = await EncryptFilename(this.config.encryptionKey, bucketId, file.name)
-      file.name = encryptedFilename
-      return Upload(this.config, file, bucketId, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
-        console.log(`progress ${progress}%`)
-        console.log(`uploaded ${uploadedBytes} from ${totalBytes}`)
-      })
-    } else {
-      return Promise.reject('Encryption key was not provided')
+  labUpload (bucketId: string, file: FileToUpload) : void {
+    if (!this.config.encryptionKey) {
+      throw new Error('Mnemonic was not provided, please, provide a mnemonic')
     }
+
+    EncryptFilename(this.config.encryptionKey, bucketId, file.name)
+      .then((name: string) => {
+        file.name = name
+
+        Upload(this.config, bucketId, file, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
+          console.log(`progress ${progress}%`)
+          console.log(`uploaded ${uploadedBytes} from ${totalBytes}`)
+        }, (err: Error | null) => {
+          if (err) {
+            console.error(`Error during upload due to ${err.message}`)
+          } else {
+            console.log('finished upload correctly!')
+          }
+        })
+      })
   }
 
   resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
