@@ -17,7 +17,6 @@ dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  // console.log(`request to: ${targetUrl}`)
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
@@ -166,7 +165,6 @@ export interface FrameStaging {
 /**
  * Creates a file staging frame
  * @param config App config
- * @param jwt JSON Web Token
  * @param params
  */
 export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
@@ -306,7 +304,7 @@ interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode (config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
+export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
   const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
 
   console.log(content.byteLength)
