@@ -1,5 +1,4 @@
 import * as fs from 'fs'
-import { Readable } from 'stream'
 import StreamToBlob from 'stream-to-blob'
 import BlobToStream from 'blob-to-stream'
 
@@ -7,7 +6,7 @@ import { Upload } from './lib/upload'
 import { Download } from './lib/download'
 import { EncryptFilename } from './lib/crypto'
 
-import { FileToUpload } from "./api/shard"
+import { FileMeta } from "./api/FileObjectUpload"
 import { CreateEntryFromFrameResponse } from './services/request'
 
 export interface OnlyErrorCallback {
@@ -74,7 +73,7 @@ interface UploadFileParams {
 }
 
 export class Environment {
-  private config: EnvironmentConfig
+  protected config: EnvironmentConfig
 
   constructor(config: EnvironmentConfig) {
     this.config = config
@@ -170,38 +169,9 @@ export class Environment {
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
         const content = BlobToStream(fileContent) 
-        const fileToUpload: FileToUpload = { content, name, size }
+        const fileToUpload: FileMeta = { content, name, size }
 
         Upload(this.config, bucketId, fileToUpload, progress, finished)
-      })
-  }
-
-  /**
-   * Exposed method for download testing. 
-   * DO NOT USE IT FOR PRODUCTION USECASES
-   * @param bucketId Bucket id where file is
-   * @param fileId File id to download
-   */
-  labDownload (bucketId: string, fileId: string, options: DownloadFileOptions) : Promise<Readable> {
-    return Download(this.config, bucketId, fileId, options)
-  }
-
-  /**
-   * Exposed method for upload testing. 
-   * DO NOT USE IT FOR PRODUCTION USECASES
-   * @param bucketId Bucket id where file is
-   * @param fileId File id to download
-   */
-  labUpload (bucketId: string, file: FileToUpload, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
-    if (!this.config.encryptionKey) {
-      throw new Error('Mnemonic was not provided, please, provide a mnemonic')
-    }
-
-    EncryptFilename(this.config.encryptionKey, bucketId, file.name)
-      .then((name: string) => {
-        file.name = name
-
-        Upload(this.config, bucketId, file, progress, finish)
       })
   }
 
