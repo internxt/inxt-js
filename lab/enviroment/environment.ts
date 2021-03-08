@@ -1,7 +1,7 @@
 import { Readable } from 'stream'
 
 import { DownloadFileOptions, Environment, UploadFinishCallback, UploadProgressCallback } from "../../src"
-import { FileToUpload } from "../../src/api/shard"
+import { FileMeta } from "../../src/api/FileObjectUpload"
 import { EncryptFilename } from "../../src/lib/crypto"
 import { Download } from "../../src/lib/download"
 import { Upload } from "../../src/lib/upload"
@@ -14,7 +14,7 @@ export class LabEnvironment extends Environment {
      * @param progress Progress callback
      * @param finish Finish callback
      */
-    upload(bucketId: string, file: FileToUpload, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
+    upload(bucketId: string, file: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
         if(!this.config.encryptionKey) {
             throw new Error('Mnemonic was not provided')   
         }
