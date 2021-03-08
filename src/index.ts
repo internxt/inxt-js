@@ -124,6 +124,11 @@ export class Environment {
     cb(Error('Not implemented yet'), null)
   }
 
+  /**
+   * Lists files in a bucket
+   * @param bucketId Bucket id whose files are going to be listed
+   * @param cb Callback that receives the files list
+   */
   listFiles(bucketId: string, cb: ListFilesCallback) : void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
