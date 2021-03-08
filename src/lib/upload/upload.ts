@@ -1,10 +1,10 @@
-import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from ".."
-import { FileObjectUpload, FileMeta } from "../api/FileObjectUpload"
-import EncryptStream from "./encryptStream"
+import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../.."
+import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload"
+import EncryptStream from "../encryptStream"
 
-import { ShardMeta } from '../lib/shardMeta'
+import { ShardMeta } from '../shardMeta'
 
-import * as api from '../services/request'
+import * as api from '../../services/request'
 
 
 export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
