@@ -41,6 +41,10 @@ interface GetInfo {
   (err: Error | null, result: any) : void
 }
 
+interface GetBuckets {
+  (err: Error | null, result: any) : void
+}
+
 interface UploadFileParams {
   filename: string,
   fileSize: number,
@@ -63,6 +67,15 @@ export class Environment {
   getInfo(cb: GetInfo) : void {
     /* TODO */
     cb(null, 'Not implemented yet')
+  }
+
+  /**
+   * Gets list of available buckets
+   * @param cb Callback that will receive the list of buckets
+   */
+  getBuckets(cb: GetBuckets) : void {
+    /* TODO */
+    cb(Error('Not implemented yet'), null)
   }
 
   setEncryptionKey(newEncryptionKey: string): void {
