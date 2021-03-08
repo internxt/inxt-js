@@ -1,4 +1,5 @@
-import { Environment, EnvironmentConfig } from '../src'
+import { EnvironmentConfig } from '../src'
+import { LabEnvironment } from './enviroment'
 
 import * as dotenv from 'dotenv'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
@@ -23,6 +24,6 @@ export const getConfig = () : EnvironmentConfig => {
     return { bridgeUser, bridgePass, bridgeUrl, encryptionKey: mnemonic }
 }
 
-export const getEnvironment = () : Environment => {
-    return new Environment(getConfig())
+export const getEnvironment = () : LabEnvironment => {
+    return new LabEnvironment(getConfig())
 }
