@@ -45,6 +45,10 @@ interface GetBucketsCallback {
   (err: Error | null, result: any) : void
 }
 
+interface GetBucketIdCallback {
+  (err: Error | null, result: any) : void
+}
+
 interface CreateBucketCallback {
   (err: Error | null, result: any) : void
 }
@@ -82,6 +86,16 @@ export class Environment {
    * @param cb Callback that will receive the list of buckets
    */
   getBuckets(cb: GetBucketsCallback) : void {
+    /* TODO */
+    cb(Error('Not implemented yet'), null)
+  }
+
+  /**
+   * Gets a bucket id by name
+   * @param bucketName Name of the bucket to be retrieved
+   * @param cb Callback that will receive the bucket id
+   */
+  getBucketId(bucketName: string, cb: GetBucketIdCallback) : void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
