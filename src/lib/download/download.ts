@@ -1,5 +1,5 @@
-import { DownloadFileOptions, EnvironmentConfig } from '../index'
-import { FileObject } from '../api/FileObject'
+import { DownloadFileOptions, EnvironmentConfig } from '../..'
+import { FileObject } from '../../api/FileObject'
 import { Readable, Transform } from 'stream'
 
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
