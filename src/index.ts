@@ -37,11 +37,11 @@ export interface DownloadFileOptions {
   finishedCallback: OnlyErrorCallback
 }
 
-interface GetInfo {
+interface GetInfoCallback {
   (err: Error | null, result: any) : void
 }
 
-interface GetBuckets {
+interface GetBucketsCallback {
   (err: Error | null, result: any) : void
 }
 
@@ -64,7 +64,7 @@ export class Environment {
    * Gets general API info
    * @param cb Callback that will receive api's info
    */
-  getInfo(cb: GetInfo) : void {
+  getInfo(cb: GetInfoCallback) : void {
     /* TODO */
     cb(null, 'Not implemented yet')
   }
@@ -73,7 +73,7 @@ export class Environment {
    * Gets list of available buckets
    * @param cb Callback that will receive the list of buckets
    */
-  getBuckets(cb: GetBuckets) : void {
+  getBuckets(cb: GetBucketsCallback) : void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
