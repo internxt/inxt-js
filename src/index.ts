@@ -7,11 +7,16 @@ import { FileToUpload } from "./api/shard"
 import { Readable } from 'stream'
 import { EncryptFilename } from './lib/crypto'
 import { Upload } from './lib/upload'
+import { CreateEntryFromFrameResponse } from './services/request'
 export * from './lib/crypto'
 export * from './api/shard'
 
 export interface OnlyErrorCallback {
   (err: Error | null): void
+}
+
+export interface UploadFinishCallback {
+  (err: Error | null, response: CreateEntryFromFrameResponse | null): void
 }
 
 export interface DownloadProgressCallback {
@@ -33,7 +38,7 @@ interface UploadFileParams {
   fileSize: number,
   fileContent: Blob
   progressCallback: UploadProgressCallback,
-  finishedCallback: OnlyErrorCallback
+  finishedCallback: UploadFinishCallback
 }
 
 export class Environment {

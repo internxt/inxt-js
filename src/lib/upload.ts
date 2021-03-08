@@ -1,4 +1,4 @@
-import { EnvironmentConfig, UploadProgressCallback, OnlyErrorCallback } from ".."
+import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from ".."
 import { FileObjectUpload, FileMeta } from "../api/FileObjectUpload"
 import EncryptStream from "./encryptStream"
 
@@ -7,7 +7,7 @@ import { ShardMeta } from '../lib/shardMeta'
 import * as api from '../services/request'
 
 
-export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: OnlyErrorCallback) : void {
+export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
     if (!config.encryptionKey) {
         throw new Error('Encryption key')
     }
@@ -28,14 +28,14 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                 const rawShard = out.shards.pop()
 
                 if(!rawShard) {
-                    finish(Error('Shard encrypted was null'))
+                    finish(Error('Shard encrypted was null'), null)
                     return reject()
                 }
                 
                 const { size, index } = rawShard
 
                 if(size !== encryptedShard.length) {
-                    finish(Error(`size registered and size encrypted do not match`))
+                    finish(Error(`size registered and size encrypted do not match`), null)
                     return reject()
                 }
 
@@ -56,7 +56,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
             })
 
             out.on('error', (err: Error) => {
-                finish(err)
+                finish(err, null)
                 return reject()
             })
 
@@ -65,7 +65,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                     const uploadShardResponses = await Promise.all(uploadShardPromises)
 
                     if(uploadShardResponses.length === 0) {
-                        finish(Error('No upload requests has been made'))
+                        finish(Error('No upload requests has been made'), null)
                         return reject()
                     }
 
@@ -82,16 +82,16 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                     const savingFileResponse = await File.SaveFileInNetwork(bucketEntry)
 
                     if(!savingFileResponse) {
-                        finish(Error('Saving file response was null'))
+                        finish(Error('Saving file response was null'), null)
                         return reject()
                     } 
 
                     progress(100, totalBytes, totalBytes)
 
-                    finish(null)
+                    finish(null, savingFileResponse)
                     return resolve(null)
                 } catch (err) {
-                    finish(Error(err.message))
+                    finish(Error(err.message), null)
                     return reject()
                 }
             })
