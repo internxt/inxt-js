@@ -14,6 +14,7 @@ import { ERRORS } from "../lib/errors"
 
 import { ExchangeReport } from "./reports"
 import { Shard } from "./shard"
+import { logger } from "../lib/utils/logger"
 
 export interface FileMeta {
     size: number,
@@ -52,12 +53,20 @@ export class FileObjectUpload {
   }
 
   async CheckBucketExistance() : Promise<boolean> {
+    logger.info(`checking if bucket ${this.bucketId} exists`)
+
     try {
         // if bucket not exists, bridge returns an error
         await api.getBucketById(this.config, this.bucketId)
+
+        logger.info(`bucket ${this.bucketId} exists`)
+
         return false
     } catch (err) {
+        err = { ...err, message: `CheckBucketExistanceError: Due to ${err.message || '??'}` }
+
         if (err.message === ERRORS.BUCKET_NOT_FOUND) {
+            logger.error(`Bucket ${this.bucketId} not found`)
             return true
         } else {
             return Promise.reject(err)
@@ -71,26 +80,47 @@ export class FileObjectUpload {
     try {
         if(response = await api.createFrame(this.config)) {
             this.frameId = response.id
+
+            logger.debug(`staged a file with frame ${this.frameId}`)
         } else {
             throw new Error('Staging file response was empty')
         }
     } catch (err) {
+        err = { ...err, message: `StageFileError: Due to ${err.message || '??'}` }
         return Promise.reject(err)
     }
   }
 
   async SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody) : Promise<void | api.CreateEntryFromFrameResponse> {
     try {
-        return await api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
+        const response = await api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
+
+        if(response) {
+            logger.info(`saved file in network with id ${response.id} inside bucket ${this.bucketId}`)
+        } else {
+            throw new Error('Save file in network response was empty')
+        }
+
+        return response
     } catch (err) {
+        err = { ...err, message: `SaveFileInNetworkError: Due to ${err.message || '??'}` }
         return Promise.reject(err)
     }
   }
 
   async NegotiateContract(frameId: string, shardMeta: ShardMeta) : Promise<void | ContractNegotiated> {
     try {
-        return await api.addShardToFrame(this.config, frameId, shardMeta)
+        const response = await api.addShardToFrame(this.config, frameId, shardMeta)
+
+        if(response) {
+            logger.debug(`negotiated a contract for shard ${shardMeta.hash}(index ${shardMeta.index}, size ${shardMeta.size}) with token ${response.token}`)
+        } else {
+            throw new Error('Negotiate contract response was empty')
+        }
+        
+        return response
     } catch (err) {
+        err = { ...err, message: `NegotiateContractError: Due to ${err.message || '??'}` }
         return Promise.reject(err)
     }
   }
@@ -98,14 +128,13 @@ export class FileObjectUpload {
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard) : Promise<boolean> {
     try {
         await api.sendShardToNode(this.config, shard, encryptedShard)
+
+        logger.debug(`node ${shard.farmer.nodeID} accepted shard ${shard.hash}`)
+
         return false
     } catch (err) {
         return Promise.reject(err)
     }
-  }
-
-  Abort(reason: string) : void {
-    throw new Error(`Aborted upload due to ${reason}`)
   }
 
   GenerateHmac(shardMetas: ShardMeta[]) : string {
@@ -121,6 +150,8 @@ export class FileObjectUpload {
   }
 
   async StartUploadFile() : Promise<EncryptStream> {
+    logger.info('Starting file upload')
+
     await this.CheckBucketExistance()
     await this.StageFile()
 
@@ -129,6 +160,7 @@ export class FileObjectUpload {
 
   async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number) : Promise<ShardMeta> {
     const shardMeta : ShardMeta = getShardMeta(encryptedShard, shardSize, index, false)
+    logger.info(`uploading shard ${shardMeta.hash}`)
 
     let negotiatedContract: ContractNegotiated | void
     let token = "", operation = ""
@@ -139,11 +171,7 @@ export class FileObjectUpload {
             token = negotiatedContract.token
             operation = negotiatedContract.operation
             farmer = { ...negotiatedContract.farmer, lastSeen: new Date() }
-        } else {
-            this.Abort('Negotiated contract response is empty')
         }
-
-        console.log('dos')
 
         const hash = shardMeta.hash
         const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity: false, token, farmer, operation }
@@ -158,22 +186,19 @@ export class FileObjectUpload {
             exchangeReport.DownloadOk()
         }
 
-        console.log('tres')
-
         exchangeReport.params.exchangeEnd = new Date()
         await exchangeReport.sendReport()
 
-        console.log('cuatro')
-
     } catch (err) {
-        console.log(err)
         if(attemps > 1) {
             await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps)
         } else {
-            this.Abort(err.message)
+            err = { ...err, message: `UploadShardError: Shard ${shardMeta.hash} not uploaded due to ${err.message || '??'}` }
+            return Promise.reject(err)
         }
     }
 
+    logger.info(`shard ${shardMeta.hash} uploaded successfully`)
     return shardMeta
   }
 

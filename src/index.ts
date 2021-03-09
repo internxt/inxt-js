@@ -5,6 +5,7 @@ import BlobToStream from 'blob-to-stream'
 import { Upload } from './lib/upload'
 import { Download } from './lib/download'
 import { EncryptFilename } from './lib/crypto'
+import { logger } from './lib/utils/logger'
 
 import { FileMeta } from "./api/FileObjectUpload"
 import { CreateEntryFromFrameResponse } from './services/request'
@@ -168,10 +169,18 @@ export class Environment {
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
+        logger.debug(`Filename ${filename} encrypted is ${name}`)
+
         const content = BlobToStream(fileContent) 
         const fileToUpload: FileMeta = { content, name, size }
 
         Upload(this.config, bucketId, fileToUpload, progress, finished)
+      })
+      .catch((err: Error) => {
+        logger.error(`Error encrypting filename due to ${err.message}`)
+        console.error(err)
+
+        finished(err, null)
       })
   }
 

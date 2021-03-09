@@ -2,6 +2,7 @@ import { Hash, createHash } from 'crypto'
 import { Readable, PassThrough } from 'stream'
 import assert from 'assert'
 import { ripemd160 } from './crypto'
+import { logger } from './utils/logger'
 
 interface FileMuxerOptions {
   shards: number
@@ -125,7 +126,7 @@ class FileMuxer extends Readable {
 
     input.once('end', () => {
       const digest = this.hasher.digest()
-      console.log('digest', digest)
+      logger.debug(`digest ${digest}`)
       const inputHash = ripemd160(digest)
       this.hasher = createHash('sha256')
 
@@ -133,10 +134,10 @@ class FileMuxer extends Readable {
 
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
-        console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
+        logger.error('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
         this.emit('error', Error('Shard failed integrity check'))
       } else {
-        console.log('Shard %s OK', inputHash.toString('hex'))
+        logger.info('shard %s OK', inputHash.toString('hex'))
         // Send successful SHARD_DOWNLOADED
       }
 

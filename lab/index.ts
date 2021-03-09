@@ -4,6 +4,7 @@ import { resolve } from 'path'
 import { getBucketId, getEnvironment } from './setup'
 import { DownloadProgressCallback, OnlyErrorCallback, UploadFinishCallback, UploadProgressCallback } from '../src'
 import { CreateEntryFromFrameResponse } from '../src/services/request'
+import { logger } from '../src/lib/utils/logger'
 
 const env = getEnvironment()
 const bucketId = getBucketId()
@@ -37,28 +38,25 @@ function up(fileSize: number, progress: UploadProgressCallback, finish: UploadFi
 }
 
 async function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyErrorCallback) {
-  const file = await env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
-  file.on('data', (chunk: Buffer) => console.log('downloaded chunk', chunk.toString('hex').slice(0, 32)))
+  await env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
 } 
 
 up(size, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
-  console.log(`progress ${progress}%`)
-  console.log(`uploaded ${uploadedBytes} from ${totalBytes}`)
+  logger.warn(`progress ${progress}% (${uploadedBytes} from ${totalBytes})`)
 }, async (err: Error | null, res: CreateEntryFromFrameResponse) => {
   if (err) {
-    console.error(`Error during upload due to ${err.message}`)
+    logger.error(`error during upload due to ${err.message}`)
   } else {
-    console.log('Upload finished!')
+    logger.info('upload finished!')
     
     await down(res.id, (progress: number, downloadedBytes: number | null, totalBytes: number | null) => {
-      console.log(`progress ${progress}%`)
-      console.log(`downloaded ${downloadedBytes} from ${totalBytes}`)
+      logger.warn(`progress ${progress}% (${downloadedBytes} from ${totalBytes})`)
     }, (err: Error | null) => {
       if(err) {
-        console.log('There was an error downloading the file due to ' + err.message)
+        logger.error(`there was an error downloading the file due to ${err.message}`)
       } else {
-        console.log('Download finished!')
+        logger.info('download finished!')
       }
-    }).then(console.log).catch(console.log)
+    }).catch(logger.error)
   }
 })
