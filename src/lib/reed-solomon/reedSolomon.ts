@@ -70,21 +70,16 @@ function init_mul_table() {
   }
 }
 
-function generate_gf() {
-  /*
-  * 1. Generate the polynomial representation
-  * store that representation in gf_exp[i] = x ** i
-  * build gf_log[gf_exp[i]] = i
-  * First GF bits we just shift bits to left
-  */
+export function generate_gf(): void {
   let mask = 1
+  const Pp:string = primitivePolynomial[GF_BITS]
 
   // Compute gf_exp
   for(let i = 0; i < GF_BITS; i++, mask <<= 1) {
     gf_exp[i] = mask
     gf_log[gf_exp[i]] = i
 
-    if( primitivePolynomial[i] == '1') {
+    if( Pp.charAt(i) === '1') {
       gf_exp[GF_BITS] = gf_exp[GF_BITS] ^ mask
     }
 
