@@ -146,11 +146,11 @@ export function generate_gf(): void {
  * @param {number} c
  * @return {*}
  */
-function addmul(dst1: Uint8Array, src1: Uint8Array, c:number, sz: number, dst_max: number, src_max: number, iRow:number, dataShards: number) {
-  let dst = iRow, src = iRow*dataShards+c
-  const lim: number = dst_max < src_max ? dst_max : src_max;
+export function addmul(dst1: Uint8Array, src1: Uint8Array, c:number, sz: number, dst_max: number, src_max: number, dstPos:number, srcPos: number) {
+  let dst = dstPos, src = srcPos
+  const lim: number = dst_max < src_max ? dst_max : src_max
 
-  for(let pos=0; dst <= lim; dst++, src++, pos++) {
+  for(let pos=0; dst < lim; dst++, src++, pos++) {
     if(pos < src_max && pos < dst_max) {
       // PERFORM MULTIPLICATION GF dst*, src*
       GF_ADDMULC(dst1, dst, src1[src], c)
