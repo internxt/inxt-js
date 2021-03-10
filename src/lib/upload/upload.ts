@@ -7,7 +7,14 @@ import { ShardMeta } from '../shardMeta'
 import * as api from '../../services/request'
 import { logger } from "../utils/logger"
 
-
+/**
+ * Uploads a file to the network
+ * @param config Environment config
+ * @param bucketId id whose bucket is going to store the file
+ * @param fileMeta file metadata
+ * @param progress upload progress callback
+ * @param finish finish progress callback
+ */
 export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
     if (!config.encryptionKey) {
         throw new Error('encryption key is null')
