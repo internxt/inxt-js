@@ -14,6 +14,29 @@ const inverse = new Uint8Array(GF_SIZE + 1)
 
 const gf_mul_table = new Uint8Array(Math.pow(GF_SIZE + 1, 2))
 
+/**
+ * compareTo of two arays
+ *
+ * @param {Uint8Array} a
+ * @param {number} startA
+ * @param {number} endA
+ * @param {Uint8Array} b
+ * @param {number} startB
+ * @param {number} endB
+ * @return {number} 1 if a>b, -1 if a<b, 0 otherwise
+ */
+function memcmp(a: Uint8Array, startA:number, endA:number, b:Uint8Array, startB:number, endB:number): number {
+  const elementsOfA = endA - startA + 1
+  const elementsOfB = endB - startB + 1
+  const elementsToCompare = (elementsOfA <= elementsOfB) ? elementsOfA : elementsOfB
+  for(let offset=0; offset<elementsToCompare; offset++) {
+    const A = a[startA + offset]
+    const B = b[startB + offset]
+    if( A<B ) return -1
+    else if(A>B) return 1
+  }
+  return 0
+}
 function GF_ADDMULC(dst: Uint8Array, pos: number, x: number, c:number) {
   dst[pos] ^= gf_mul_table[(c << 8) + x]
 }
