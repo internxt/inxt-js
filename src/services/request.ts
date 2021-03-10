@@ -15,6 +15,7 @@ import { Shard } from '../api/shard'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
+const PROXY = 'https://api.internxt.com:8081'
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
   const DefaultOptions: AxiosRequestConfig = {
@@ -103,7 +104,7 @@ interface getBucketByIdResponse {
  */
 export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/buckets/${bucketId}`
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -133,7 +134,7 @@ interface getFileByIdResponse {
  */
 export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -169,7 +170,7 @@ export interface FrameStaging {
  */
 export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/frames`
+  const targetUrl = `${PROXY}/${URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -226,7 +227,7 @@ export interface CreateEntryFromFrameResponse {
  */
 export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/buckets/${bucketId}/files`
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -268,7 +269,7 @@ interface AddShardToFrameBody {
  */
 export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
-  const targetUrl = `${URL}/frames/${frameId}`
+  const targetUrl = `${PROXY}/${URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
       'User-Agent': 'libstorj-2.0.0-beta2',
@@ -305,7 +306,7 @@ interface SendShardToNodeResponse {
  * @param content Buffer with shard content
  */
 export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
-  const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
+  const targetUrl = `${PROXY}/http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
 
   const defParams: AxiosRequestConfig = {
     headers: {
