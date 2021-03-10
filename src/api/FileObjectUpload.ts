@@ -191,6 +191,7 @@ export class FileObjectUpload {
 
     } catch (err) {
         if(attemps > 1) {
+            logger.error(`upload ${shardMeta.hash} failed. Retrying...`)
             await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps)
         } else {
             err = { ...err, message: `UploadShardError: Shard ${shardMeta.hash} not uploaded due to ${err.message || '??'}` }
