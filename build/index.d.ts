@@ -102,7 +102,6 @@ export declare class Environment {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
     /**
      * Cancels the upload
      * @param state Download file state at the moment

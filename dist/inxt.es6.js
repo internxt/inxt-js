@@ -863,31 +863,12 @@ exports.DownloadShard = DownloadShard;
 
 },{"../lib/crypto":10,"../lib/hashstream":18,"../services/request":26,"./fileinfo":4,"./reports":5}],7:[function(require,module,exports){
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
-var fs = __importStar(require("fs"));
+// import * as fs from 'fs'
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
 var upload_1 = require("./lib/upload");
@@ -995,26 +976,26 @@ var Environment = /** @class */ (function () {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
-        if (!options.overwritte && fs.existsSync(filePath)) {
-            return options.finishedCallback(new Error('File already exists'));
-        }
-        var fileStream = fs.createWriteStream(filePath);
-        download_1.Download(this.config, bucketId, fileId, options).then(function (stream) {
-            console.log('START DUMPING FILE');
-            var dump = stream.pipe(fileStream);
-            dump.on('error', function (err) {
-                console.log('DUMP FILE error', err.message);
-                options.finishedCallback(err);
-            });
-            dump.on('end', function (err) {
-                console.log('DUMP FILE END');
-                options.finishedCallback(err);
-            });
-        });
-        /* TODO: Returns state object */
-        return;
-    };
+    // resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
+    //   if (!options.overwritte && fs.existsSync(filePath)) {
+    //     return options.finishedCallback(new Error('File already exists'))
+    //   }
+    //   const fileStream = fs.createWriteStream(filePath)
+    //   Download(this.config, bucketId, fileId, options).then(stream => {
+    //     console.log('START DUMPING FILE')
+    //     const dump = stream.pipe(fileStream)
+    //     dump.on('error', (err) => {
+    //       console.log('DUMP FILE error', err.message)
+    //       options.finishedCallback(err)
+    //     })
+    //     dump.on('end', (err) => {
+    //       console.log('DUMP FILE END')
+    //       options.finishedCallback(err)
+    //     })
+    //   })
+    //   /* TODO: Returns state object */
+    //   return
+    // }
     /**
      * Cancels the upload
      * @param state Download file state at the moment
@@ -1026,7 +1007,7 @@ var Environment = /** @class */ (function () {
 }());
 exports.Environment = Environment;
 
-},{"./lib/crypto":10,"./lib/download":13,"./lib/upload":21,"./lib/utils/logger":23,"blob-to-stream":114,"fs":164,"stream-to-blob":376}],8:[function(require,module,exports){
+},{"./lib/crypto":10,"./lib/download":13,"./lib/upload":21,"./lib/utils/logger":23,"blob-to-stream":114,"stream-to-blob":376}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BUCKET_NAME_MAGIC = exports.BUCKET_META_MAGIC = exports.SHA256_DIGEST_SIZE = exports.GCM_DIGEST_SIZE = void 0;
