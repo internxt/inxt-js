@@ -9,7 +9,6 @@ import DecryptStream from "../lib/decryptstream"
 import StreamToBlob from 'stream-to-blob'
 import { randomBytes } from 'crypto'
 import FileMuxer from "../lib/filemuxer"
-import * as fs from 'fs'
 import { Duplex } from 'stream'
 
 function BufferToStream(buffer: Buffer): Duplex {

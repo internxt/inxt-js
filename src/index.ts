@@ -1,4 +1,4 @@
-import * as fs from 'fs'
+// import * as fs from 'fs'
 import StreamToBlob from 'stream-to-blob'
 import BlobToStream from 'blob-to-stream'
 
@@ -191,29 +191,29 @@ export class Environment {
    * @param filePath File path where the file maybe already is
    * @param options Options for resolve file case
    */
-  resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
-    if (!options.overwritte && fs.existsSync(filePath)) {
-      return options.finishedCallback(new Error('File already exists'))
-    }
+  // resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
+  //   if (!options.overwritte && fs.existsSync(filePath)) {
+  //     return options.finishedCallback(new Error('File already exists'))
+  //   }
 
-    const fileStream = fs.createWriteStream(filePath)
+  //   const fileStream = fs.createWriteStream(filePath)
 
-    Download(this.config, bucketId, fileId, options).then(stream => {
-      console.log('START DUMPING FILE')
-      const dump = stream.pipe(fileStream)
-      dump.on('error', (err) => {
-        console.log('DUMP FILE error', err.message)
-        options.finishedCallback(err)
-      })
-      dump.on('end', (err) => {
-        console.log('DUMP FILE END')
-        options.finishedCallback(err)
-      })
-    })
+  //   Download(this.config, bucketId, fileId, options).then(stream => {
+  //     console.log('START DUMPING FILE')
+  //     const dump = stream.pipe(fileStream)
+  //     dump.on('error', (err) => {
+  //       console.log('DUMP FILE error', err.message)
+  //       options.finishedCallback(err)
+  //     })
+  //     dump.on('end', (err) => {
+  //       console.log('DUMP FILE END')
+  //       options.finishedCallback(err)
+  //     })
+  //   })
 
-    /* TODO: Returns state object */
-    return
-  }
+  //   /* TODO: Returns state object */
+  //   return
+  // }
 
   /**
    * Cancels the upload
