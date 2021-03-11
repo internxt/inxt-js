@@ -10,6 +10,25 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,12 +69,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.streamRequest = exports.request = void 0;
+exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.extractErrorMsg = exports.streamRequest = exports.request = void 0;
+var url = __importStar(require("url"));
+var stream_1 = require("stream");
+var https = __importStar(require("https"));
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
-var stream_1 = require("stream");
-var https_1 = __importDefault(require("https"));
-var url_1 = __importDefault(require("url"));
+var dotenv = __importStar(require("dotenv"));
+dotenv.config({ path: '/home/inxt/inxt-js/.env' });
+var INXT_API_URL = process.env.INXT_API_URL;
 function request(config, method, targetUrl, params) {
     return __awaiter(this, void 0, void 0, function () {
         var DefaultOptions, options;
@@ -75,11 +97,11 @@ function request(config, method, targetUrl, params) {
 }
 exports.request = request;
 function streamRequest(targetUrl, nodeID) {
-    var uriParts = url_1.default.parse(targetUrl);
+    var uriParts = url.parse(targetUrl);
     var downloader = null;
     function _createDownloadStream() {
-        new https_1.default.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
-        return https_1.default.get({
+        new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
+        return https.get({
             protocol: uriParts.protocol,
             hostname: uriParts.hostname,
             port: uriParts.port,
@@ -109,3 +131,161 @@ function streamRequest(targetUrl, nodeID) {
     });
 }
 exports.streamRequest = streamRequest;
+function extractErrorMsg(err) {
+    if (err.response) {
+        return Promise.reject({
+            err: err.response,
+            message: err.response.data.error ? err.response.data.error : err.response.data.result,
+            status: err.response.status
+        });
+    }
+    else {
+        throw new Error('empty error message');
+    }
+}
+exports.extractErrorMsg = extractErrorMsg;
+/**
+ * Checks if a bucket exists given its id
+ * @param config App config
+ * @param bucketId
+ * @param token
+ * @param jwt JSON Web Token
+ * @param params
+ */
+function getBucketById(config, bucketId, params) {
+    var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
+    var targetUrl = URL + "/buckets/" + bucketId;
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+        }
+    };
+    var finalParams = __assign(__assign({}, defParams), params);
+    return request(config, 'get', targetUrl, finalParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.getBucketById = getBucketById;
+/**
+ * Checks if a file exists given its id and a bucketId
+ * @param config App config
+ * @param bucketId
+ * @param fileId
+ * @param jwt JSON Web Token
+ * @param params
+ */
+function getFileById(config, bucketId, fileId, params) {
+    var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
+    var targetUrl = URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+        }
+    };
+    var finalParams = __assign(__assign({}, defParams), params);
+    return request(config, 'get', targetUrl, finalParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.getFileById = getFileById;
+/**
+ * Creates a file staging frame
+ * @param config App config
+ * @param params
+ */
+function createFrame(config, params) {
+    var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
+    var targetUrl = URL + "/frames";
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+        }
+    };
+    var finalParams = __assign(__assign({}, defParams), params);
+    return request(config, 'post', targetUrl, finalParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.createFrame = createFrame;
+/**
+ * Creates a bucket entry from the given frame object
+ * @param {EnvironmentConfig} config App config
+ * @param {string} bucketId
+ * @param {CreateEntryFromFrameBody} body
+ * @param {string} jwt JSON Web Token
+ * @param {AxiosRequestConfig} params
+ */
+function createEntryFromFrame(config, bucketId, body, params) {
+    var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
+    var targetUrl = URL + "/buckets/" + bucketId + "/files";
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+        },
+        data: body
+    };
+    var finalParams = __assign(__assign({}, defParams), params);
+    return request(config, 'post', targetUrl, finalParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.createEntryFromFrame = createEntryFromFrame;
+/**
+ * Negotiates a storage contract and adds the shard to the frame
+ * @param {EnvironmentConfig} config App config
+ * @param {string} frameId
+ * @param {AddShardToFrameBody} body
+ * @param {string} jwt JSON Web Token
+ * @param {AxiosRequestConfig} params
+ */
+function addShardToFrame(config, frameId, body, params) {
+    var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
+    var targetUrl = URL + "/frames/" + frameId;
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+        },
+        data: __assign(__assign({}, body), { challenges: body.challenges_as_str })
+    };
+    var finalParams = __assign(__assign({}, defParams), params);
+    return request(config, 'put', targetUrl, finalParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.addShardToFrame = addShardToFrame;
+/**
+ * Sends an upload exchange report
+ * @param config App config
+ * @param body
+ */
+function sendUploadExchangeReport(config, exchangeReport) {
+    return exchangeReport.sendReport()
+        .catch(extractErrorMsg);
+}
+exports.sendUploadExchangeReport = sendUploadExchangeReport;
+/**
+ * Stores a shard in a node
+ * @param config App config
+ * @param shard Interface that has the contact info
+ * @param content Buffer with shard content
+ */
+function sendShardToNode(config, shard, content) {
+    var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
+    var defParams = {
+        headers: {
+            'User-Agent': 'libstorj-2.0.0-beta2',
+            'Content-Type': 'application/octet-stream',
+            'x-storj-node-id': shard.farmer.nodeID,
+        },
+        data: content
+    };
+    return request(config, 'post', targetUrl, defParams)
+        .then(function (res) { return res.data; })
+        .catch(extractErrorMsg);
+}
+exports.sendShardToNode = sendShardToNode;

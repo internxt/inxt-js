@@ -40,6 +40,7 @@
     "memory-blob-store": "^5.0.1",
     "mux-demux": "^3.7.9",
     "stream-to-blob": "^2.0.1",
-    "streamsaver": "^2.0.4"
+    "streamsaver": "^2.0.4",
+    "winston": "^3.3.3"
   }
 }

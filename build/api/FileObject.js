@@ -198,9 +198,12 @@ var FileObject = /** @class */ (function (_super) {
             });
         });
     };
-    FileObject.prototype.StartDownloadFile = function () {
+    FileObject.prototype.StartDownloadFile = function (cb) {
         var _this = this;
         var shardObject;
+        var downloadedBytes = 0;
+        var progress = 0;
+        var totalBytes = this.fileInfo ? this.fileInfo.size : 0;
         if (!this.fileInfo) {
             throw new Error('Undefined fileInfo');
         }
@@ -221,6 +224,9 @@ var FileObject = /** @class */ (function (_super) {
                     case 1:
                         shardBuffer = _a.sent();
                         fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        downloadedBytes += shardBuffer.length;
+                        progress = (downloadedBytes / totalBytes) * 100;
+                        cb(progress, downloadedBytes, totalBytes);
                         // fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
                         fileMuxer.once('drain', function () { return nextItem(); });
                         _a.label = 2;

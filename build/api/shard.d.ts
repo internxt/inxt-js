@@ -1,8 +1,9 @@
 /// <reference types="node" />
-import { EnvironmentConfig } from "..";
 import { Transform, Readable } from 'stream';
+import { EnvironmentConfig } from "..";
 export interface Shard {
     index: number;
+    replaceCount: number;
     hash: string;
     size: number;
     parity: boolean;

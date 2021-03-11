@@ -31,6 +31,7 @@ var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var assert_1 = __importDefault(require("assert"));
 var crypto_2 = require("./crypto");
+var logger_1 = require("./utils/logger");
 /**
  * Accepts multiple ordered input sources and exposes them as a single
  * contiguous readable stream. Used for re-assembly of shards.
@@ -119,16 +120,18 @@ var FileMuxer = /** @class */ (function (_super) {
             // Init exchange report
         });
         input.once('end', function () {
-            var inputHash = crypto_2.ripemd160(_this.hasher.digest());
+            var digest = _this.hasher.digest();
+            logger_1.logger.debug("digest " + digest);
+            var inputHash = crypto_2.ripemd160(digest);
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
             if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
-                console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
+                logger_1.logger.error('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
                 _this.emit('error', Error('Shard failed integrity check'));
             }
             else {
-                console.log('Shard %s OK', inputHash.toString('hex'));
+                logger_1.logger.info('shard %s OK', inputHash.toString('hex'));
                 // Send successful SHARD_DOWNLOADED
             }
             _this.emit('drain', input);

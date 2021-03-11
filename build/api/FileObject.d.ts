@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";
-import { EnvironmentConfig } from "..";
+import { DownloadProgressCallback, EnvironmentConfig } from "..";
 import { EventEmitter } from 'events';
 import { Shard } from "./shard";
 import DecryptStream from "../lib/decryptstream";
@@ -23,5 +23,5 @@ export declare class FileObject extends EventEmitter {
     GetFileMirrors(): Promise<void>;
     StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
-    StartDownloadFile(): FileMuxer;
+    StartDownloadFile(cb: DownloadProgressCallback): FileMuxer;
 }
