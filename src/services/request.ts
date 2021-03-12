@@ -1,38 +1,53 @@
 import * as url from 'url'
-import { Readable } from 'stream'
 import * as https from 'https'
+import { Readable } from 'stream'
 import { ClientRequest, IncomingMessage } from 'http'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { ExchangeReport, ExchangeReportParams } from '../api/reports'
+import { ExchangeReport } from '../api/reports'
 
 import { ShardMeta } from '../lib/shardMeta'
 import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
 import { Shard } from '../api/shard'
+import { getProxy } from './proxy'
+import { logger } from '../lib/utils/logger'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+  const proxy = await getProxy()
+  const url = `${proxy.url}/${targetUrl}`
+
+  logger.info('Request to: ' + url)
+
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
     },
-    url: targetUrl
+    url
   }
 
   const options = { ...DefaultOptions, ...params }
 
-  return axios.request<JSON>(options)
+  return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
+    proxy.free()
+    return value
+  })
 }
 
-export function streamRequest(targetUrl: string, nodeID: string): Readable {
-  const uriParts = url.parse(targetUrl)
+export async function streamRequest(targetUrl: string, nodeID: string): Promise<Readable> {
+  const proxy = await getProxy()
+  const URL = `${proxy.url}/${targetUrl}`
+
+  logger.info('StreamRequest to: ', URL)
+
+  const uriParts = url.parse(URL)
   let downloader: ClientRequest | null = null
 
   function _createDownloadStream(): ClientRequest {
@@ -54,6 +69,9 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
     read: function () {
       if (!downloader) {
         downloader = _createDownloadStream()
+
+        proxy.free()
+
         downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))

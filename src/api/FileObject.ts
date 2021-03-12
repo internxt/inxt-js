@@ -66,7 +66,7 @@ export class FileObject extends EventEmitter {
     this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
   }
 
-  StartDownloadShard(index: number): FileMuxer {
+  async StartDownloadShard(index: number): Promise<FileMuxer> {
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo')
     }
@@ -77,7 +77,7 @@ export class FileObject extends EventEmitter {
     const fileMuxer = new FileMuxer({ shards: 1, length: shard.size })
 
     const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
-    const buffer = shardObject.StartDownloadShard()
+    const buffer = await shardObject.StartDownloadShard()
 
     fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
 
@@ -86,7 +86,7 @@ export class FileObject extends EventEmitter {
 
   async TryDownloadShardWithFileMuxer(shard: Shard, excluded: string[] = []): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, (nextTry) => {
+      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry) => {
         let downloadHasError = false
         let downloadError: Error | null = null
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size })
@@ -109,7 +109,7 @@ export class FileObject extends EventEmitter {
           }
         })
   
-        const buffer = shardObject.StartDownloadShard()
+        const buffer = await shardObject.StartDownloadShard()
   
         oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
       }, async (err, result: Buffer) => {
