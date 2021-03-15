@@ -7,7 +7,7 @@ import { ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';
 import { Shard } from '../api/shard';
 export declare function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>>;
-export declare function streamRequest(targetUrl: string, nodeID: string): Readable;
+export declare function streamRequest(targetUrl: string, nodeID: string): Promise<Readable>;
 export declare function extractErrorMsg(err: AxiosError): Promise<any>;
 interface getBucketByIdResponse {
     user: string;

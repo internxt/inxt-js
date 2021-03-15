@@ -71,63 +71,88 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.extractErrorMsg = exports.streamRequest = exports.request = void 0;
 var url = __importStar(require("url"));
-var stream_1 = require("stream");
 var https = __importStar(require("https"));
+var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var dotenv = __importStar(require("dotenv"));
+var proxy_1 = require("./proxy");
+var logger_1 = require("../lib/utils/logger");
 dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 var INXT_API_URL = process.env.INXT_API_URL;
 function request(config, method, targetUrl, params) {
     return __awaiter(this, void 0, void 0, function () {
-        var DefaultOptions, options;
+        var proxy, url, DefaultOptions, options;
         return __generator(this, function (_a) {
-            DefaultOptions = {
-                method: method,
-                auth: {
-                    username: config.bridgeUser,
-                    password: crypto_1.sha256(Buffer.from(config.bridgePass)).toString('hex')
-                },
-                url: targetUrl
-            };
-            options = __assign(__assign({}, DefaultOptions), params);
-            return [2 /*return*/, axios_1.default.request(options)];
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    url = proxy.url + "/" + targetUrl;
+                    logger_1.logger.info('Request to: ' + url);
+                    DefaultOptions = {
+                        method: method,
+                        auth: {
+                            username: config.bridgeUser,
+                            password: crypto_1.sha256(Buffer.from(config.bridgePass)).toString('hex')
+                        },
+                        url: url
+                    };
+                    options = __assign(__assign({}, DefaultOptions), params);
+                    return [2 /*return*/, axios_1.default.request(options).then(function (value) {
+                            proxy.free();
+                            return value;
+                        })];
+            }
         });
     });
 }
 exports.request = request;
 function streamRequest(targetUrl, nodeID) {
-    var uriParts = url.parse(targetUrl);
-    var downloader = null;
-    function _createDownloadStream() {
-        new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
-        return https.get({
-            protocol: uriParts.protocol,
-            hostname: uriParts.hostname,
-            port: uriParts.port,
-            path: uriParts.path,
-            headers: {
-                'content-type': 'application/octet-stream',
-                'x-storj-node-id': nodeID
+    return __awaiter(this, void 0, void 0, function () {
+        function _createDownloadStream() {
+            new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
+            return https.get({
+                protocol: uriParts.protocol,
+                hostname: uriParts.hostname,
+                port: uriParts.port,
+                path: uriParts.path,
+                headers: {
+                    'content-type': 'application/octet-stream',
+                    'x-storj-node-id': nodeID
+                }
+            });
+        }
+        var proxy, URL, uriParts, downloader;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    URL = proxy.url + "/" + targetUrl;
+                    logger_1.logger.info("StreamRequest to: " + URL);
+                    uriParts = url.parse(URL);
+                    downloader = null;
+                    return [2 /*return*/, new stream_1.Readable({
+                            read: function () {
+                                var _this = this;
+                                if (!downloader) {
+                                    downloader = _createDownloadStream();
+                                    proxy.free();
+                                    downloader.on('response', function (res) {
+                                        res
+                                            .on('data', _this.push.bind(_this))
+                                            .on('error', _this.emit.bind(_this, 'error'))
+                                            .on('end', function () {
+                                            _this.push.bind(_this, null);
+                                            _this.emit('end');
+                                        }).on('close', _this.emit.bind(_this, 'close'));
+                                    }).on('error', this.emit.bind(this, 'error'));
+                                }
+                            }
+                        })];
             }
         });
-    }
-    return new stream_1.Readable({
-        read: function () {
-            var _this = this;
-            if (!downloader) {
-                downloader = _createDownloadStream();
-                downloader.on('response', function (res) {
-                    res
-                        .on('data', _this.push.bind(_this))
-                        .on('error', _this.emit.bind(_this, 'error'))
-                        .on('end', function () {
-                        _this.push.bind(_this, null);
-                        _this.emit('end');
-                    }).on('close', _this.emit.bind(_this, 'close'));
-                }).on('error', this.emit.bind(this, 'error'));
-            }
-        }
     });
 }
 exports.streamRequest = streamRequest;
