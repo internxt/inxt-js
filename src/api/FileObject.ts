@@ -1,15 +1,16 @@
+import { randomBytes } from 'crypto'
+import { Duplex } from 'stream'
+import { EventEmitter } from 'events'
+import { eachLimit, retry } from 'async'
+
+import DecryptStream from "../lib/decryptstream"
+import FileMuxer from "../lib/filemuxer"
+import { GenerateFileKey } from "../lib/crypto"
+
 import { ShardObject } from "./ShardObject"
 import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror } from "./fileinfo"
-import { DownloadProgressCallback, EnvironmentConfig } from ".."
-import { EventEmitter } from 'events'
-import { GenerateFileKey, Aes256ctrDecrypter } from "../lib/crypto"
+import { EnvironmentConfig } from ".."
 import { Shard } from "./shard"
-import { eachLimit, eachSeries, queue, times, AsyncResultIterator, retry } from "async"
-import DecryptStream from "../lib/decryptstream"
-import StreamToBlob from 'stream-to-blob'
-import { randomBytes } from 'crypto'
-import FileMuxer from "../lib/filemuxer"
-import { Duplex } from 'stream'
 
 function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex()
