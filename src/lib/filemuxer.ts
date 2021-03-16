@@ -164,8 +164,6 @@ class FileMuxer extends Readable {
 
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
-      this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash: '' }))
-
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
         const actualHash = hash.toString('hex')
