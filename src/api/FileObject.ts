@@ -89,12 +89,15 @@ export class FileObject extends EventEmitter {
       retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry) => {
         let downloadHasError = false
         let downloadError: Error | null = null
+
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size })
         const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
   
+        oneFileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
         oneFileMuxer.on('error', (err) => {
           downloadHasError = true
           downloadError = err
+          this.emit('download-filemuxer-error', err)
           // Should emit Exchange Report?
         })
   
@@ -129,11 +132,8 @@ export class FileObject extends EventEmitter {
 
   }
 
-  StartDownloadFile(cb: DownloadProgressCallback): FileMuxer {
+  StartDownloadFile(): FileMuxer {
     let shardObject
-    let downloadedBytes = 0
-    let progress = 0
-    const totalBytes = this.fileInfo ? this.fileInfo.size : 0
 
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo')
@@ -146,34 +146,37 @@ export class FileObject extends EventEmitter {
       length: this.rawShards.reduce((a, b) => { return { size: a.size + b.size } }, { size: 0 }).size
     })
 
-    eachLimit(this.rawShards, 1, async (shard, nextItem) => {
-      if (this.fileInfo && shard) {
+    fileMuxer.on('error', (err) => this.emit('download-filemuxer-error', err))
+    fileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
 
+    eachLimit(this.rawShards, this.rawShards.length, (shard, nextItem) => {
+      if (this.fileInfo && shard) {
 
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
         this.shards.push(shardObject)
-
-        // axios --> hasher
-        // const buffer = shardObject.StartDownloadShard()
 
         // We add the stream buffer to the muxer, and will be downloaded to the main stream.
         // We should download the shard isolated, and check if its ok.
         // If it fails, try another mirror.
         // If its ok, add it to the muxer.
-        const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard)
-        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+        this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
+          fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
 
-        downloadedBytes += shardBuffer.length
-        progress = (downloadedBytes / totalBytes) * 100
-        cb(progress, downloadedBytes, totalBytes)
+          this.emit('download-progress', shardBuffer.length)
 
-        // fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
-        fileMuxer.once('drain', () => nextItem())
+          fileMuxer.once('drain', () => nextItem())
+        }).catch((err: Error) => {
+          nextItem(err)
+        })
+        
       }
-    }, () => {
-      this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
-      console.log('ALL SHARDS FINISHED')
-      this.emit('end')
+    }, (err: Error | null | undefined) => {
+      if (err) {
+        this.emit('error', err)
+      } else {
+        this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
+        this.emit('end')
+      } 
     })
 
     return fileMuxer

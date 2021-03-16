@@ -8,17 +8,22 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   }
 
   const File = new FileObject(config, bucketId, fileId)
-  await File.GetFileInfo()
 
-  File.on('end', () => {
-    console.log('FILE END')
+  File.on('download-filemuxer-success', (msg) => out.emit('download-filemuxer-success', msg))
+  File.on('download-filemuxer-error', (err) => out.emit('download-filemuxer-error', err))
+  File.on('end', () => out.emit('download-finished'))
+
+  File.decipher.on('end', () => out.emit('decrypting-finished'))
+  File.decipher.once('error', (err: Error) => out.emit('error', err))
+  File.decipher.on('decrypting-progress', () => {
+    console.log('decrypting progress!')
+    // must recalculate 25% of the progress?
   })
 
-  // API request file mirrors with tokens
-  await File.GetFileMirrors()
+  await File.GetFileInfo()
 
   let totalSize = File.final_length
-  const t = new Transform({
+  const out = new Transform({
     transform(chunk: Buffer, enc, cb) {
       if (chunk.length > totalSize) {
         cb(null, chunk.slice(0, totalSize))
@@ -29,5 +34,27 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
     }
   })
 
-  return File.StartDownloadFile(options.progressCallback).pipe(File.decipher).pipe(t)
+  // If an error occurs, the download ends
+  out.on('error', (err: Error | null | undefined) => out.emit('end', err))
+  out.on('end', (err: Error | null | undefined) => options.finishedCallback(err ? err : null))
+
+  let downloadedBytes = 0
+  let progress = 0
+  const totalBytes = File.fileInfo ? File.fileInfo.size : 0
+
+  File.on('download-progress', (addedBytes: number) => {
+    downloadedBytes += addedBytes
+    progress = (downloadedBytes / totalBytes) * 100
+    options.progressCallback(progress, downloadedBytes, totalBytes)
+    // must recalculate 75% of the progress?
+  })
+
+  // Propagate events to the output stream
+  File.on('end', () => out.emit('download-finished'))
+  File.on('error', (err) => out.emit('error', err))
+
+  // API request file mirrors with tokens
+  await File.GetFileMirrors()
+
+  return File.StartDownloadFile().pipe(File.decipher).pipe(out)
 }
