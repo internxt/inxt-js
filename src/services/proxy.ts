@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { Mutex } from '../../src/lib/utils/mutex'
 
 const wait = (ms: number) => new Promise((res) => setTimeout(res, ms))
 
@@ -59,6 +60,11 @@ export interface ProxyRequest {
     id: string;
 }
 
+interface ProxyManager {
+    url: string,
+    free: () => void
+}
+
 const proxyBalancer = new ProxyBalancer()
     .attach(new Proxy('https://proxy1.internxt.com'))
     .attach(new Proxy('https://proxy2.internxt.com'))
@@ -66,10 +72,20 @@ const proxyBalancer = new ProxyBalancer()
     .attach(new Proxy('https://proxy4.internxt.com'))
     .attach(new Proxy('https://proxy5.internxt.com'))
 
-export const getProxy = async() => {
-    const proxy = await proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)
-    const proxyReq = { id: randomBytes(30).toString('hex') }
-    proxy.addReq(proxyReq)
 
-    return { ...proxy, free: () => proxy.removeReq(proxyReq) }
+const mutex = new Mutex()
+
+export const getProxy = async (): Promise<ProxyManager> => {
+    let response = { ...new Proxy(''), free: () => {null} }
+
+    await mutex.dispatch(async () => {
+        const proxy = await proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)
+        const proxyReq = { id: randomBytes(30).toString('hex') }
+        proxy.addReq(proxyReq)
+
+        response = { ...proxy, free: () => proxy.removeReq(proxyReq) }
+    })
+
+    return response
 }
+
