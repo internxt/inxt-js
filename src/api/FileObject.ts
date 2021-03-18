@@ -117,30 +117,38 @@ export class FileObject extends EventEmitter {
   
         oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
       }, async (err, result: Buffer) => {
-        if (err) {
-          excluded.push(shard.farmer.nodeID)
-          const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)
-          if (!newShard[0].farmer) {
-            reject(Error('File missing shard error'))
+        try {
+          if (!err) {
+            return resolve(result) 
           } else {
-            return this.TryDownloadShardWithFileMuxer(newShard[0], excluded)
+            excluded.push(shard.farmer.nodeID)
+
+            const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)
+            
+            if (!newShard[0].farmer) {
+              return reject(Error('File missing shard error'))
+            }
+            
+            const buffer = await this.TryDownloadShardWithFileMuxer(newShard[0], excluded)
+            return resolve(buffer)
           }
-        } else {
-          resolve(result)
-        }
+        } catch (err) {
+          return reject(err)
+        }   
       })
     })
 
   }
 
   StartDownloadFile(): FileMuxer {
-    let shardObject
-
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo')
     }
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
+
+    this.decipher.on('error', (err) => this.emit('decrypting-error', err))
+    this.decipher.on('success', (msg) => this.emit('decrypting-success', msg))
 
     const fileMuxer = new FileMuxer({
       shards: this.rawShards.length,
@@ -150,34 +158,37 @@ export class FileObject extends EventEmitter {
     fileMuxer.on('error', (err) => this.emit('download-filemuxer-error', err))
     fileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
 
+    let shardObject
+
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
-      if (this.fileInfo && shard) {
-
-        shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
-        this.shards.push(shardObject)
-
-        // We add the stream buffer to the muxer, and will be downloaded to the main stream.
-        // We should download the shard isolated, and check if its ok.
-        // If it fails, try another mirror.
-        // If its ok, add it to the muxer.
-        this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
-          fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
-
-          this.emit('download-progress', shardBuffer.length)
-
-          fileMuxer.once('drain', () => nextItem())
-        }).catch((err: Error) => {
-          nextItem(err)
-        })
-        
+      if (!shard) { 
+        return nextItem(Error('Null shard found')) 
       }
+
+      shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
+      this.shards.push(shardObject)
+
+      // We add the stream buffer to the muxer, and will be downloaded to the main stream.
+      // We should download the shard isolated, and check if its ok.
+      // If it fails, try another mirror.
+      // If its ok, add it to the muxer.
+      this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+          .once('error', nextItem)  
+          .once('drain', () => {
+            // continue just if drain fired
+            this.emit('download-progress', shardBuffer.length)
+            nextItem()
+          })
+      }).catch(nextItem)
+
     }, (err: Error | null | undefined) => {
       if (err) {
-        this.emit('error', err)
-      } else {
-        this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
-        this.emit('end')
-      } 
+        return this.emit('error', err)
+      }
+
+      this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
+      this.emit('end')
     })
 
     return fileMuxer
