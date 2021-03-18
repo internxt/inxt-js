@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import { Mutex } from '../../src/lib/utils/mutex'
+import { Mutex } from '../lib/utils/mutex'
 
 const wait = (ms: number) => new Promise((res) => setTimeout(res, ms))
 

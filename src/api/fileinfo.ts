@@ -4,6 +4,7 @@ import { request } from '../services/request'
 import { Shard } from './shard'
 import { ShardObject } from './ShardObject'
 import { AxiosResponse, AxiosError } from 'axios'
+import { getProxy } from '../services/proxy'
 
 export interface FileInfo {
   bucket: string
@@ -23,8 +24,11 @@ export interface FileInfo {
   index: string
 }
 
-export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
-  return request(config, 'get', `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data).catch((err: AxiosError) => {
+export async function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
+  const proxy = await getProxy()
+
+  return request(config, 'get', `${proxy.url}/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data).catch((err: AxiosError) => {
+    proxy.free()
     switch (err.response?.status) {
       case 404:
         throw Error(err.response.data.error)
@@ -34,14 +38,17 @@ export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId:
   })
 }
 
-export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Shard[]> {
+export async function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Shard[]> {
   const excludeNodeIds: string = excludeNodes.join(',')
+  const proxy = await getProxy()
+
   return request(config,
     'GET',
-    `https://api.internxt.com:8081/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`,
+    `${proxy.url}/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`,
     {
       responseType: 'json'
     }).then((res: AxiosResponse) => {
+      proxy.free()
       return res.data
     })
 }
