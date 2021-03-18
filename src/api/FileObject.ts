@@ -150,7 +150,7 @@ export class FileObject extends EventEmitter {
     fileMuxer.on('error', (err) => this.emit('download-filemuxer-error', err))
     fileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
 
-    eachLimit(this.rawShards, this.rawShards.length, (shard, nextItem) => {
+    eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (this.fileInfo && shard) {
 
         shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
