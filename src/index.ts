@@ -154,10 +154,12 @@ export class Environment {
   }
 
   downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Blob> {
-    return Download(this.config, bucketId, fileId, options).then(stream => {
-      options.finishedCallback(null)
-      return StreamToBlob(stream, 'application/octet-stream')
-    })
+    return Download(this.config, bucketId, fileId, options)
+      .then(stream => StreamToBlob(stream, 'application/octet-stream'))
+      .then((file: Blob) => {
+        options.finishedCallback(null)
+        return file
+      })
   }
 
   uploadFile(bucketId: string, data:UploadFileParams) : void {
