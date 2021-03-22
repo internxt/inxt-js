@@ -124,7 +124,6 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
   const targetUrl = `${URL}/buckets/${bucketId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -154,7 +153,6 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
   const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -190,7 +188,6 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
   const targetUrl = `${URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -247,7 +244,6 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   const targetUrl = `${URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: body
@@ -289,7 +285,6 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
   const targetUrl = `${URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: { ...body, challenges: body.challenges_as_str }
@@ -327,7 +322,6 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
 
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
       'x-storj-node-id': shard.farmer.nodeID,
     },
