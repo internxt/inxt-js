@@ -2,6 +2,7 @@ import { Hash, createHash } from 'crypto'
 import { Readable, PassThrough } from 'stream'
 import assert from 'assert'
 import { ripemd160 } from './crypto'
+import { FILEMUXER } from './events'
 
 export class FileMuxerError extends Error {
   content: any
@@ -170,7 +171,7 @@ class FileMuxer extends Readable {
         return this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
       } 
 
-      this.emit('success', new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
+      this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
       this.emit('drain', input)   
     })
 
