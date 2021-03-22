@@ -1,5 +1,6 @@
 import { createDecipheriv, Decipher } from 'crypto'
 import { Transform } from 'stream'
+import { DECRYPT } from './events'
 
 export class DecryptStream extends Transform {
   private decipher: Decipher
@@ -11,6 +12,7 @@ export class DecryptStream extends Transform {
 
   _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void): void {
     this.decipher.write(chunk)
+    this.emit(DECRYPT.PROGRESS, chunk.byteLength)
     cb(null, this.decipher.read())
   }
 

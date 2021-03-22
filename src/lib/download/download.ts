@@ -1,6 +1,8 @@
-import { DownloadFileOptions, EnvironmentConfig } from '../..'
+import { DownloadFileOptions, DownloadProgressCallback, EnvironmentConfig } from '../..'
 import { FileObject } from '../../api/FileObject'
 import { Readable, Transform } from 'stream'
+import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events'
+import { Mutex } from '../utils/mutex'
 
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
   if (!config.encryptionKey) {
@@ -25,32 +27,68 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
     }
   })
 
-  // If an error occurs, the download ends
-  out.on('error', (err: Error | null | undefined) => out.emit('end', err))
-
-  // Propagate events to the output stream
-  File.on('download-filemuxer-success', (msg) => out.emit('download-filemuxer-success', msg))
-  File.on('download-filemuxer-error', (err) => out.emit('download-filemuxer-error', err))
-  File.on('end', () => out.emit('download-finished'))
-  File.on('error', (err) => out.emit('error', err))
-
-  File.decipher.on('end', () => out.emit('decrypting-finished'))
-  File.decipher.once('error', (err: Error) => out.emit('error', err))
-  File.decipher.on('decrypting-progress', () => {
-    console.log('decrypting progress!')
-    // must recalculate 25% of the progress?
-  })
-
-  let downloadedBytes = 0
-  let progress = 0
-  const totalBytes = File.fileInfo ? File.fileInfo.size : 0
-
-  File.on('download-progress', (addedBytes: number) => {
-    downloadedBytes += addedBytes
-    progress = (downloadedBytes / totalBytes) * 100
-    options.progressCallback(progress, downloadedBytes, totalBytes)
-    // must recalculate 75% of the progress?
-  })
+  out.on('error', (err) => { throw err })
+  
+  attachFileObjectListeners(File, out)
+  handleDownloadProgress(File, options.progressCallback)
 
   return File.StartDownloadFile().pipe(File.decipher).pipe(out)
+}
+
+// TODO: use propagate lib
+function attachFileObjectListeners(f: FileObject, notified: Transform) {
+  // propagate events to notified
+  f.on(FILEMUXER.PROGRESS, (msg) => notified.emit(FILEMUXER.PROGRESS, msg))
+
+  // TODO: Handle filemuxer errors
+  f.on(FILEMUXER.ERROR, (err) => notified.emit(FILEMUXER.ERROR, err))
+
+  // TODO: Handle fileObject errors
+  f.on('error', (err) => notified.emit(FILEOBJECT.ERROR, err))
+  f.on('end', () => notified.emit(FILEOBJECT.END))
+  
+  f.decipher.on('end', () => notified.emit(DECRYPT.END))
+  f.decipher.once('error', (err: Error) => notified.emit(DECRYPT.ERROR, err))
+}
+
+function handleDownloadProgress(fl: FileObject, cb: DownloadProgressCallback) {
+  let totalBytesDownloaded = 0, totalBytesDecrypted = 0
+  let progress = 0
+  const totalBytes = fl.fileInfo ? fl.fileInfo.size : 0
+
+  function getWeightedDownload() {
+    const coefficient = 0.75
+    return totalBytesDownloaded * coefficient
+  }
+
+  function getWeightedDecryption() {
+    const coefficient = 0.25
+    return totalBytesDecrypted * coefficient
+  }
+
+  function getBytesProcessed() {
+    return getWeightedDecryption() + getWeightedDownload()
+  }
+
+  function getCurrentProgress() {
+    return (getBytesProcessed() / totalBytes) * 100
+  }
+
+  const mutex = new Mutex()
+
+  fl.on(DOWNLOAD.PROGRESS, async (addedBytes: number) => {
+    await mutex.dispatch(() => {
+      totalBytesDownloaded += addedBytes
+      progress = getCurrentProgress()
+      cb(progress, totalBytesDownloaded, totalBytes)
+    })
+  })
+
+  fl.on(DECRYPT.PROGRESS, async (addedBytes: number) => {
+    await mutex.dispatch(() => {
+      totalBytesDecrypted += addedBytes
+      progress = getCurrentProgress()
+      cb(progress, totalBytesDownloaded, totalBytes)
+    })
+  })
 }

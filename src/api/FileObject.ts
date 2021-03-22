@@ -12,6 +12,7 @@ import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror } from "./fileinfo
 import { EnvironmentConfig } from ".."
 import { Shard } from "./shard"
 import { ExchangeReport } from './reports'
+import { DECRYPT, DOWNLOAD, FILEMUXER, FILEOBJECT } from '../lib/events'
 
 function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex()
@@ -99,11 +100,11 @@ export class FileObject extends EventEmitter {
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size })
         const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
   
-        oneFileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
+        oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg))
         oneFileMuxer.on('error', (err) => {
           downloadHasError = true
           downloadError = err
-          this.emit('download-filemuxer-error', err)
+          this.emit(FILEMUXER.ERROR, err)
           // Should emit Exchange Report?
         })
   
@@ -152,8 +153,8 @@ export class FileObject extends EventEmitter {
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
 
-    this.decipher.on('error', (err) => this.emit('decrypting-error', err))
-    this.decipher.on('success', (msg) => this.emit('decrypting-success', msg))
+    this.decipher.on('error', (err) => this.emit(DECRYPT.ERROR, err))
+    this.decipher.on(DECRYPT.PROGRESS, (msg) => this.emit(DECRYPT.PROGRESS, msg))
 
     const fileMuxer = new FileMuxer({
       shards: this.rawShards.length,
@@ -161,10 +162,10 @@ export class FileObject extends EventEmitter {
     })
 
     fileMuxer.on('error', (err) => this.emit('download-filemuxer-error', err))
-    fileMuxer.on('success', (msg) => this.emit('download-filemuxer-success', msg))
+    fileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg))
 
     let shardObject
-    let exchangeReport =new ExchangeReport(this.config)
+    let exchangeReport = new ExchangeReport(this.config)
 
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (!shard) { 
@@ -172,7 +173,7 @@ export class FileObject extends EventEmitter {
       }
 
       exchangeReport = new ExchangeReport(this.config)
-      
+
       exchangeReport.params.exchangeEnd = new Date()
       exchangeReport.params.farmerId = shard.farmer.nodeID
       exchangeReport.params.dataHash = shard.hash
@@ -192,7 +193,7 @@ export class FileObject extends EventEmitter {
             exchangeReport.DownloadOk()
             exchangeReport.sendReport()
 
-            this.emit('download-progress', shardBuffer.length)
+            this.emit(DOWNLOAD.PROGRESS, shardBuffer.length)
             nextItem()
           })
 
@@ -205,7 +206,7 @@ export class FileObject extends EventEmitter {
 
     }, (err: Error | null | undefined) => {
       if (err) {        
-        return this.emit('error', err)
+        return this.emit(FILEOBJECT.ERROR, err)
       }
 
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
