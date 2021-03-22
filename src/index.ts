@@ -22,6 +22,10 @@ export interface DownloadProgressCallback {
   (progress: number, downloadedBytes: number | null, totalBytes: number | null): void
 }
 
+export interface DecryptionProgressCallback {
+  (progress: number, decryptedBytes: number | null, totalBytes: number | null): void
+}
+
 export interface UploadProgressCallback {
   (progress: number, uploadedBytes: number | null, totalBytes: number | null) : void
 }
@@ -34,6 +38,7 @@ export interface ResolveFileOptions {
 
 export interface DownloadFileOptions {
   progressCallback: DownloadProgressCallback,
+  decryptionProgressCallback?: DecryptionProgressCallback,
   finishedCallback: OnlyErrorCallback
 }
 

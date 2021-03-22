@@ -1,8 +1,7 @@
-import { DownloadFileOptions, DownloadProgressCallback, EnvironmentConfig } from '../..'
+import { DecryptionProgressCallback, DownloadFileOptions, DownloadProgressCallback, EnvironmentConfig } from '../..'
 import { FileObject } from '../../api/FileObject'
 import { Readable, Transform } from 'stream'
 import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events'
-import { Mutex } from '../utils/mutex'
 
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
   if (!config.encryptionKey) {
@@ -30,7 +29,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   out.on('error', (err) => { throw err })
   
   attachFileObjectListeners(File, out)
-  handleDownloadProgress(File, options.progressCallback)
+  handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback)
 
   return File.StartDownloadFile().pipe(File.decipher).pipe(out)
 }
@@ -51,44 +50,30 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
   f.decipher.once('error', (err: Error) => notified.emit(DECRYPT.ERROR, err))
 }
 
-function handleDownloadProgress(fl: FileObject, cb: DownloadProgressCallback) {
+function handleFileResolving(fl: FileObject, downloadCb: DownloadProgressCallback, decryptionCb?: DecryptionProgressCallback) {
   let totalBytesDownloaded = 0, totalBytesDecrypted = 0
   let progress = 0
   const totalBytes = fl.fileInfo ? fl.fileInfo.size : 0
 
-  function getWeightedDownload() {
-    const coefficient = 0.75
-    return totalBytesDownloaded * coefficient
+  function getDownloadProgress() {
+    return (totalBytesDownloaded / totalBytes) * 100 
   }
 
-  function getWeightedDecryption() {
-    const coefficient = 0.25
-    return totalBytesDecrypted * coefficient
+  function getDecryptionProgress() {
+    return (totalBytesDecrypted / totalBytes) * 100 
   }
-
-  function getBytesProcessed() {
-    return getWeightedDecryption() + getWeightedDownload()
-  }
-
-  function getCurrentProgress() {
-    return (getBytesProcessed() / totalBytes) * 100
-  }
-
-  const mutex = new Mutex()
 
   fl.on(DOWNLOAD.PROGRESS, async (addedBytes: number) => {
-    await mutex.dispatch(() => {
-      totalBytesDownloaded += addedBytes
-      progress = getCurrentProgress()
-      cb(progress, totalBytesDownloaded, totalBytes)
-    })
+    totalBytesDownloaded += addedBytes
+    progress = getDownloadProgress()
+    downloadCb(progress, totalBytesDownloaded, totalBytes)
   })
 
-  fl.on(DECRYPT.PROGRESS, async (addedBytes: number) => {
-    await mutex.dispatch(() => {
+  if (decryptionCb) {
+    fl.on(DECRYPT.PROGRESS, (addedBytes: number) => {
       totalBytesDecrypted += addedBytes
-      progress = getCurrentProgress()
-      cb(progress, totalBytesDownloaded, totalBytes)
+      progress = getDecryptionProgress()
+      decryptionCb(progress, totalBytesDecrypted, totalBytes)
     })
-  })
+  } 
 }
