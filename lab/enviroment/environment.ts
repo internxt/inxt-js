@@ -40,7 +40,6 @@ export class LabEnvironment extends Environment {
 
         const output = await Download(this.config, bucketId, fileId, options)
 
-        // handleLogsFrom(output)
         new DownloadLogsManager(output).init()
 
         return output
@@ -100,33 +99,3 @@ class DownloadLogsManager {
         })
     }
 }
-
-// function handleLogsFrom(output: Readable) {
-//     handleDownloadLogs(output)
-//     handleDecryptingLogs(output)
-
-//     output.on('error', (err: Error) => {
-//         logger.error('Download failed due to %s', err.message)
-//         console.error(err)
-//     })
-
-//     output.on('end', () => logger.info('Download complete.'))
-// }
-
-// function handleDownloadLogs(output: Readable) {
-//     output.on(DOWNLOAD.END, () => logger.info('Shards download finished. Decrypting...'))
-
-//     output.on(FILEMUXER.ERROR, (err: ShardFailedIntegrityCheckError) => {
-//         logger.error('%s. Expected hash: %s, actual: %s', err.message, err.content.expectedHash, err.content.actualHash)
-//     })
-
-//     output.on(FILEMUXER.PROGRESS, (msg: ShardSuccesfulIntegrityCheck) => {
-//         logger.debug('digest %s', msg.content.digest)
-//         logger.info('shard %s OK', msg.content.expectedHash)
-//     })
-// }
-
-// function handleDecryptingLogs(output: Readable) {
-//     output.on(DECRYPT.PROGRESS, () => logger.info('Decrypting progress'))
-//     output.on(DECRYPT.END, () => logger.info('Decrypting finished.'))
-// }
