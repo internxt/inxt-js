@@ -47,7 +47,7 @@ var ExchangeReport = /** @class */ (function () {
         if (!this.validate()) {
             return Promise.reject(Error('Not valid report to send'));
         }
-        return request_1.request(this.config, 'POST', "https://api.internxt.com:8081/" + this.config.bridgeUrl + "/reports/exchanges", { data: this.params });
+        return request_1.request(this.config, 'POST', this.config.bridgeUrl + "/reports/exchanges", { data: this.params });
     };
     ExchangeReport.prototype.DownloadOk = function () {
         this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS;

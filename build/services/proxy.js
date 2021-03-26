@@ -56,6 +56,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getProxy = exports.Proxy = exports.ProxyBalancer = void 0;
 var crypto_1 = require("crypto");
+var mutex_1 = require("../lib/utils/mutex");
 var wait = function (ms) { return new Promise(function (res) { return setTimeout(res, ms); }); };
 var MAX_CONCURRENT_BROWSER_CONNECTIONS = 6;
 var ProxyBalancer = /** @class */ (function () {
@@ -72,7 +73,6 @@ var ProxyBalancer = /** @class */ (function () {
                         _a.label = 1;
                     case 1:
                         if (!((proxiesAvailable = proxiesCopy.filter(function (proxy) { return proxy.requests() < reqsLessThan; })).length === 0)) return [3 /*break*/, 3];
-                        console.log('Proxies not available, waiting ...');
                         return [4 /*yield*/, wait(500)];
                     case 2:
                         _a.sent();
@@ -109,22 +109,38 @@ var Proxy = /** @class */ (function () {
     return Proxy;
 }());
 exports.Proxy = Proxy;
+// const proxyBalancer = new ProxyBalancer()
+//     .attach(new Proxy('https://proxy1.internxt.com'))
+//     .attach(new Proxy('https://proxy2.internxt.com'))
+//     .attach(new Proxy('https://proxy3.internxt.com'))
+//     .attach(new Proxy('https://proxy4.internxt.com'))
+//     .attach(new Proxy('https://proxy5.internxt.com'))
 var proxyBalancer = new ProxyBalancer()
-    .attach(new Proxy('https://proxy1.internxt.com'))
-    .attach(new Proxy('https://proxy2.internxt.com'))
-    .attach(new Proxy('https://proxy3.internxt.com'))
-    .attach(new Proxy('https://proxy4.internxt.com'))
-    .attach(new Proxy('https://proxy5.internxt.com'));
+    .attach(new Proxy('https://api.internxt.com:8081'));
+var mutex = new mutex_1.Mutex();
 exports.getProxy = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var proxy, proxyReq;
+    var response;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)];
+            case 0:
+                response = __assign(__assign({}, new Proxy('')), { free: function () { null; } });
+                return [4 /*yield*/, mutex.dispatch(function () { return __awaiter(void 0, void 0, void 0, function () {
+                        var proxy, proxyReq;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0: return [4 /*yield*/, proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)];
+                                case 1:
+                                    proxy = _a.sent();
+                                    proxyReq = { id: crypto_1.randomBytes(30).toString('hex') };
+                                    proxy.addReq(proxyReq);
+                                    response = __assign(__assign({}, proxy), { free: function () { return proxy.removeReq(proxyReq); } });
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); })];
             case 1:
-                proxy = _a.sent();
-                proxyReq = { id: crypto_1.randomBytes(30).toString('hex') };
-                proxy.addReq(proxyReq);
-                return [2 /*return*/, __assign(__assign({}, proxy), { free: function () { return proxy.removeReq(proxyReq); } })];
+                _a.sent();
+                return [2 /*return*/, response];
         }
     });
 }); };

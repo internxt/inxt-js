@@ -130,7 +130,7 @@ function streamRequest(targetUrl, nodeID) {
                 case 1:
                     proxy = _a.sent();
                     URL = proxy.url + "/" + targetUrl;
-                    logger_1.logger.info("StreamRequest to: " + URL);
+                    logger_1.logger.info('StreamRequest to: ', URL);
                     uriParts = url.parse(URL);
                     downloader = null;
                     return [2 /*return*/, new stream_1.Readable({
@@ -182,7 +182,6 @@ function getBucketById(config, bucketId, params) {
     var targetUrl = URL + "/buckets/" + bucketId;
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
         }
     };
@@ -205,7 +204,6 @@ function getFileById(config, bucketId, fileId, params) {
     var targetUrl = URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
         }
     };
@@ -225,7 +223,6 @@ function createFrame(config, params) {
     var targetUrl = URL + "/frames";
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
         }
     };
@@ -248,7 +245,6 @@ function createEntryFromFrame(config, bucketId, body, params) {
     var targetUrl = URL + "/buckets/" + bucketId + "/files";
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
         },
         data: body
@@ -272,7 +268,6 @@ function addShardToFrame(config, frameId, body, params) {
     var targetUrl = URL + "/frames/" + frameId;
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
         },
         data: __assign(__assign({}, body), { challenges: body.challenges_as_str })
@@ -303,7 +298,6 @@ function sendShardToNode(config, shard, content) {
     var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
     var defParams = {
         headers: {
-            'User-Agent': 'libstorj-2.0.0-beta2',
             'Content-Type': 'application/octet-stream',
             'x-storj-node-id': shard.farmer.nodeID,
         },

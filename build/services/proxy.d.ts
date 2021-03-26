@@ -16,7 +16,9 @@ export declare class Proxy {
 export interface ProxyRequest {
     id: string;
 }
-export declare const getProxy: () => Promise<{
-    free: () => void;
+interface ProxyManager {
     url: string;
-}>;
+    free: () => void;
+}
+export declare const getProxy: () => Promise<ProxyManager>;
+export {};

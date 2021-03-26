@@ -8,6 +8,9 @@ export interface UploadFinishCallback {
 export interface DownloadProgressCallback {
     (progress: number, downloadedBytes: number | null, totalBytes: number | null): void;
 }
+export interface DecryptionProgressCallback {
+    (progress: number, decryptedBytes: number | null, totalBytes: number | null): void;
+}
 export interface UploadProgressCallback {
     (progress: number, uploadedBytes: number | null, totalBytes: number | null): void;
 }
@@ -16,8 +19,14 @@ export interface ResolveFileOptions {
     finishedCallback: OnlyErrorCallback;
     overwritte?: boolean;
 }
+export interface StoreFileOptions {
+    filename: string;
+    progressCallback: UploadProgressCallback;
+    finishedCallback: OnlyErrorCallback;
+}
 export interface DownloadFileOptions {
     progressCallback: DownloadProgressCallback;
+    decryptionProgressCallback?: DecryptionProgressCallback;
     finishedCallback: OnlyErrorCallback;
 }
 interface GetInfoCallback {
@@ -102,11 +111,16 @@ export declare class Environment {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
+    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
     /**
      * Cancels the upload
      * @param state Download file state at the moment
      */
     resolveFileCancel(state: any): void;
+    /**
+     * Uploads a file, returns state object
+     */
+    storeFile(bucketId: string, filePath: string, options: StoreFileOptions): void;
 }
 export interface EnvironmentConfig {
     bridgeUrl?: string;
