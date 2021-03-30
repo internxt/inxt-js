@@ -93,6 +93,8 @@ export class FileObject extends EventEmitter {
     return new Promise((resolve, reject) => {
       retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry) => {
         exchangeReport.params.exchangeStart = new Date()
+        exchangeReport.params.farmerId = shard.farmer.nodeID
+        exchangeReport.params.dataHash = shard.hash
 
         let downloadHasError = false
         let downloadError: Error | null = null
@@ -105,7 +107,10 @@ export class FileObject extends EventEmitter {
           downloadHasError = true
           downloadError = err
           this.emit(FILEMUXER.ERROR, err)
+
           // Should emit Exchange Report?
+          exchangeReport.DownloadError()
+          exchangeReport.sendReport()
         })
   
         const buffs: Buffer[] = []
@@ -115,6 +120,9 @@ export class FileObject extends EventEmitter {
           if (downloadHasError) {
             nextTry(downloadError)
           } else {
+            exchangeReport.DownloadOk()
+            exchangeReport.sendReport()
+
             nextTry(null, Buffer.concat(buffs))
           }
         })
@@ -165,18 +173,11 @@ export class FileObject extends EventEmitter {
     fileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg))
 
     let shardObject
-    let exchangeReport = new ExchangeReport(this.config)
 
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
       if (!shard) { 
         return nextItem(Error('Null shard found')) 
       }
-
-      exchangeReport = new ExchangeReport(this.config)
-
-      exchangeReport.params.exchangeEnd = new Date()
-      exchangeReport.params.farmerId = shard.farmer.nodeID
-      exchangeReport.params.dataHash = shard.hash
 
       shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
       this.shards.push(shardObject)
@@ -190,17 +191,11 @@ export class FileObject extends EventEmitter {
           .once('error', (err) => { throw err })  
           .once('drain', () => {
             // continue just if drain fired, 'drain' = decrypted correctly and ready for more
-            exchangeReport.DownloadOk()
-            exchangeReport.sendReport()
-
             this.emit(DOWNLOAD.PROGRESS, shardBuffer.length)
             nextItem()
           })
 
       }).catch((err) => {
-        exchangeReport.DownloadError()
-        exchangeReport.sendReport()
-
         nextItem(err)
       })
 
