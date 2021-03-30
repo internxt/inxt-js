@@ -110,7 +110,7 @@ export class FileObject extends EventEmitter {
 
           // Should emit Exchange Report?
           exchangeReport.DownloadError()
-          exchangeReport.sendReport()
+          exchangeReport.sendReport().catch((err) => { err })
         })
   
         const buffs: Buffer[] = []
@@ -121,7 +121,7 @@ export class FileObject extends EventEmitter {
             nextTry(downloadError)
           } else {
             exchangeReport.DownloadOk()
-            exchangeReport.sendReport()
+            exchangeReport.sendReport().catch((err) => { err })
 
             nextTry(null, Buffer.concat(buffs))
           }
