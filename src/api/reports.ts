@@ -75,6 +75,10 @@ export class ExchangeReport {
   }
 
   sendReport() {
+    if (this.params.exchangeEnd == null) {
+      this.params.exchangeEnd = new Date()
+    }
+
     if (!this.validate()) {
       return Promise.reject(Error('Not valid report to send'))
     }
