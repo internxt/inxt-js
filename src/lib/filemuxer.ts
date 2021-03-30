@@ -168,10 +168,11 @@ class FileMuxer extends Readable {
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
         const actualHash = hash.toString('hex')
-        return this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
-      } 
+        this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
+      } else {
+        this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
+      }
 
-      this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
       this.emit('drain', input)   
     })
 
