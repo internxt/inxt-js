@@ -28,9 +28,9 @@ export interface Shard {
   operation: string
 }
 
-export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable {
+export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable> {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`
-  return api.streamRequest(`https://api.internxt.com:8081/${fetchUrl}`, nodeID)
+  return api.streamRequest(fetchUrl, nodeID)
 }
 
 export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {

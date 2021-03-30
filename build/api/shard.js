@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -37,14 +56,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadShard = exports.DownloadShardRequest = void 0;
-var crypto_1 = require("../lib/crypto");
-var request_1 = require("../services/request");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
+var api = __importStar(require("../services/request"));
 var hashstream_1 = require("../lib/hashstream");
+var crypto_1 = require("../lib/crypto");
 function DownloadShardRequest(config, address, port, hash, token, nodeID) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
-    return request_1.streamRequest("https://api.internxt.com:8081/" + fetchUrl, nodeID);
+    return api.streamRequest(fetchUrl, nodeID);
 }
 exports.DownloadShardRequest = DownloadShardRequest;
 function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {

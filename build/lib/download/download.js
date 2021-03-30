@@ -36,11 +36,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var FileObject_1 = require("../api/FileObject");
+exports.Download = void 0;
+var FileObject_1 = require("../../api/FileObject");
 var stream_1 = require("stream");
-function Download(config, bucketId, fileId) {
+var events_1 = require("../events");
+function Download(config, bucketId, fileId, options) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, totalSize, t;
+        var File, totalSize, out;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -48,19 +50,18 @@ function Download(config, bucketId, fileId) {
                         throw Error('Encryption key required');
                     }
                     File = new FileObject_1.FileObject(config, bucketId, fileId);
-                    return [4 /*yield*/, File.GetFileInfo()];
+                    return [4 /*yield*/, File.GetFileInfo()
+                        // API request file mirrors with tokens
+                    ];
                 case 1:
                     _a.sent();
-                    File.on('end', function () {
-                        console.log('FILE END');
-                    });
                     // API request file mirrors with tokens
                     return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:
                     // API request file mirrors with tokens
                     _a.sent();
                     totalSize = File.final_length;
-                    t = new stream_1.Transform({
+                    out = new stream_1.Transform({
                         transform: function (chunk, enc, cb) {
                             if (chunk.length > totalSize) {
                                 cb(null, chunk.slice(0, totalSize));
@@ -71,9 +72,51 @@ function Download(config, bucketId, fileId) {
                             }
                         }
                     });
-                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher).pipe(t)];
+                    out.on('error', function (err) { throw err; });
+                    attachFileObjectListeners(File, out);
+                    handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
+                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher).pipe(out)];
             }
         });
     });
 }
-exports.default = Download;
+exports.Download = Download;
+// TODO: use propagate lib
+function attachFileObjectListeners(f, notified) {
+    // propagate events to notified
+    f.on(events_1.FILEMUXER.PROGRESS, function (msg) { return notified.emit(events_1.FILEMUXER.PROGRESS, msg); });
+    // TODO: Handle filemuxer errors
+    f.on(events_1.FILEMUXER.ERROR, function (err) { return notified.emit(events_1.FILEMUXER.ERROR, err); });
+    // TODO: Handle fileObject errors
+    f.on('error', function (err) { return notified.emit(events_1.FILEOBJECT.ERROR, err); });
+    f.on('end', function () { return notified.emit(events_1.FILEOBJECT.END); });
+    f.decipher.on('end', function () { return notified.emit(events_1.DECRYPT.END); });
+    f.decipher.once('error', function (err) { return notified.emit(events_1.DECRYPT.ERROR, err); });
+}
+function handleFileResolving(fl, downloadCb, decryptionCb) {
+    var _this = this;
+    var totalBytesDownloaded = 0, totalBytesDecrypted = 0;
+    var progress = 0;
+    var totalBytes = fl.fileInfo ? fl.fileInfo.size : 0;
+    function getDownloadProgress() {
+        return (totalBytesDownloaded / totalBytes) * 100;
+    }
+    function getDecryptionProgress() {
+        return (totalBytesDecrypted / totalBytes) * 100;
+    }
+    fl.on(events_1.DOWNLOAD.PROGRESS, function (addedBytes) { return __awaiter(_this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            totalBytesDownloaded += addedBytes;
+            progress = getDownloadProgress();
+            downloadCb(progress, totalBytesDownloaded, totalBytes);
+            return [2 /*return*/];
+        });
+    }); });
+    if (decryptionCb) {
+        fl.on(events_1.DECRYPT.PROGRESS, function (addedBytes) {
+            totalBytesDecrypted += addedBytes;
+            progress = getDecryptionProgress();
+            decryptionCb(progress, totalBytesDecrypted, totalBytes);
+        });
+    }
+}

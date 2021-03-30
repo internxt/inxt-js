@@ -1,0 +1,60 @@
+// File transfer success
+export const STORJ_TRANSFER_OK = 0
+export const STORJ_TRANSFER_CANCELED = 1
+
+// Bridge related errors 1000 to 1999
+export const STORJ_BRIDGE_REQUEST_ERROR = 1000
+export const STORJ_BRIDGE_AUTH_ERROR = 1001
+export const STORJ_BRIDGE_TOKEN_ERROR = 1002
+export const STORJ_BRIDGE_TIMEOUT_ERROR = 1003
+export const STORJ_BRIDGE_INTERNAL_ERROR = 1004
+export const STORJ_BRIDGE_RATE_ERROR = 1005
+export const STORJ_BRIDGE_BUCKET_NOTFOUND_ERROR = 1006
+export const STORJ_BRIDGE_FILE_NOTFOUND_ERROR = 1007
+export const STORJ_BRIDGE_JSON_ERROR = 1008
+export const STORJ_BRIDGE_FRAME_ERROR = 1009
+export const STORJ_BRIDGE_POINTER_ERROR = 1010
+export const STORJ_BRIDGE_REPOINTER_ERROR = 1011
+export const STORJ_BRIDGE_FILEINFO_ERROR = 1012
+export const STORJ_BRIDGE_BUCKET_FILE_EXISTS = 1013
+export const STORJ_BRIDGE_OFFER_ERROR = 1014
+
+// Farmer related errors 2000 to 2999
+export const STORJ_FARMER_REQUEST_ERROR = 2000
+export const STORJ_FARMER_TIMEOUT_ERROR = 2001
+export const STORJ_FARMER_AUTH_ERROR = 2002
+export const STORJ_FARMER_EXHAUSTED_ERROR = 2003
+export const STORJ_FARMER_INTEGRITY_ERROR = 2004
+
+// File related errors 3000 to 3999
+export const STORJ_FILE_INTEGRITY_ERROR = 3000
+export const STORJ_FILE_WRITE_ERROR = 3001
+export const STORJ_FILE_ENCRYPTION_ERROR = 3002
+export const STORJ_FILE_SIZE_ERROR = 3003
+export const STORJ_FILE_DECRYPTION_ERROR = 3004
+export const STORJ_FILE_GENERATE_HMAC_ERROR = 3005
+export const STORJ_FILE_READ_ERROR = 3006
+export const STORJ_FILE_SHARD_MISSING_ERROR = 3007
+export const STORJ_FILE_RECOVER_ERROR = 3008
+export const STORJ_FILE_RESIZE_ERROR = 3009
+export const STORJ_FILE_UNSUPPORTED_ERASURE = 3010
+export const STORJ_FILE_PARITY_ERROR = 3011
+
+// Memory related errors 4000 to 4999
+export const STORJ_MEMORY_ERROR = 4000
+export const STORJ_MAPPING_ERROR = 4001
+export const STORJ_UNMAPPING_ERROR = 4002
+
+// Queue related errors 5000
+export const STORJ_QUEUE_ERROR = 5000
+
+// Meta related errors 6000 to 6999
+export const STORJ_META_ENCRYPTION_ERROR = 6000
+export const STORJ_META_DECRYPTION_ERROR = 6001
+
+// Miscellaneous errors
+export const STORJ_HEX_DECODE_ERROR = 7000
+
+// Exchange report codes
+export const STORJ_REPORT_SUCCESS = 1000
+export const STORJ_REPORT_FAILURE = 1100

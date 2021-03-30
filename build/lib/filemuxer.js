@@ -27,10 +27,39 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ShardSuccesfulIntegrityCheck = exports.ShardFailedIntegrityCheckError = exports.FileMuxerError = void 0;
 var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var assert_1 = __importDefault(require("assert"));
 var crypto_2 = require("./crypto");
+var events_1 = require("./events");
+var FileMuxerError = /** @class */ (function (_super) {
+    __extends(FileMuxerError, _super);
+    function FileMuxerError() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    return FileMuxerError;
+}(Error));
+exports.FileMuxerError = FileMuxerError;
+var ShardFailedIntegrityCheckError = /** @class */ (function (_super) {
+    __extends(ShardFailedIntegrityCheckError, _super);
+    function ShardFailedIntegrityCheckError(content) {
+        var _this = _super.call(this) || this;
+        _this.name = 'ShardFailedIntegrityCheck';
+        _this.message = 'Shard failed integrity check';
+        _this.content = content;
+        return _this;
+    }
+    return ShardFailedIntegrityCheckError;
+}(FileMuxerError));
+exports.ShardFailedIntegrityCheckError = ShardFailedIntegrityCheckError;
+var ShardSuccesfulIntegrityCheck = /** @class */ (function () {
+    function ShardSuccesfulIntegrityCheck(content) {
+        this.content = content;
+    }
+    return ShardSuccesfulIntegrityCheck;
+}());
+exports.ShardSuccesfulIntegrityCheck = ShardSuccesfulIntegrityCheck;
 /**
  * Accepts multiple ordered input sources and exposes them as a single
  * contiguous readable stream. Used for re-assembly of shards.
@@ -119,18 +148,17 @@ var FileMuxer = /** @class */ (function (_super) {
             // Init exchange report
         });
         input.once('end', function () {
-            var inputHash = crypto_2.ripemd160(_this.hasher.digest());
+            var digest = _this.hasher.digest();
+            var inputHash = crypto_2.ripemd160(digest);
+            var expectedHash = inputHash.toString('hex');
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
             if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
-                console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'));
-                _this.emit('error', Error('Shard failed integrity check'));
+                var actualHash = hash.toString('hex');
+                return _this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: expectedHash, actualHash: actualHash }));
             }
-            else {
-                console.log('Shard %s OK', inputHash.toString('hex'));
-                // Send successful SHARD_DOWNLOADED
-            }
+            _this.emit(events_1.FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: expectedHash, digest: digest.toString('hex') }));
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {

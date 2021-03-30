@@ -2,7 +2,40 @@ import { Hash, createHash } from 'crypto'
 import { Readable, PassThrough } from 'stream'
 import assert from 'assert'
 import { ripemd160 } from './crypto'
-import { logger } from './utils/logger'
+import { FILEMUXER } from './events'
+
+export class FileMuxerError extends Error {
+  content: any
+}
+
+export interface ShardFailedIntegrityCheckContent {
+  expectedHash: string,
+  actualHash: string,
+}
+
+export class ShardFailedIntegrityCheckError extends FileMuxerError {
+  content: ShardFailedIntegrityCheckContent
+
+  constructor(content: ShardFailedIntegrityCheckContent) {
+    super()
+    this.name = 'ShardFailedIntegrityCheck'
+    this.message = 'Shard failed integrity check'
+    this.content = content
+  }
+}
+
+export interface ShardSuccesfulIntegrityCheckContent {
+  expectedHash: string,
+  digest: string
+}
+
+export class ShardSuccesfulIntegrityCheck {
+  content: ShardSuccesfulIntegrityCheckContent
+
+  constructor(content: ShardSuccesfulIntegrityCheckContent) {
+    this.content = content
+  }
+}
 
 interface FileMuxerOptions {
   shards: number
@@ -126,22 +159,20 @@ class FileMuxer extends Readable {
 
     input.once('end', () => {
       const digest = this.hasher.digest()
-      logger.debug(`digest ${digest}`)
       const inputHash = ripemd160(digest)
+      const expectedHash = inputHash.toString('hex')
       this.hasher = createHash('sha256')
 
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
-        logger.error('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
-        this.emit('error', Error('Shard failed integrity check'))
-      } else {
-        logger.info('shard %s OK', inputHash.toString('hex'))
-        // Send successful SHARD_DOWNLOADED
-      }
+        const actualHash = hash.toString('hex')
+        return this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
+      } 
 
-      this.emit('drain', input)
+      this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
+      this.emit('drain', input)   
     })
 
     readable.on('error', (err) => {

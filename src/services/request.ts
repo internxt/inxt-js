@@ -1,39 +1,54 @@
 import * as url from 'url'
-import { Readable } from 'stream'
 import * as https from 'https'
+import { Readable } from 'stream'
 import { ClientRequest, IncomingMessage } from 'http'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { ExchangeReport, ExchangeReportParams } from '../api/reports'
+import { ExchangeReport } from '../api/reports'
 
 import { ShardMeta } from '../lib/shardMeta'
 import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
 import { Shard } from '../api/shard'
+import { getProxy } from './proxy'
+import { logger } from '../lib/utils/logger'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
 const PROXY = 'https://api.internxt.com:8081'
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
+  const proxy = await getProxy()
+  const url = `${proxy.url}/${targetUrl}`
+
+  logger.info('Request to: ' + url)
+
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
     },
-    url: targetUrl
+    url
   }
 
   const options = { ...DefaultOptions, ...params }
 
-  return axios.request<JSON>(options)
+  return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
+    proxy.free()
+    return value
+  })
 }
 
-export function streamRequest(targetUrl: string, nodeID: string): Readable {
-  const uriParts = url.parse(targetUrl)
+export async function streamRequest(targetUrl: string, nodeID: string): Promise<Readable> {
+  const proxy = await getProxy()
+  const URL = `${proxy.url}/${targetUrl}`
+
+  logger.info('StreamRequest to: ', URL)
+
+  const uriParts = url.parse(URL)
   let downloader: ClientRequest | null = null
 
   function _createDownloadStream(): ClientRequest {
@@ -55,6 +70,9 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
     read: function () {
       if (!downloader) {
         downloader = _createDownloadStream()
+
+        proxy.free()
+
         downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))
@@ -107,7 +125,6 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
   const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -137,7 +154,6 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
   const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -173,7 +189,6 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
   const targetUrl = `${PROXY}/${URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -230,7 +245,6 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: body
@@ -272,7 +286,6 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
   const targetUrl = `${PROXY}/${URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: { ...body, challenges: body.challenges_as_str }
@@ -310,7 +323,6 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
 
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
       'x-storj-node-id': shard.farmer.nodeID,
     },
