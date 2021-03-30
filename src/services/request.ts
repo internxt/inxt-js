@@ -82,7 +82,9 @@ export async function streamRequest(targetUrl: string, nodeID: string): Promise<
               this.push.bind(this, null)
               this.emit('end')
             }).on('close', this.emit.bind(this, 'close'))
-        }).on('error', this.emit.bind(this, 'error'))
+        })
+        .on('error', this.emit.bind(this, 'error'))
+        .on('timeout', () => this.emit('error', Error('Request timeout')))
       }
     }
   })
