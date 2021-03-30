@@ -62,7 +62,8 @@ export async function streamRequest(targetUrl: string, nodeID: string): Promise<
       headers: {
         'content-type': 'application/octet-stream',
         'x-storj-node-id': nodeID
-      }
+      },
+      timeout: 3000
     })
   }
 
