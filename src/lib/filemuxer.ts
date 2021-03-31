@@ -152,6 +152,16 @@ class FileMuxer extends Readable {
 
     readable.on('end', () => { input.end() })
 
+    /**
+     * DO NOT REMOVE THE NEXT LINE
+     * 
+     * This forces PassThrough to be in flowing mode. Thus, we can force input.end().
+     * If it isn't in flowing mode, the 'end' might not fire, blocking the entire download process.
+     * 
+     * See https://nodejs.org/api/stream.html#stream_event_end
+     */
+    input.on('data', () => {})
+
     input.once('readable', () => {
       // console.log('shard is now readable, start to download')
       // Init exchange report

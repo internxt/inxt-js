@@ -44,9 +44,9 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
 
   // TODO: Handle fileObject errors
   f.on('error', (err) => notified.emit(FILEOBJECT.ERROR, err))
-  f.on('end', () => notified.emit(FILEOBJECT.END))
+  // f.on('end', () => notified.emit(FILEOBJECT.END))
   
-  f.decipher.on('end', () => notified.emit(DECRYPT.END))
+  // f.decipher.on('end', () => notified.emit(DECRYPT.END))
   f.decipher.once('error', (err: Error) => notified.emit(DECRYPT.ERROR, err))
 }
 

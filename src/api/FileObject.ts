@@ -111,6 +111,9 @@ export class FileObject extends EventEmitter {
           // Should emit Exchange Report?
           exchangeReport.DownloadError()
           exchangeReport.sendReport().catch((err) => { err })
+
+          // Force to finish this attempt
+          oneFileMuxer.emit('drain')
         })
   
         const buffs: Buffer[] = []
@@ -200,12 +203,13 @@ export class FileObject extends EventEmitter {
       })
 
     }, (err: Error | null | undefined) => {
-      if (err) {        
-        return this.emit(FILEOBJECT.ERROR, err)
-      }
+      // if (err) {        
+      //   // this.emit(FILEOBJECT.ERROR, err)
+
+      // }
 
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size })
-      this.emit('end')
+      this.emit('end', err)
     })
 
     return fileMuxer
