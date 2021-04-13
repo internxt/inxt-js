@@ -149,7 +149,7 @@ export default class GaloisField {
   dotProduct(a: Uint8Array, ar: number, ac: number, b: Uint8Array, br: number, bc: number): Uint8Array {
 
     // Check conditions for multiplication
-    if(ac == br ) throw new ReedSolomonError('Columns of A should be equal to rows in B for dot product.')
+    if(ac != br ) throw new ReedSolomonError('Columns of A should be equal to rows in B for dot product.')
     else {
       let ptr = 0
       const y = new Uint8Array(ar * bc)
@@ -181,12 +181,22 @@ export default class GaloisField {
    * @param {number} initPointerSrc
    * @memberof GaloisField
    */
-  addMul(dst: Uint8Array, src: Uint8Array, c: number, sz: number, dstMax: number, srcMax: number, initPointerDst: number, initPointerSrc: number): void {
-    const lowerMax = Math.min(dstMax, srcMax)
+  addMul2(dst: Uint8Array, src: Uint8Array, c: number, sz: number, dstMax: number, srcMax: number, initPointerDst: number, initPointerSrc: number): void {
+    const lowerMax = srcMax//Math.min(dstMax, srcMax)
     if(c != 0) {
       // TODO: Check when we past the max -> Is it really needed? -> Arrays init to 0.
       for (; initPointerDst < lowerMax; initPointerDst++, initPointerSrc++) {
-        dst[initPointerDst] ^= this.gf_mul_table[(c << 8) + src[initPointerSrc]]
+        dst[initPointerDst] = dst[initPointerDst] ^ this.gf_mul_table[(c << 8) + src[initPointerSrc]]
+      }
+    }
+  }
+
+  addMul(matrix: Uint8Array, c: number, sz: number, pointerRowDst: number, pointerRowSrc: number): void {
+    const lim = pointerRowDst + sz
+    if (c != 0) {
+      // TODO: Check when we past the max -> Is it really needed? -> Arrays init to 0.
+      for (; pointerRowDst < lim; pointerRowDst++, pointerRowSrc++) {
+        matrix[pointerRowDst] ^= this.gf_mul_table[(c << 8) + matrix[pointerRowSrc]]
       }
     }
   }
@@ -249,7 +259,7 @@ export default class GaloisField {
           if(ix != icol) {
             c = src[p + icol]
             src[p + icol] = 0
-            this.addMul(src,src,c,k,k,k,pivot_row_index,p)
+            this.addMul(src,c,k,p,pivot_row_index)
           }
         }
       }
