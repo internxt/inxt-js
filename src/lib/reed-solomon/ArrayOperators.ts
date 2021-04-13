@@ -8,7 +8,7 @@
 export function swap(array: Uint8Array, a_index: number, b_index: number): void {
   const tmp = array[a_index]
   array[a_index] = array[b_index]
-  array[a_index] = tmp
+  array[b_index] = tmp
 }
 
 /**
