@@ -181,7 +181,7 @@ export default class GaloisField {
    * @param {number} initPointerSrc
    * @memberof GaloisField
    */
-  addMul2(dst: Uint8Array, src: Uint8Array, c: number, sz: number, dstMax: number, srcMax: number, initPointerDst: number, initPointerSrc: number): void {
+  addMul2(dst: Uint8Array, src: Uint8Array, c: number, sz: number, dstMax: number, srcMax: number, initPointerDst=0, initPointerSrc=0): void {
     const lowerMax = srcMax//Math.min(dstMax, srcMax)
     if(c != 0) {
       // TODO: Check when we past the max -> Is it really needed? -> Arrays init to 0.
