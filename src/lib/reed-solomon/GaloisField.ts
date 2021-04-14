@@ -146,7 +146,7 @@ export default class GaloisField {
    * @return {*}  {Uint8Array}
    * @memberof GaloisField
    */
-  dotProduct(a: Uint8Array, ar: number, ac: number, b: Uint8Array, br: number, bc: number): Uint8Array {
+  dotProduct(a: Uint8Array, ar: number, ac: number, b: Uint8Array, br: number, bc: number, initA = 0, initB = 0): Uint8Array {
 
     // Check conditions for multiplication
     if(ac != br ) throw new ReedSolomonError('Columns of A should be equal to rows in B for dot product.')
@@ -154,9 +154,9 @@ export default class GaloisField {
       let ptr = 0
       const y = new Uint8Array(ar * bc)
       for(let r = 0; r < ar; r++) {
-        for(let c = 0; c < bc; c++) {
+        for(let c = initB; c < bc; c++) {
           let tg = 0
-          for(let i=0; i < ac; i++) {
+          for(let i=initA; i < ac; i++) {
             tg ^= this.galMultiply(a[r*ac+i], b[i*bc+c])
           }
           y[ptr++] = tg
