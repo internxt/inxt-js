@@ -75,10 +75,14 @@ export class ExchangeReport {
   }
 
   sendReport() {
+    if (this.params.exchangeEnd == null) {
+      this.params.exchangeEnd = new Date()
+    }
+
     if (!this.validate()) {
       return Promise.reject(Error('Not valid report to send'))
     }
-    return request(this.config, 'POST', `https://api.internxt.com:8081/${this.config.bridgeUrl}/reports/exchanges`, { data: this.params })
+    return request(this.config, 'POST', `${this.config.bridgeUrl}/reports/exchanges`, { data: this.params })
   }
 
   DownloadOk() {

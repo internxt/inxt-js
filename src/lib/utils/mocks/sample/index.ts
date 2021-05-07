@@ -80,7 +80,7 @@ const spawnShardReferenced = (spawner: ShardReferencedSpawner) : ShardReferenced
     const fileId: string = spawner.fileId ? spawner.fileId : randomBytes(32).toString('hex')
     const bucketId: string = spawner.bucketId ? spawner.bucketId : randomBytes(32).toString('hex')
 
-    return { index, hash, size, parity, token, farmer, operation, fileId, bucketId }
+    return { index, replaceCount: 0, hash, size, parity, token, farmer, operation, fileId, bucketId }
 }
 
 

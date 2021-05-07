@@ -35,68 +35,38 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Aes256ctrDecrypter = exports.GenerateFileKey = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
-var crypto_1 = __importDefault(require("crypto"));
-var bip39_1 = require("bip39");
-function sha256(input) {
-    return crypto_1.default.createHash('sha256').update(input).digest();
-}
-exports.sha256 = sha256;
-function sha256HashBuffer() {
-    return crypto_1.default.createHash('sha256');
-}
-exports.sha256HashBuffer = sha256HashBuffer;
-function sha512(input) {
-    return crypto_1.default.createHash('sha512').update(input).digest();
-}
-exports.sha512 = sha512;
-function sha512HmacBuffer(key) {
-    return crypto_1.default.createHmac('sha512', key);
-}
-exports.sha512HmacBuffer = sha512HmacBuffer;
-function ripemd160(input) {
-    return crypto_1.default.createHash('ripemd160').update(input).digest();
-}
-exports.ripemd160 = ripemd160;
-function GetDeterministicKey(key, data) {
-    var hash = crypto_1.default.createHash('sha512');
-    hash.update(key).update(data);
-    return hash.digest();
-}
-exports.GetDeterministicKey = GetDeterministicKey;
-function GenerateBucketKey(mnemonic, bucketId) {
-    return __awaiter(this, void 0, void 0, function () {
-        var seed;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, bip39_1.mnemonicToSeed(mnemonic)];
-                case 1:
-                    seed = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'))];
-            }
+exports.Mutex = void 0;
+var Mutex = /** @class */ (function () {
+    function Mutex() {
+        this.mutex = Promise.resolve();
+    }
+    Mutex.prototype.lock = function () {
+        var begin;
+        this.mutex = this.mutex.then(function () { return new Promise(begin); });
+        return new Promise(function (res) { return begin = res; });
+    };
+    Mutex.prototype.dispatch = function (fn) {
+        return __awaiter(this, void 0, void 0, function () {
+            var unlock;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.lock()];
+                    case 1:
+                        unlock = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        _a.trys.push([2, , 4, 5]);
+                        return [4 /*yield*/, Promise.resolve(fn())];
+                    case 3: return [2 /*return*/, _a.sent()];
+                    case 4:
+                        unlock();
+                        return [7 /*endfinally*/];
+                    case 5: return [2 /*return*/];
+                }
+            });
         });
-    });
-}
-exports.GenerateBucketKey = GenerateBucketKey;
-function GenerateFileKey(mnemonic, bucketId, index) {
-    return __awaiter(this, void 0, void 0, function () {
-        var bucketKey;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, GenerateBucketKey(mnemonic, bucketId)];
-                case 1:
-                    bucketKey = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
-            }
-        });
-    });
-}
-exports.GenerateFileKey = GenerateFileKey;
-function Aes256ctrDecrypter(key, iv) {
-    return crypto_1.default.createDecipheriv('aes-256-ctr', key, iv);
-}
-exports.Aes256ctrDecrypter = Aes256ctrDecrypter;
+    };
+    return Mutex;
+}());
+exports.Mutex = Mutex;

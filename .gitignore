@@ -1,10 +1,8 @@
 node_modules/
 .env
 
-# My common test filenames
-PEPA.*
-
 # Dev files
 notes.*
 
-build/
+# Files for testing
+lab/files

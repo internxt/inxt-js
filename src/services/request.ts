@@ -1,38 +1,54 @@
 import * as url from 'url'
-import { Readable } from 'stream'
 import * as https from 'https'
+import { Readable } from 'stream'
 import { ClientRequest, IncomingMessage } from 'http'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
 import { EnvironmentConfig } from '..'
 import { sha256 } from '../lib/crypto'
-import { ExchangeReport, ExchangeReportParams } from '../api/reports'
+import { ExchangeReport } from '../api/reports'
 
 import { ShardMeta } from '../lib/shardMeta'
 import { ContractNegotiated } from '../lib/contracts'
 import * as dotenv from 'dotenv'
+import { Shard } from '../api/shard'
+import { getProxy } from './proxy'
+import { logger } from '../lib/utils/logger'
 dotenv.config({ path: '/home/inxt/inxt-js/.env' })
 
 const INXT_API_URL = process.env.INXT_API_URL
+const PROXY = 'https://api.internxt.com:8081'
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  // console.log(`request to: ${targetUrl}`)
+  const proxy = await getProxy()
+  const url = `${proxy.url}/${targetUrl}`
+
+  logger.info('Request to: ' + url)
+
   const DefaultOptions: AxiosRequestConfig = {
     method: method,
     auth: {
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
     },
-    url: targetUrl
+    url
   }
 
   const options = { ...DefaultOptions, ...params }
 
-  return axios.request<JSON>(options)
+  return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
+    proxy.free()
+    return value
+  })
 }
 
-export function streamRequest(targetUrl: string, nodeID: string): Readable {
-  const uriParts = url.parse(targetUrl)
+export async function streamRequest(targetUrl: string, nodeID: string): Promise<Readable> {
+  const proxy = await getProxy()
+  const URL = `${proxy.url}/${targetUrl}`
+
+  logger.info('StreamRequest to: ', URL)
+
+  const uriParts = url.parse(URL)
   let downloader: ClientRequest | null = null
 
   function _createDownloadStream(): ClientRequest {
@@ -46,7 +62,8 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
       headers: {
         'content-type': 'application/octet-stream',
         'x-storj-node-id': nodeID
-      }
+      },
+      timeout: 3000
     })
   }
 
@@ -54,6 +71,9 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
     read: function () {
       if (!downloader) {
         downloader = _createDownloadStream()
+
+        proxy.free()
+
         downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))
@@ -62,7 +82,9 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
               this.push.bind(this, null)
               this.emit('end')
             }).on('close', this.emit.bind(this, 'close'))
-        }).on('error', this.emit.bind(this, 'error'))
+        })
+        .on('error', this.emit.bind(this, 'error'))
+        .on('timeout', () => this.emit('error', Error('Request timeout')))
       }
     }
   })
@@ -101,11 +123,11 @@ interface getBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, token:string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}?token=${token}`
+export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -131,10 +153,10 @@ interface getFileByIdResponse {
  * @param params
  */
 export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/file-ids/${fileId}`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -163,14 +185,13 @@ export interface FrameStaging {
 /**
  * Creates a file staging frame
  * @param config App config
- * @param jwt JSON Web Token
  * @param params
  */
 export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
-  const targetUrl = `${INXT_API_URL}/frames`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${PROXY}/${URL}/frames`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     }
   }
@@ -193,6 +214,8 @@ export interface CreateEntryFromFrameBody {
 }
 
 export interface CreateEntryFromFrameResponse {
+  /* bucket entry id */
+  id: string,
   index: string,
   /* frame id */
   frame: string,
@@ -221,10 +244,10 @@ export interface CreateEntryFromFrameResponse {
  * @param {AxiosRequestConfig} params
  */
 export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
-  const targetUrl = `${INXT_API_URL}/buckets/${bucketId}/files`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/files`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: body
@@ -262,10 +285,10 @@ interface AddShardToFrameBody {
  * @param {AxiosRequestConfig} params
  */
 export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
-  const targetUrl = `${INXT_API_URL}/frames/${frameId}`
+  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
+  const targetUrl = `${PROXY}/${URL}/frames/${frameId}`
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
     },
     data: { ...body, challenges: body.challenges_as_str }
@@ -295,20 +318,16 @@ interface SendShardToNodeResponse {
 /**
  * Stores a shard in a node
  * @param config App config
- * @param shardHash
- * @param token Node token
- * @param hostname Node url
- * @param port Node xcore port
- * @param nodeID
+ * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode (config: EnvironmentConfig, shardHash: string, token: string, hostname: string, port: number, nodeID: string, content: Buffer):Promise<SendShardToNodeResponse | void> {
-  const targetUrl = `http://${hostname}:${port}/shards/${shardHash}?token=${token}`
+export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
+  const targetUrl = `${PROXY}/http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
+
   const defParams: AxiosRequestConfig = {
     headers: {
-      'User-Agent': 'libstorj-2.0.0-beta2',
       'Content-Type': 'application/octet-stream',
-      'x-storj-node-id': nodeID,
+      'x-storj-node-id': shard.farmer.nodeID,
     },
     data: content
   }

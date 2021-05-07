@@ -1,5 +1,5 @@
 import { EnvironmentConfig } from "..";
-interface ExchangeReportParams {
+export interface ExchangeReportParams {
     dataHash: string | null;
     reporterId: string;
     farmerId: string | null;
@@ -30,4 +30,3 @@ export declare class ExchangeReport {
     DownloadOk(): void;
     DownloadError(): void;
 }
-export {};

@@ -1,11 +1,13 @@
 /// <reference types="node" />
+import { Duplex } from 'stream';
+import { EventEmitter } from 'events';
+import DecryptStream from "../lib/decryptstream";
+import FileMuxer from "../lib/filemuxer";
 import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";
 import { EnvironmentConfig } from "..";
-import { EventEmitter } from 'events';
 import { Shard } from "./shard";
-import DecryptStream from "../lib/decryptstream";
-import FileMuxer from "../lib/filemuxer";
+export declare function BufferToStream(buffer: Buffer): Duplex;
 export declare class FileObject extends EventEmitter {
     shards: ShardObject[];
     rawShards: Shard[];
@@ -21,7 +23,7 @@ export declare class FileObject extends EventEmitter {
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     GetFileInfo(): Promise<FileInfo | undefined>;
     GetFileMirrors(): Promise<void>;
-    StartDownloadShard(index: number): FileMuxer;
+    StartDownloadShard(index: number): Promise<FileMuxer>;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
     StartDownloadFile(): FileMuxer;
 }

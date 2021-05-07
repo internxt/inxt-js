@@ -1,5 +1,24 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
+export declare class FileMuxerError extends Error {
+    content: any;
+}
+export interface ShardFailedIntegrityCheckContent {
+    expectedHash: string;
+    actualHash: string;
+}
+export declare class ShardFailedIntegrityCheckError extends FileMuxerError {
+    content: ShardFailedIntegrityCheckContent;
+    constructor(content: ShardFailedIntegrityCheckContent);
+}
+export interface ShardSuccesfulIntegrityCheckContent {
+    expectedHash: string;
+    digest: string;
+}
+export declare class ShardSuccesfulIntegrityCheck {
+    content: ShardSuccesfulIntegrityCheckContent;
+    constructor(content: ShardSuccesfulIntegrityCheckContent);
+}
 interface FileMuxerOptions {
     shards: number;
     length: number;

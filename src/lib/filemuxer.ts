@@ -1,7 +1,41 @@
 import { Hash, createHash } from 'crypto'
 import { Readable, PassThrough } from 'stream'
-import * as assert from 'assert'
+import assert from 'assert'
 import { ripemd160 } from './crypto'
+import { FILEMUXER } from './events'
+
+export class FileMuxerError extends Error {
+  content: any
+}
+
+export interface ShardFailedIntegrityCheckContent {
+  expectedHash: string,
+  actualHash: string,
+}
+
+export class ShardFailedIntegrityCheckError extends FileMuxerError {
+  content: ShardFailedIntegrityCheckContent
+
+  constructor(content: ShardFailedIntegrityCheckContent) {
+    super()
+    this.name = 'ShardFailedIntegrityCheck'
+    this.message = 'Shard failed integrity check'
+    this.content = content
+  }
+}
+
+export interface ShardSuccesfulIntegrityCheckContent {
+  expectedHash: string,
+  digest: string
+}
+
+export class ShardSuccesfulIntegrityCheck {
+  content: ShardSuccesfulIntegrityCheckContent
+
+  constructor(content: ShardSuccesfulIntegrityCheckContent) {
+    this.content = content
+  }
+}
 
 interface FileMuxerOptions {
   shards: number
@@ -118,27 +152,38 @@ class FileMuxer extends Readable {
 
     readable.on('end', () => { input.end() })
 
+    /**
+     * DO NOT REMOVE THE NEXT LINE
+     * 
+     * This forces PassThrough to be in flowing mode. Thus, we can force input.end().
+     * If it isn't in flowing mode, the 'end' might not fire, blocking the entire download process.
+     * 
+     * See https://nodejs.org/api/stream.html#stream_event_end
+     */
+    input.on('data', () => {})
+
     input.once('readable', () => {
       // console.log('shard is now readable, start to download')
       // Init exchange report
     })
 
     input.once('end', () => {
-      const inputHash = ripemd160(this.hasher.digest())
+      const digest = this.hasher.digest()
+      const inputHash = ripemd160(digest)
+      const expectedHash = inputHash.toString('hex')
       this.hasher = createHash('sha256')
 
       this.inputs.splice(this.inputs.indexOf(input), 1)
 
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
-        console.log('Expected hash: %s, actual: %s', inputHash.toString('hex'), hash.toString('hex'))
-        this.emit('error', Error('Shard failed integrity check'))
+        const actualHash = hash.toString('hex')
+        this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
       } else {
-        console.log('Shard %s OK', inputHash.toString('hex'))
-        // Send successful SHARD_DOWNLOADED
+        this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
       }
 
-      this.emit('drain', input)
+      this.emit('drain', input)   
     })
 
     readable.on('error', (err) => {
