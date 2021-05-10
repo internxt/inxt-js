@@ -147,7 +147,6 @@ export default class GaloisField {
    * @memberof GaloisField
    */
   dotProduct(a: Uint8Array, ar: number, ac: number, b: Uint8Array, br: number, bc: number, initA = 0, initB = 0): Uint8Array {
-
     // Check conditions for multiplication
     if(ac != br ) throw new ReedSolomonError('Columns of A should be equal to rows in B for dot product.')
     else {
@@ -181,7 +180,7 @@ export default class GaloisField {
    * @param {number} initPointerSrc
    * @memberof GaloisField
    */
-  addMul2(dst: Uint8Array, src: Uint8Array, c: number, sz: number, dstMax: number, srcMax: number, initPointerDst=0, initPointerSrc=0): void {
+  addMul2(dst: Uint8Array, src: Uint8Array, c: number, srcMax: number, initPointerDst=0, initPointerSrc=0): void {
     const lowerMax = srcMax//Math.min(dstMax, srcMax)
     if(c != 0) {
       // TODO: Check when we past the max -> Is it really needed? -> Arrays init to 0.
