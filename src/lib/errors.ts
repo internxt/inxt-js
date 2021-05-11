@@ -20,4 +20,3 @@ export enum NODE_ERRORS {
     SHARD_HASH_NOT_MATCHES = 'Calculated hash does not match the expected result',
     SHARD_SIZE_BIGGER_THAN_CONTRACTED = 'Shard exceeds the amount defined in the contract'
 }
-  

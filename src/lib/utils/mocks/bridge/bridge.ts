@@ -14,15 +14,15 @@ export class BridgeMock {
     mirrors: ShardReferenced[]
     DEFAULT_BRIDGE_ERROR_MESSAGE = 'bridge reject'
 
-    constructor (mirrors: ShardReferenced[]) {
+    constructor(mirrors: ShardReferenced[]) {
         this.mirrors = mirrors
     }
 
     // fileinfo.ts 'GetFileMirror'
-    GetFileMirror (config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []) : Promise<ShardReferenced[]> {
+    GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: string[] = []): Promise<ShardReferenced[]> {
         const mirrorsIncluded = []
 
-        for(const mirror of this.mirrors) {
+        for (const mirror of this.mirrors) {
             if (excludeNodes.findIndex((nodeId) => nodeId === mirror.farmer.nodeID) === -1) {
                 mirrorsIncluded.push(mirror)
             }
@@ -33,24 +33,24 @@ export class BridgeMock {
         return Promise.resolve(mirrorsSkipped)
     }
 
-    private _limit (m: ShardReferenced[], limit: number) : ShardReferenced [] {
+    private _limit(m: ShardReferenced[], limit: number): ShardReferenced [] {
         return m.slice(0, limit)
     }
 
-    private _skip (m: ShardReferenced[], skip: number): ShardReferenced [] {
+    private _skip(m: ShardReferenced[], skip: number): ShardReferenced [] {
         return m.slice(skip, m.length)
     }
 
-    resolve () : Promise<boolean> {
+    resolve(): Promise<boolean> {
         return Promise.resolve(true)
     }
 
-    reject () : Promise<void> {
+    reject(): Promise<void> {
         return Promise.reject(BRIDGE_ERRORS.DEFAULT)
     }
 }
 
-export const generateShardReferenced = (index: number, hash: string, nodeID: string, fileId: string, bucketId: string) : ShardReferenced => {
+export const generateShardReferenced = (index: number, hash: string, nodeID: string, fileId: string, bucketId: string): ShardReferenced => {
     return {
         index,
         replaceCount: 0,

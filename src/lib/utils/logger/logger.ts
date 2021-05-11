@@ -11,17 +11,17 @@ const loggerOptions = {
     }
 }
 
-function parseLogLevel(level: number) : string {
+function parseLogLevel(level: number): string {
     const levelNames = Object.keys(loggerOptions.levels)
     const valueIndex = Object.values(loggerOptions.levels).indexOf(level)
 
     if (valueIndex === -1) {
         return levelNames[levelNames.length - 1]
-    } 
+    }
     return levelNames[valueIndex]
 }
 
-const getLoggerInstance = (level: number) : Winston.Logger => {
+const getLoggerInstance = (level: number): Winston.Logger => {
     const levelName = parseLogLevel(level)
     const logger = Winston.createLogger({
         level: levelName,
@@ -36,7 +36,7 @@ const getLoggerInstance = (level: number) : Winston.Logger => {
         transports: [new Winston.transports.Console()]
     })
 
-    if(process.env.STAGE !== 'development') {
+    if (process.env.STAGE !== 'development') {
         logger.silent = true
     }
 

@@ -15,7 +15,7 @@ import { logger } from "../utils/logger"
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback) : void {
+export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): void {
     if (!config.encryptionKey) {
         throw new Error('encryption key is null')
     }
@@ -35,17 +35,17 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
             out.on('data', async (encryptedShard: Buffer) => {
                 const rawShard = out.shards.pop()
 
-                if(!rawShard) {
+                if (!rawShard) {
                     return reject('raw shard is null')
                 }
-                
+
                 const { size, index } = rawShard
 
-                if(size !== encryptedShard.length) {
+                if (size !== encryptedShard.length) {
                     return reject(`shard size calculated ${size} and encrypted shard size ${encryptedShard.length} do not match`)
                 }
 
-                const generateShardPromise = async () : Promise<ShardMeta> => {
+                const generateShardPromise = async (): Promise<ShardMeta> => {
                     const response = await File.UploadShard(encryptedShard, size, File.frameId, index, 3)
 
                     uploadedBytes += size
@@ -64,9 +64,9 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                 try {
                     const uploadShardResponses = await Promise.all(uploadShardPromises)
 
-                    if(uploadShardResponses.length === 0) throw new Error('no upload requests has been made')
+                    if (uploadShardResponses.length === 0) { throw new Error('no upload requests has been made') }
 
-                    const bucketEntry : api.CreateEntryFromFrameBody = {
+                    const bucketEntry: api.CreateEntryFromFrameBody = {
                         frame: File.frameId,
                         filename: fileMeta.name,
                         index: File.index.toString('hex'),
@@ -78,7 +78,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
 
                     const savingFileResponse = await File.SaveFileInNetwork(bucketEntry)
 
-                    if(!savingFileResponse) throw new Error('saving file response is null')
+                    if (!savingFileResponse) { throw new Error('saving file response is null') }
 
                     progress(100, totalBytes, totalBytes)
                     finish(null, savingFileResponse)
@@ -93,5 +93,5 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
         logger.error(`File upload went wrong due to ${err.message}`)
 
         finish(err, null)
-    })   
+    })
 }

@@ -16,13 +16,13 @@ export class TestStream extends Transform {
     this.endPosition = 100
   }
 
-  _pushChunk(chunk: Buffer, cb:any): void {
+  _pushChunk(chunk: Buffer, cb: any): void {
 
     let wait = false
 
-    for(let i = 0; i<chunk.length; i+=100) {
-        
-        if(this.push(this.takeSliceOf(chunk, 100)) === false) {
+    for (let i = 0; i < chunk.length; i += 100) {
+
+        if (this.push(this.takeSliceOf(chunk, 100)) === false) {
             // buffer full
             this.pause()
             wait = true
@@ -36,7 +36,7 @@ export class TestStream extends Transform {
             console.log(`stopped in ${this.startPosition} bytes`)
             console.log('waiting until buffer emits drain')
 
-            while(wait) {}
+            while (wait) { }
 
             console.log('continuing')
 
@@ -45,18 +45,18 @@ export class TestStream extends Transform {
 
   }
 
-  _transform(chunk: Buffer, enc: any, cb:any): void {
+  _transform(chunk: Buffer, enc: any, cb: any): void {
     console.log(chunk.length)
     this._pushChunk(chunk, cb)
   }
 
-  takeSliceOf (chunk: Buffer, sliceSize: number) : Buffer {
+  takeSliceOf(chunk: Buffer, sliceSize: number): Buffer {
     const slicedBuffer = chunk.slice(this.startPosition, this.startPosition + sliceSize)
     this.startPosition += sliceSize
     return slicedBuffer
-  } 
+  }
 
-  _flush(cb:any) {
+  _flush(cb: any) {
     cb(null)
   }
 }

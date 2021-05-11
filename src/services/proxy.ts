@@ -17,7 +17,7 @@ export class ProxyBalancer {
 
         let proxiesAvailable
 
-        while((proxiesAvailable = proxiesCopy.filter((proxy) => proxy.requests() < reqsLessThan)).length === 0) {
+        while ((proxiesAvailable = proxiesCopy.filter((proxy) => proxy.requests() < reqsLessThan)).length === 0) {
             await wait(500)
         }
 
@@ -42,7 +42,7 @@ export class Proxy {
         this.url = url
         this.currentRequests = []
     }
-    
+
     requests(): number {
         return this.currentRequests.length
     }
@@ -72,11 +72,10 @@ const proxyBalancer = new ProxyBalancer()
     .attach(new Proxy('https://proxy4.internxt.com'))
     .attach(new Proxy('https://proxy5.internxt.com'))
 
-
 const mutex = new Mutex()
 
 export const getProxy = async (): Promise<ProxyManager> => {
-    let response = { ...new Proxy(''), free: () => {null} }
+    let response = { ...new Proxy(''), free: () => { null} }
 
     await mutex.dispatch(async () => {
         const proxy = await proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)
@@ -88,4 +87,3 @@ export const getProxy = async (): Promise<ProxyManager> => {
 
     return response
 }
-

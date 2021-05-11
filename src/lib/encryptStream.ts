@@ -1,5 +1,5 @@
 import { Transform } from 'stream'
-import { createCipheriv, Cipher} from 'crypto'
+import { createCipheriv, Cipher } from 'crypto'
 
 interface RawShard {
   size: number

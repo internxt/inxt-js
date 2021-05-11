@@ -8,12 +8,10 @@ interface MerkleTree {
   preleaf: Buffer[]
 }
 
-
-
 const SHARD_CHALLENGES = 4;
 
-function arrayBufferToString(array: Buffer[]) : string[] {
-  return array.map( b => {
+function arrayBufferToString(array: Buffer[]): string[] {
+  return array.map(b => {
     return b.toString("hex")
   })
 }
@@ -35,7 +33,7 @@ function leaf(preleaf: Buffer): Buffer {
 }
 
 function leafArray(preleafArray: Buffer[]): Buffer[] {
-  return preleafArray.map( preleaf => {
+  return preleafArray.map(preleaf => {
     return leaf(preleaf)
   })
 }
@@ -55,7 +53,7 @@ function challenge(): Buffer {
 
 function challengeArray(): Buffer[] {
   const challengeArray = []
-  for(let i=0; i<SHARD_CHALLENGES; i++) {
+  for (let i = 0; i < SHARD_CHALLENGES; i++) {
     challengeArray.push(challenge())
   }
   return challengeArray
@@ -70,14 +68,13 @@ function merkleTree(encrypted: Buffer): MerkleTree {
 
   const merkleTree: MerkleTree = {
     leaf: arrayBufferToString(leaves),
-    challenges: challenges,
+    challenges,
     challenges_as_str: arrayBufferToString(challenges),
     preleaf: preleaves
   }
 
   return merkleTree
 }
-
 
 function getChallenges(mT: MerkleTree): string[] {
   const challenges = mT.challenges.map(challengeBuffer => {
@@ -94,9 +91,3 @@ function getTree(mT: MerkleTree): string[] {
 }
 
 export { merkleTree, getChallenges, getTree, MerkleTree }
-
-
-
-
-
-

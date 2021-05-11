@@ -96,7 +96,7 @@ export class ExchangeReport {
   }
   UploadOk() {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS
-    this.params.exchangeResultMessage =ExchangeReport.INXT_REPORT_SHARD_UPLOADED
+    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_SHARD_UPLOADED
   }
 
   UploadError() {

@@ -51,8 +51,9 @@ export class FileObject extends EventEmitter {
   async GetFileInfo(): Promise<FileInfo | undefined> {
     if (!this.fileInfo) {
       this.fileInfo = await GetFileInfo(this.config, this.bucketId, this.fileId)
-      if (this.config.encryptionKey)
+      if (this.config.encryptionKey) {
         this.fileKey = await GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'))
+      }
     }
     return this.fileInfo
   }
@@ -101,7 +102,7 @@ export class FileObject extends EventEmitter {
 
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size })
         const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
-  
+
         oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg))
         oneFileMuxer.on('error', (err) => {
           downloadHasError = true
@@ -115,10 +116,10 @@ export class FileObject extends EventEmitter {
           // Force to finish this attempt
           oneFileMuxer.emit('drain')
         })
-  
+
         const buffs: Buffer[] = []
         oneFileMuxer.on('data', (data: Buffer) => { buffs.push(data) })
-  
+
         oneFileMuxer.once('drain', () => {
           if (downloadHasError) {
             nextTry(downloadError)
@@ -129,29 +130,29 @@ export class FileObject extends EventEmitter {
             nextTry(null, Buffer.concat(buffs))
           }
         })
-  
+
         const buffer = await shardObject.StartDownloadShard()
-  
+
         oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null)
       }, async (err, result: Buffer) => {
         try {
           if (!err) {
-            return resolve(result) 
+            return resolve(result)
           } else {
             excluded.push(shard.farmer.nodeID)
 
             const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)
-            
+
             if (!newShard[0].farmer) {
               return reject(Error('File missing shard error'))
             }
-            
+
             const buffer = await this.TryDownloadShardWithFileMuxer(newShard[0], excluded)
             return resolve(buffer)
           }
         } catch (err) {
           return reject(err)
-        }   
+        }
       })
     })
 
@@ -178,8 +179,8 @@ export class FileObject extends EventEmitter {
     let shardObject
 
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
-      if (!shard) { 
-        return nextItem(Error('Null shard found')) 
+      if (!shard) {
+        return nextItem(Error('Null shard found'))
       }
 
       shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId)
@@ -191,7 +192,7 @@ export class FileObject extends EventEmitter {
       // If its ok, add it to the muxer.
       this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
         fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
-          .once('error', (err) => { throw err })  
+          .once('error', (err) => { throw err })
           .once('drain', () => {
             // continue just if drain fired, 'drain' = decrypted correctly and ready for more
             this.emit(DOWNLOAD.PROGRESS, shardBuffer.length)

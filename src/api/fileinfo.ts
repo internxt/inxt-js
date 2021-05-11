@@ -27,7 +27,7 @@ export interface FileInfo {
 export async function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
   const proxy = await getProxy()
 
-  return request(config, 'get', `${proxy.url}/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, {}).then<FileInfo>((res: AxiosResponse) => res.data).catch((err: AxiosError) => {
+  return request(config, 'get', `${proxy.url}/${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, { }).then<FileInfo>((res: AxiosResponse) => res.data).catch((err: AxiosError) => {
     proxy.free()
     switch (err.response?.status) {
       case 404:
@@ -38,7 +38,7 @@ export async function GetFileInfo(config: EnvironmentConfig, bucketId: string, f
   })
 }
 
-export async function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: Array<string> = []): Promise<Shard[]> {
+export async function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: string[] = []): Promise<Shard[]> {
   const excludeNodeIds: string = excludeNodes.join(',')
   const proxy = await getProxy()
 
@@ -56,7 +56,7 @@ export async function GetFileMirror(config: EnvironmentConfig, bucketId: string,
 export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
   const shards: Shard[] = []
 
-  return doUntil((next: (err: Error | null, results?: Array<Shard>, shards?: Shard[]) => void) => {
+  return doUntil((next: (err: Error | null, results?: Shard[], shards?: Shard[]) => void) => {
     GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {
       results.forEach((shard: Shard) => {
         shards.push(shard)

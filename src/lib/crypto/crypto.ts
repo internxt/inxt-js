@@ -39,7 +39,7 @@ export async function GenerateFileKey(mnemonic: string, bucketId: string, index:
   return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)
 }
 
-export async function EncryptFilename(mnemonic: string, bucketId: string, filename: string) : Promise<string> {
+export async function EncryptFilename(mnemonic: string, bucketId: string, filename: string): Promise<string> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId)
 
   const GenerateEncryptionKey = () => {
@@ -51,8 +51,8 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
 
   const GenerateEncryptionIv = () => {
     const hasher = sha512HmacBuffer(bucketKey)
-    
-    if(bucketId === BUCKET_NAME_MAGIC) {
+
+    if (bucketId === BUCKET_NAME_MAGIC) {
       hasher.update(bucketId)
     }
 
@@ -96,15 +96,14 @@ function decryptMeta(bufferBase64: string, decryptKey: string) {
   }
 }
 
-
-export function EncryptMeta (fileMeta: string, key: Buffer, iv: Buffer) : string {
-  const cipher : crypto.CipherCCM = Aes256gcmEncrypter(key, iv)
+export function EncryptMeta(fileMeta: string, key: Buffer, iv: Buffer): string {
+  const cipher: crypto.CipherCCM = Aes256gcmEncrypter(key, iv)
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()])
   const digest = cipher.getAuthTag()
   return Buffer.concat([digest, iv, cipherTextBuf]).toString('base64')
 }
 
-export function EncryptMetaBuffer (fileMeta: string, encryptKey: Buffer, iv: Buffer) : Buffer {
+export function EncryptMetaBuffer(fileMeta: string, encryptKey: Buffer, iv: Buffer): Buffer {
   const cipher: crypto.CipherGCM = Aes256gcmEncrypter(encryptKey, iv)
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()])
   const digest = cipher.getAuthTag()

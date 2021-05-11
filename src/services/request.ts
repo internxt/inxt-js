@@ -26,7 +26,7 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   logger.info('Request to: ' + url)
 
   const DefaultOptions: AxiosRequestConfig = {
-    method: method,
+    method,
     auth: {
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
@@ -68,7 +68,7 @@ export async function streamRequest(targetUrl: string, nodeID: string): Promise<
   }
 
   return new Readable({
-    read: function () {
+    read() {
       if (!downloader) {
         downloader = _createDownloadStream()
 
@@ -90,10 +90,10 @@ export async function streamRequest(targetUrl: string, nodeID: string): Promise<
   })
 }
 
-export function extractErrorMsg(err: AxiosError) : Promise<any> {
-  if(err.response) {
+export function extractErrorMsg(err: AxiosError): Promise<any> {
+  if (err.response) {
     return Promise.reject({
-      err: err.response, 
+      err: err.response,
       message: err.response.data.error ? err.response.data.error : err.response.data.result,
       status: err.response.status
     })
@@ -152,7 +152,7 @@ interface getFileByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
+export function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL
   const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/file-ids/${fileId}`
   const defParams: AxiosRequestConfig = {
@@ -321,7 +321,7 @@ interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer):Promise<SendShardToNodeResponse | void> {
+export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): Promise<SendShardToNodeResponse | void> {
   const targetUrl = `${PROXY}/http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`
 
   const defParams: AxiosRequestConfig = {

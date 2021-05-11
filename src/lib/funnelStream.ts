@@ -7,29 +7,29 @@ export class FunnelStream extends Transform {
     private bufferOffset = 0
     private lastChunkLength = 0
 
-    constructor (limit = 1) {
+    constructor(limit = 1) {
         super()
         this.limit = limit
         this.buffer = Buffer.alloc(limit)
     }
 
-    private bufferStillHasData () : boolean {
+    private bufferStillHasData(): boolean {
         return this.bufferOffset != 0
-    } 
+    }
 
-    private bufferIsEmpty () : boolean {
+    private bufferIsEmpty(): boolean {
         return this.bufferOffset == 0
     }
 
-    private pushToReadable (b: Buffer) : void {
+    private pushToReadable(b: Buffer): void {
         this.push(b)
     }
 
-    private pushBuffer () : void {
+    private pushBuffer(): void {
         this.pushToReadable(this.buffer)
     }
 
-    _transform (chunk: Buffer, enc: string, done: (err: Error | null) => void) : void {
+    _transform(chunk: Buffer, enc: string, done: (err: Error | null) => void): void {
         if (this.bufferStillHasData()) {
             const bytesToPush = (this.limit - this.bufferOffset)
 
@@ -37,8 +37,8 @@ export class FunnelStream extends Transform {
             const completeBuffer = () => chunk.copy(this.buffer, this.bufferOffset, 0, bytesToPush)
             const addToBuffer = () => chunk.copy(this.buffer, this.bufferOffset)
             const resetOffset = () => this.bufferOffset = 0
-            const incrementOffset = (increment: number) => this.bufferOffset += increment 
-            
+            const incrementOffset = (increment: number) => this.bufferOffset += increment
+
             if (enoughToFillBuffer()) {
                 completeBuffer()
 
@@ -52,7 +52,7 @@ export class FunnelStream extends Transform {
             }
         }
 
-        const pushChunks = (chunk: Buffer) : Buffer => {
+        const pushChunks = (chunk: Buffer): Buffer => {
             let offset = 0
             let chunkSize = chunk.length
 
@@ -67,7 +67,7 @@ export class FunnelStream extends Transform {
 
             return chunk.slice(offset, offset + chunkSize)
         }
-        
+
         if (this.bufferIsEmpty()) {
             const remainingChunk = pushChunks(chunk)
 
@@ -83,7 +83,7 @@ export class FunnelStream extends Transform {
         done(null)
     }
 
-    _flush (done: () => void) : void {
+    _flush(done: () => void): void {
         if (this.bufferStillHasData()) {
             this.pushToReadable(this.buffer.slice(0, this.lastChunkLength))
         }

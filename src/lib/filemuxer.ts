@@ -160,7 +160,7 @@ class FileMuxer extends Readable {
      * 
      * See https://nodejs.org/api/stream.html#stream_event_end
      */
-    input.on('data', () => {})
+    input.on('data', () => { })
 
     input.once('readable', () => {
       // console.log('shard is now readable, start to download')
@@ -178,12 +178,12 @@ class FileMuxer extends Readable {
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
         const actualHash = hash.toString('hex')
-        this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash })) 
+        this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash }))
       } else {
         this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }))
       }
 
-      this.emit('drain', input)   
+      this.emit('drain', input)
     })
 
     readable.on('error', (err) => {

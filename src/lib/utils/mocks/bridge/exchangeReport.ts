@@ -5,34 +5,34 @@ import { ExchangeReport } from "../../../../api/reports"
 export class ExchangeReportMock {
     exchangeReport: ExchangeReport;
 
-    constructor (er: ExchangeReport) {
+    constructor(er: ExchangeReport) {
         this.exchangeReport = er
     }
 
-    expectedResultCode () : number {
+    expectedResultCode(): number {
         return this.exchangeReport.expectedResultCode()
     }
 
-    validate () : boolean {
+    validate(): boolean {
         return this.exchangeReport.validate()
     }
 
-    sendReport () : Promise<boolean> {
-        if(!this.validate()) {
+    sendReport(): Promise<boolean> {
+        if (!this.validate()) {
             return Promise.reject(Error('Not valid report to send'))
         }
         return Promise.resolve(true)
     }
 
-    DownloadOk () : void {
+    DownloadOk(): void {
         this.exchangeReport.DownloadOk()
     }
 
-    DownloadError () : void {
+    DownloadError(): void {
         this.exchangeReport.DownloadError()
     }
-    
-    static randomReport () : ExchangeReport {
+
+    static randomReport(): ExchangeReport {
         const bridgeUrl = 'fake/url'
         const bridgeUser = 'fakeUser'
         const bridgePass = 'fakePass'

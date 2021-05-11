@@ -58,7 +58,10 @@
         "no-bitwise": false,
         "curly": [true],
         "newline-before-return": true,
-        "no-inferrable-types": true
+        "no-inferrable-types": true,
+        "eofline": true,
+        "prefer-conditional-expression": true,
+        "no-string-throw": true
     },
     "rulesDirectory": []
 }

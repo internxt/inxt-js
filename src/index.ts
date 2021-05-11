@@ -10,25 +10,15 @@ import { logger } from './lib/utils/logger'
 import { FileMeta } from "./api/FileObjectUpload"
 import { CreateEntryFromFrameResponse } from './services/request'
 
-export interface OnlyErrorCallback {
-  (err: Error | null): void
-}
+export type OnlyErrorCallback = (err: Error | null) => void
 
-export interface UploadFinishCallback {
-  (err: Error | null, response: CreateEntryFromFrameResponse | null): void
-}
+export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void
 
-export interface DownloadProgressCallback {
-  (progress: number, downloadedBytes: number | null, totalBytes: number | null): void
-}
+export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void
 
-export interface DecryptionProgressCallback {
-  (progress: number, decryptedBytes: number | null, totalBytes: number | null): void
-}
+export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void
 
-export interface UploadProgressCallback {
-  (progress: number, uploadedBytes: number | null, totalBytes: number | null) : void
-}
+export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void
 
 export interface ResolveFileOptions {
   progressCallback: DownloadProgressCallback,
@@ -42,33 +32,19 @@ export interface DownloadFileOptions {
   finishedCallback: OnlyErrorCallback
 }
 
-interface GetInfoCallback {
-  (err: Error | null, result: any) : void
-}
+type GetInfoCallback = (err: Error | null, result: any)  => void
 
-interface GetBucketsCallback {
-  (err: Error | null, result: any) : void
-}
+type GetBucketsCallback = (err: Error | null, result: any)  => void
 
-interface GetBucketIdCallback {
-  (err: Error | null, result: any) : void
-}
+type GetBucketIdCallback = (err: Error | null, result: any)  => void
 
-interface CreateBucketCallback {
-  (err: Error | null, result: any) : void
-}
+type CreateBucketCallback = (err: Error | null, result: any)  => void
 
-interface DeleteBucketCallback {
-  (err: Error | null, result: any) : void
-}
+type DeleteBucketCallback = (err: Error | null, result: any)  => void
 
-interface ListFilesCallback {
-  (err: Error | null, result: any) : void
-}
+type ListFilesCallback = (err: Error | null, result: any)  => void
 
-interface DeleteFileCallback {
-  (err: Error | null, result: any) : void
-}
+type DeleteFileCallback = (err: Error | null, result: any)  => void
 
 interface UploadFileParams {
   filename: string,
@@ -89,7 +65,7 @@ export class Environment {
    * Gets general API info
    * @param cb Callback that will receive api's info
    */
-  getInfo(cb: GetInfoCallback) : void {
+  getInfo(cb: GetInfoCallback): void {
     /* TODO */
     cb(null, 'Not implemented yet')
   }
@@ -98,7 +74,7 @@ export class Environment {
    * Gets list of available buckets
    * @param cb Callback that will receive the list of buckets
    */
-  getBuckets(cb: GetBucketsCallback) : void {
+  getBuckets(cb: GetBucketsCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -108,7 +84,7 @@ export class Environment {
    * @param bucketName Name of the bucket to be retrieved
    * @param cb Callback that will receive the bucket id
    */
-  getBucketId(bucketName: string, cb: GetBucketIdCallback) : void {
+  getBucketId(bucketName: string, cb: GetBucketIdCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -118,7 +94,7 @@ export class Environment {
    * @param bucketName Name of the new bucket
    * @param cb Callback that will receive the response after creation
    */
-  createBucket(bucketName:string, cb: CreateBucketCallback) : void {
+  createBucket(bucketName: string, cb: CreateBucketCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -128,7 +104,7 @@ export class Environment {
    * @param bucketId Id whose bucket is going to be deleted
    * @param cb Callback that will receive the response after deletion
    */
-  deleteBucket(bucketId: string, cb: DeleteBucketCallback) : void {
+  deleteBucket(bucketId: string, cb: DeleteBucketCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -139,7 +115,7 @@ export class Environment {
    * @param fileId Id of the file to be deleted
    * @param cb Callback that receives the response after deletion
    */
-  deleteFile(bucketId: string, fileId: string, cb: DeleteFileCallback) : void {
+  deleteFile(bucketId: string, fileId: string, cb: DeleteFileCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -149,7 +125,7 @@ export class Environment {
    * @param bucketId Bucket id whose files are going to be listed
    * @param cb Callback that receives the files list
    */
-  listFiles(bucketId: string, cb: ListFilesCallback) : void {
+  listFiles(bucketId: string, cb: ListFilesCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null)
   }
@@ -167,7 +143,7 @@ export class Environment {
       })
   }
 
-  uploadFile(bucketId: string, data:UploadFileParams) : void {
+  uploadFile(bucketId: string, data: UploadFileParams): void {
     if (!this.config.encryptionKey) {
       throw new Error('Mnemonic was not provided, please, provide a mnemonic')
     }
@@ -178,7 +154,7 @@ export class Environment {
       .then((name: string) => {
         logger.debug(`Filename ${filename} encrypted is ${name}`)
 
-        const content = BlobToStream(fileContent) 
+        const content = BlobToStream(fileContent)
         const fileToUpload: FileMeta = { content, name, size }
 
         Upload(this.config, bucketId, fileToUpload, progress, finished)
@@ -226,7 +202,7 @@ export class Environment {
    * Cancels the upload
    * @param state Download file state at the moment
    */
-  resolveFileCancel(state: any) : void {
+  resolveFileCancel(state: any): void {
     throw new Error('Not implemented yet')
   }
 

@@ -12,7 +12,7 @@ export class NodeMock {
     private _nodeResponse: NodeResponse
     private _shard: Readable
 
-    constructor (port: number, path: string, ID: string, hostname: string) {
+    constructor(port: number, path: string, ID: string, hostname: string) {
         this.port = port
         this.path = path
         this.ID = ID
@@ -21,19 +21,19 @@ export class NodeMock {
         this._shard = Readable.from('')
     }
 
-    set shard (s: Readable) {
+    set shard(s: Readable) {
         this._shard = this.shard
     }
 
-    set nodeResponse (nr: NodeResponse) {
+    set nodeResponse(nr: NodeResponse) {
         this._nodeResponse = nr
     }
 
-    get (nr: NodeRequest): NodeResponse {
+    get(nr: NodeRequest): NodeResponse {
         return this._nodeResponse
     }
 
-    send (shardStream: Stream) : Promise <NodeResponse> {
+    send(shardStream: Stream): Promise <NodeResponse> {
         return Promise.resolve(this._nodeResponse)
     }
 }
@@ -47,11 +47,11 @@ export class NodeRequest {
     public url: string;
     public token: string;
 
-    constructor (
-        hostname: string, 
-        path: string, 
-        port: number, 
-        headers: NodeRequestHeaders, 
+    constructor(
+        hostname: string,
+        path: string,
+        port: number,
+        headers: NodeRequestHeaders,
         token: string,
         shardHash: string
     ) {
@@ -69,21 +69,21 @@ export class NodeResponse {
     public statusCode: HTTPStatusCodes;
     public content: Readable
 
-    constructor (status: boolean, statusCode: HTTPStatusCodes, content?:Buffer | string, responseSize?: number) {
+    constructor(status: boolean, statusCode: HTTPStatusCodes, content?: Buffer | string, responseSize?: number) {
         this.status = status
         this.statusCode = statusCode
         this.content = Readable.from('')
 
-        if(responseSize) {
+        if (responseSize) {
             this.content = Readable.from(randomBytes(responseSize))
         } else {
-            if(content instanceof String) {
+            if (content instanceof String) {
                 this.content = Readable.from(Buffer.from(content))
             }
         }
     }
 
-    on (event: string, cb: () => void) : void {
+    on(event: string, cb: () => void): void {
         this.content.on(event, () => cb)
     }
 }
@@ -92,10 +92,10 @@ export class NodeRequestHeaders implements HTTPHeaders {
     contentType: ContentType.OCTET_STREAM
     xStorjNodeId: string
 
-    constructor (contentType: ContentType.OCTET_STREAM, xStorjNodeId: string) {
+    constructor(contentType: ContentType.OCTET_STREAM, xStorjNodeId: string) {
         this.contentType = contentType
         this.xStorjNodeId = xStorjNodeId
-    }   
+    }
 }
 
 export class CaseNotImplementedError extends Error {
@@ -113,7 +113,7 @@ export const generateResponse = (type: HTTPStatusCodes, statusSize: number): Nod
         case HTTPStatusCodes.NOT_FOUND:
             return new NodeResponse(false, type, '', statusSize)
         case HTTPStatusCodes.INTERNAL_SERVER_ERROR:
-            return new NodeResponse(false, type, '', statusSize) 
+            return new NodeResponse(false, type, '', statusSize)
         default:
             throw new CaseNotImplementedError()
     }

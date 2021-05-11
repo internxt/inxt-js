@@ -34,7 +34,7 @@ export class FileObjectUpload {
   funnel: FunnelStream
   fileEncryptionKey: Buffer
 
-  constructor (config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string)  {
+  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string)  {
     this.config = config
     this.index = Buffer.alloc(0)
     this.fileMeta = fileMeta
@@ -45,14 +45,14 @@ export class FileObjectUpload {
     this.fileEncryptionKey = randomBytes(32)
   }
 
-  async init() : Promise<void> {
+  async init(): Promise<void> {
     this.index = randomBytes(32)
     this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index)
 
-    this.cipher = new EncryptStream(this.fileEncryptionKey, this.index.slice(0, 16)) 
+    this.cipher = new EncryptStream(this.fileEncryptionKey, this.index.slice(0, 16))
   }
 
-  async CheckBucketExistance() : Promise<boolean> {
+  async CheckBucketExistance(): Promise<boolean> {
     logger.info(`checking if bucket ${this.bucketId} exists`)
 
     try {
@@ -70,15 +70,15 @@ export class FileObjectUpload {
             return true
         } else {
             return Promise.reject(err)
-        } 
+        }
     }
   }
 
-  async StageFile() : Promise<api.FrameStaging | void> {
+  async StageFile(): Promise<api.FrameStaging | void> {
     let response
 
     try {
-        if(response = await api.createFrame(this.config)) {
+        if (response = await api.createFrame(this.config)) {
             this.frameId = response.id
 
             logger.debug(`staged a file with frame ${this.frameId}`)
@@ -91,11 +91,11 @@ export class FileObjectUpload {
     }
   }
 
-  async SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody) : Promise<void | api.CreateEntryFromFrameResponse> {
+  async SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
     try {
         const response = await api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
 
-        if(response) {
+        if (response) {
             logger.info(`saved file in network with id ${response.id} inside bucket ${this.bucketId}`)
         } else {
             throw new Error('Save file in network response was empty')
@@ -108,16 +108,16 @@ export class FileObjectUpload {
     }
   }
 
-  async NegotiateContract(frameId: string, shardMeta: ShardMeta) : Promise<void | ContractNegotiated> {
+  async NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
     try {
         const response = await api.addShardToFrame(this.config, frameId, shardMeta)
 
-        if(response) {
+        if (response) {
             logger.debug(`negotiated a contract for shard ${shardMeta.hash}(index ${shardMeta.index}, size ${shardMeta.size}) with token ${response.token}`)
         } else {
             throw new Error('Negotiate contract response was empty')
         }
-        
+
         return response
     } catch (err) {
         err = { ...err, message: `NegotiateContractError: Due to ${err.message || '??'}` }
@@ -125,7 +125,7 @@ export class FileObjectUpload {
     }
   }
 
-  async NodeRejectedShard(encryptedShard: Buffer, shard: Shard) : Promise<boolean> {
+  async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
     try {
         await api.sendShardToNode(this.config, shard, encryptedShard)
 
@@ -137,11 +137,11 @@ export class FileObjectUpload {
     }
   }
 
-  GenerateHmac(shardMetas: ShardMeta[]) : string {
+  GenerateHmac(shardMetas: ShardMeta[]): string {
     const hmac = sha512HmacBuffer(this.fileEncryptionKey)
 
     if (shardMetas && shardMetas.length > 0) {
-        for(let i = 0; i < shardMetas.length; i++) {
+        for (let i = 0; i < shardMetas.length; i++) {
             hmac.update(Buffer.from(shardMetas[i].hash, 'hex'))
         }
     }
@@ -149,7 +149,7 @@ export class FileObjectUpload {
     return hmac.digest().toString('hex')
   }
 
-  async StartUploadFile() : Promise<EncryptStream> {
+  async StartUploadFile(): Promise<EncryptStream> {
     logger.info('Starting file upload')
 
     await this.CheckBucketExistance()
@@ -158,8 +158,8 @@ export class FileObjectUpload {
     return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher)
   }
 
-  async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number) : Promise<ShardMeta> {
-    const shardMeta : ShardMeta = getShardMeta(encryptedShard, shardSize, index, false)
+  async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number): Promise<ShardMeta> {
+    const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, false)
     logger.info(`uploading shard ${shardMeta.hash}`)
 
     let negotiatedContract: ContractNegotiated | void
@@ -167,7 +167,7 @@ export class FileObjectUpload {
     let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() }
 
     try {
-        if(negotiatedContract = await this.NegotiateContract(frameId, shardMeta)) {
+        if (negotiatedContract = await this.NegotiateContract(frameId, shardMeta)) {
             token = negotiatedContract.token
             operation = negotiatedContract.operation
             farmer = { ...negotiatedContract.farmer, lastSeen: new Date() }
@@ -175,12 +175,12 @@ export class FileObjectUpload {
 
         const hash = shardMeta.hash
         const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity: false, token, farmer, operation }
-        
+
         const exchangeReport = new ExchangeReport(this.config)
         exchangeReport.params.dataHash = hash
         exchangeReport.params.farmerId = shard.farmer.nodeID
 
-        if(await this.NodeRejectedShard(encryptedShard, shard)) {
+        if (await this.NodeRejectedShard(encryptedShard, shard)) {
             exchangeReport.DownloadError()
         } else {
             exchangeReport.DownloadOk()
@@ -190,7 +190,7 @@ export class FileObjectUpload {
         await exchangeReport.sendReport()
 
     } catch (err) {
-        if(attemps > 1) {
+        if (attemps > 1) {
             logger.error(`upload ${shardMeta.hash} failed. Retrying...`)
             await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps)
         } else {

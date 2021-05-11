@@ -38,6 +38,5 @@ export class ShardObject extends EventEmitter {
     return downloader
   }
 
-
   isFinished(): boolean { return this._isFinished }
 }

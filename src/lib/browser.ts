@@ -9,4 +9,4 @@ declare global {
 
 self.Inxt = Environment
 
-export default Environment 
+export default Environment

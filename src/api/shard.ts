@@ -33,7 +33,7 @@ export function DownloadShardRequest(config: EnvironmentConfig, address: string,
   return api.streamRequest(fetchUrl, nodeID)
 }
 
-export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
+export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: string[] = []): Promise<Transform | never> {
 
   const hasher = new HashStream(shard.size)
   const exchangeReport = new ExchangeReport(config)
@@ -59,7 +59,7 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
     exchangeReport.DownloadError()
     // exchangeReport.sendReport()
     excludedNodes.push(shard.farmer.nodeID)
-    const anotherMirror: Array<Shard> = await GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)
+    const anotherMirror: Shard[] = await GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)
     if (!anotherMirror[0].farmer) {
       throw Error('File missing shard error')
     } else {

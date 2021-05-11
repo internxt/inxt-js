@@ -27,7 +27,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   })
 
   out.on('error', (err) => { throw err })
-  
+
   attachFileObjectListeners(File, out)
   handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback)
 
@@ -45,7 +45,7 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
   // TODO: Handle fileObject errors
   f.on('error', (err) => notified.emit(FILEOBJECT.ERROR, err))
   // f.on('end', () => notified.emit(FILEOBJECT.END))
-  
+
   // f.decipher.on('end', () => notified.emit(DECRYPT.END))
   f.decipher.once('error', (err: Error) => notified.emit(DECRYPT.ERROR, err))
 }
@@ -56,11 +56,11 @@ function handleFileResolving(fl: FileObject, downloadCb: DownloadProgressCallbac
   const totalBytes = fl.fileInfo ? fl.fileInfo.size : 0
 
   function getDownloadProgress() {
-    return (totalBytesDownloaded / totalBytes) * 100 
+    return (totalBytesDownloaded / totalBytes) * 100
   }
 
   function getDecryptionProgress() {
-    return (totalBytesDecrypted / totalBytes) * 100 
+    return (totalBytesDecrypted / totalBytes) * 100
   }
 
   fl.on(DOWNLOAD.PROGRESS, async (addedBytes: number) => {
@@ -75,5 +75,5 @@ function handleFileResolving(fl: FileObject, downloadCb: DownloadProgressCallbac
       progress = getDecryptionProgress()
       decryptionCb(progress, totalBytesDecrypted, totalBytes)
     })
-  } 
+  }
 }

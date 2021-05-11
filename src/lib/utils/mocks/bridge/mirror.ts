@@ -15,7 +15,7 @@ export class MirrorMock {
     private _node: NodeMock
     private _bridge: BridgeMock
 
-    constructor (node: NodeMock, bridge: BridgeMock) {
+    constructor(node: NodeMock, bridge: BridgeMock) {
         this._node = node
         this._bridge = bridge
     }
@@ -26,8 +26,8 @@ export class MirrorMock {
         return this._node.get(nr).content
     }
 
-    async DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: Array<string> = []): Promise<Transform | never> {
-        
+    async DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: string[] = []): Promise<Transform | never> {
+
         const hasher = new HashStream(shard.size)
         const exchangeReportMock = new ExchangeReportMock(new ExchangeReport(config))
         const shardBinary = this.DownloadShardRequest(config, shard.farmer.address, shard.farmer.port, shard.hash, shard.token, shard.farmer.nodeID)
@@ -42,13 +42,13 @@ export class MirrorMock {
         exchangeReportMock.exchangeReport.params.exchangeEnd = new Date()
         exchangeReportMock.exchangeReport.params.farmerId = shard.farmer.nodeID
 
-        if(finalShardHash === shard.hash) {
+        if (finalShardHash === shard.hash) {
             exchangeReportMock.DownloadOk()
             return outputStream
         } else {
             exchangeReportMock.DownloadError()
             excludedNodes.push(shard.farmer.nodeID)
-            const otherMirrorResponse: Array<Shard>= await this._bridge.GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)
+            const otherMirrorResponse: Shard[] = await this._bridge.GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)
 
             const maybeOtherMirror: Shard = otherMirrorResponse[0]
 

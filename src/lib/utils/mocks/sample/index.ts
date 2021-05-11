@@ -10,7 +10,7 @@ interface NodeSpawner {
     hostname?: string
 }
 
-const spawnNode = (spawner: NodeSpawner) : NodeMock => {
+const spawnNode = (spawner: NodeSpawner): NodeMock => {
     const port: number = spawner.port ? spawner.port : 3000
     const path: string = spawner.path ? spawner.path : '/shards'
     const ID: string = spawner.ID ? spawner.ID : randomBytes(32).toString('hex')
@@ -18,29 +18,27 @@ const spawnNode = (spawner: NodeSpawner) : NodeMock => {
     return new NodeMock(port, path, ID, hostname)
 }
 
-
 /* =========== MIRROR ============ */
 interface MirrorSpawner {
     node?: NodeMock,
     bridge?: BridgeMock
 }
 
-const spawnMirror = (spawner: MirrorSpawner) : MirrorMock => {
-    const node: NodeMock = spawner.node ? spawner.node : spawnNode({})
-    const bridge: BridgeMock = spawner.bridge ? spawner.bridge : spawnBridge({})
+const spawnMirror = (spawner: MirrorSpawner): MirrorMock => {
+    const node: NodeMock = spawner.node ? spawner.node : spawnNode({ })
+    const bridge: BridgeMock = spawner.bridge ? spawner.bridge : spawnBridge({ })
     return new MirrorMock(node, bridge)
-} 
-
+}
 
 /* =========== BRIDGE ============ */
 interface BridgeSpawner {
     mirrors?: ShardReferenced[]
 }
 
-const spawnBridge = (spawner: BridgeSpawner) : BridgeMock => {
-    const mirrors: ShardReferenced [] = spawner.mirrors ? spawner.mirrors : [spawnShardReferenced({})]
+const spawnBridge = (spawner: BridgeSpawner): BridgeMock => {
+    const mirrors: ShardReferenced [] = spawner.mirrors ? spawner.mirrors : [spawnShardReferenced({ })]
     return new BridgeMock(mirrors)
-} 
+}
 
 /* =========== SHARD REFERENCED ========== */
 interface ShardReferencedSpawner {
@@ -62,7 +60,7 @@ interface ShardReferencedSpawner {
     bucketId?: string
 }
 
-const spawnShardReferenced = (spawner: ShardReferencedSpawner) : ShardReferenced => {
+const spawnShardReferenced = (spawner: ShardReferencedSpawner): ShardReferenced => {
     const index: number = spawner.index ? spawner.index : 0
     const hash: string = spawner.hash ? spawner.hash : randomBytes(32).toString('hex')
     const size: number = spawner.size ? spawner.size : 10000
@@ -82,7 +80,6 @@ const spawnShardReferenced = (spawner: ShardReferencedSpawner) : ShardReferenced
 
     return { index, replaceCount: 0, hash, size, parity, token, farmer, operation, fileId, bucketId }
 }
-
 
 export const spawn = {
     node: spawnNode,

@@ -4,7 +4,7 @@ import { ripemd160, sha256 } from './crypto'
 // req object for put a frame
 export interface ShardMeta {
   hash: string,
-  size: number, //size of the actual file
+  size: number, // size of the actual file
   index: number,
   is_parity: boolean,
   challenges?: Buffer[],
@@ -13,7 +13,7 @@ export interface ShardMeta {
   exclude?: any
 }
 
-function getShardHash(encryptedShardData: Buffer) : Buffer {
+function getShardHash(encryptedShardData: Buffer): Buffer {
   const shardHash: Buffer = ripemd160(sha256(encryptedShardData))
   return shardHash
 }
@@ -23,8 +23,8 @@ export function getShardMeta(encryptedShardData: Buffer, fileSize: number, index
   const shardMeta: ShardMeta = {
     hash: getShardHash(encryptedShardData).toString("hex"),
     size: fileSize,
-    index: index,
-    is_parity: is_parity,
+    index,
+    is_parity,
     challenges_as_str: mT.challenges_as_str,
     tree: mT.leaf
   }
@@ -35,5 +35,3 @@ function getShardMerkleTree(encryptedShardData: Buffer): MerkleTree {
   const mT: MerkleTree = merkleTree(encryptedShardData)
   return mT
 }
-
-

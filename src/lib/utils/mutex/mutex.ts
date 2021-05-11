@@ -11,7 +11,7 @@ export class Mutex {
 
     async dispatch(fn: (() => void) | (() => PromiseLike<void>)): Promise<void> {
         const unlock = await this.lock()
-        
+
         try {
             return await Promise.resolve(fn())
         } finally {
