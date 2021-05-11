@@ -21,7 +21,7 @@ describe('Galois Field Basic Operations', () => {
     const src = new Uint8Array([0, 1, 2, 3])
     const dst = new Uint8Array(src.length)
     const expected = new Uint8Array([0, 25, 50, 43])
-    gf.addMul2(dst, src, c, size, size, size, 0, 0)
+    gf.addMul2(dst, src, c, size)
 
     expect(dst).to.eql(expected)
   })
