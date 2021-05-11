@@ -1,41 +1,41 @@
-import { ripemd160, sha256 } from './crypto'
-import { randomBytes } from 'crypto'
+import { ripemd160, sha256 } from './crypto';
+import { randomBytes } from 'crypto';
 
 interface MerkleTree {
-  leaf: string[],
-  challenges: Buffer[],
-  challenges_as_str: string[],
-  preleaf: Buffer[]
+  leaf: string[];
+  challenges: Buffer[];
+  challenges_as_str: string[];
+  preleaf: Buffer[];
 }
 
 const SHARD_CHALLENGES = 4;
 
 function arrayBufferToString(array: Buffer[]): string[] {
   return array.map(b => {
-    return b.toString("hex")
-  })
+    return b.toString("hex");
+  });
 }
 
 export function preleaf(challenge: Buffer, encrypted: Buffer): Buffer {
-  const preleafContent = Buffer.concat([challenge, encrypted])
-  return ripemd160(sha256(preleafContent))
+  const preleafContent = Buffer.concat([challenge, encrypted]);
+  return ripemd160(sha256(preleafContent));
 }
 
 function preleafArray(encrypted: Buffer, challenge: Buffer[]): Buffer[] {
   const preleafArray = challenge.map((challenge) => {
-    return Buffer.concat([challenge, encrypted])
-  })
-  return preleafArray
+    return Buffer.concat([challenge, encrypted]);
+  });
+  return preleafArray;
 }
 
 function leaf(preleaf: Buffer): Buffer {
-  return ripemd160(sha256(preleaf))
+  return ripemd160(sha256(preleaf));
 }
 
 function leafArray(preleafArray: Buffer[]): Buffer[] {
   return preleafArray.map(preleaf => {
-    return leaf(preleaf)
-  })
+    return leaf(preleaf);
+  });
 }
 /*
 function getChallenges(): Buffer[] {
@@ -48,46 +48,46 @@ function getChallenges(): Buffer[] {
 */
 
 function challenge(): Buffer {
-  return randomBytes(16)
+  return randomBytes(16);
 }
 
 function challengeArray(): Buffer[] {
-  const challengeArray = []
+  const challengeArray = [];
   for (let i = 0; i < SHARD_CHALLENGES; i++) {
-    challengeArray.push(challenge())
+    challengeArray.push(challenge());
   }
-  return challengeArray
+  return challengeArray;
 }
 
 function merkleTree(encrypted: Buffer): MerkleTree {
   // set the challenges randomnly
-  const challenges = challengeArray()
+  const challenges = challengeArray();
 
-  const preleaves = preleafArray(encrypted, challenges)
-  const leaves = leafArray(preleaves)
+  const preleaves = preleafArray(encrypted, challenges);
+  const leaves = leafArray(preleaves);
 
   const merkleTree: MerkleTree = {
     leaf: arrayBufferToString(leaves),
     challenges,
     challenges_as_str: arrayBufferToString(challenges),
     preleaf: preleaves
-  }
+  };
 
-  return merkleTree
+  return merkleTree;
 }
 
 function getChallenges(mT: MerkleTree): string[] {
   const challenges = mT.challenges.map(challengeBuffer => {
-    return challengeBuffer.toString("hex")
-  })
-  return challenges
+    return challengeBuffer.toString("hex");
+  });
+  return challenges;
 }
 
 function getTree(mT: MerkleTree): string[] {
   const tree = mT.leaf.map(leafBuffer => {
-    return leafBuffer.toString()
-  })
-  return tree
+    return leafBuffer.toString();
+  });
+  return tree;
 }
 
-export { merkleTree, getChallenges, getTree, MerkleTree }
+export { merkleTree, getChallenges, getTree, MerkleTree };

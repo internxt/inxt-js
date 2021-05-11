@@ -1,4 +1,4 @@
-import { EnvironmentConfig } from '../index'
+import { EnvironmentConfig } from '../index';
 
 export function listbuckets(env: EnvironmentConfig) {
 

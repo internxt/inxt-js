@@ -1,6 +1,6 @@
-import * as Winston from 'winston'
-import * as dotenv from 'dotenv'
-dotenv.config({ path: '/home/inxt/inxt-js/.env' })
+import * as Winston from 'winston';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 
 const loggerOptions = {
     levels: {
@@ -9,20 +9,20 @@ const loggerOptions = {
         error: 2,
         info: 3
     }
-}
+};
 
 function parseLogLevel(level: number): string {
-    const levelNames = Object.keys(loggerOptions.levels)
-    const valueIndex = Object.values(loggerOptions.levels).indexOf(level)
+    const levelNames = Object.keys(loggerOptions.levels);
+    const valueIndex = Object.values(loggerOptions.levels).indexOf(level);
 
     if (valueIndex === -1) {
-        return levelNames[levelNames.length - 1]
+        return levelNames[levelNames.length - 1];
     }
-    return levelNames[valueIndex]
+    return levelNames[valueIndex];
 }
 
 const getLoggerInstance = (level: number): Winston.Logger => {
-    const levelName = parseLogLevel(level)
+    const levelName = parseLogLevel(level);
     const logger = Winston.createLogger({
         level: levelName,
         exitOnError: true,
@@ -34,13 +34,13 @@ const getLoggerInstance = (level: number): Winston.Logger => {
             Winston.format.printf((info: Winston.Logform.TransformableInfo) => `${info.timestamp} ${info.level}: ${info.message}`)
         ),
         transports: [new Winston.transports.Console()]
-    })
+    });
 
     if (process.env.STAGE !== 'development') {
-        logger.silent = true
+        logger.silent = true;
     }
 
-    return logger
-}
+    return logger;
+};
 
-export const logger: Winston.Logger = getLoggerInstance(1)
+export const logger: Winston.Logger = getLoggerInstance(1);

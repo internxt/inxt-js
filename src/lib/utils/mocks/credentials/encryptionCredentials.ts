@@ -1,5 +1,5 @@
-import dotenv from 'dotenv'
-dotenv.config()
+import dotenv from 'dotenv';
+dotenv.config();
 
 const EncryptionCredentials = {
   INDEX: Buffer.from(process.env.TEST_INDEX ? process.env.TEST_INDEX : "", "hex"),
@@ -8,6 +8,6 @@ const EncryptionCredentials = {
   BUCKET_KEY: process.env.TEST_BUCKET_KEY ? process.env.TEST_BUCKET_KEY : "",
   FILE_KEY: process.env.TEST_FILE_KEY ? process.env.TEST_FILE_KEY : "",
   IV: Buffer.from(process.env.TEST_IV ? process.env.TEST_IV : "", 'hex')
-}
+};
 
-module.exports = EncryptionCredentials
+module.exports = EncryptionCredentials;

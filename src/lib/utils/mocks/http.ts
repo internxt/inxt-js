@@ -1,5 +1,5 @@
 export interface HTTPHeaders {
-    contentType: ContentType
+    contentType: ContentType;
 }
 
 export enum ContentType {

@@ -1,12 +1,12 @@
-const Environment = require('../index')
+const Environment = require('../index');
 
 declare global {
   interface Window {
-    Inxt: any
-    Fetch: any
+    Inxt: any;
+    Fetch: any;
   }
 }
 
-self.Inxt = Environment
+self.Inxt = Environment;
 
-export default Environment
+export default Environment;

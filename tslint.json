@@ -61,7 +61,8 @@
         "no-inferrable-types": true,
         "eofline": true,
         "prefer-conditional-expression": true,
-        "no-string-throw": true
+        "no-string-throw": true,
+        "semicolon": true
     },
     "rulesDirectory": []
 }

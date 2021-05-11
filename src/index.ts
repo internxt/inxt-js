@@ -1,64 +1,64 @@
 // import * as fs from 'fs'
-import StreamToBlob from 'stream-to-blob'
-import BlobToStream from 'blob-to-stream'
+import StreamToBlob from 'stream-to-blob';
+import BlobToStream from 'blob-to-stream';
 
-import { Upload } from './lib/upload'
-import { Download } from './lib/download'
-import { EncryptFilename } from './lib/crypto'
-import { logger } from './lib/utils/logger'
+import { Upload } from './lib/upload';
+import { Download } from './lib/download';
+import { EncryptFilename } from './lib/crypto';
+import { logger } from './lib/utils/logger';
 
-import { FileMeta } from "./api/FileObjectUpload"
-import { CreateEntryFromFrameResponse } from './services/request'
+import { FileMeta } from "./api/FileObjectUpload";
+import { CreateEntryFromFrameResponse } from './services/request';
 
-export type OnlyErrorCallback = (err: Error | null) => void
+export type OnlyErrorCallback = (err: Error | null) => void;
 
-export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void
+export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
 
-export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void
+export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 
-export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void
+export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
 
-export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void
+export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void;
 
 export interface ResolveFileOptions {
-  progressCallback: DownloadProgressCallback,
-  finishedCallback: OnlyErrorCallback,
-  overwritte?: boolean
+  progressCallback: DownloadProgressCallback;
+  finishedCallback: OnlyErrorCallback;
+  overwritte?: boolean;
 }
 
 export interface DownloadFileOptions {
-  progressCallback: DownloadProgressCallback,
-  decryptionProgressCallback?: DecryptionProgressCallback,
-  finishedCallback: OnlyErrorCallback
+  progressCallback: DownloadProgressCallback;
+  decryptionProgressCallback?: DecryptionProgressCallback;
+  finishedCallback: OnlyErrorCallback;
 }
 
-type GetInfoCallback = (err: Error | null, result: any)  => void
+type GetInfoCallback = (err: Error | null, result: any)  => void;
 
-type GetBucketsCallback = (err: Error | null, result: any)  => void
+type GetBucketsCallback = (err: Error | null, result: any)  => void;
 
-type GetBucketIdCallback = (err: Error | null, result: any)  => void
+type GetBucketIdCallback = (err: Error | null, result: any)  => void;
 
-type CreateBucketCallback = (err: Error | null, result: any)  => void
+type CreateBucketCallback = (err: Error | null, result: any)  => void;
 
-type DeleteBucketCallback = (err: Error | null, result: any)  => void
+type DeleteBucketCallback = (err: Error | null, result: any)  => void;
 
-type ListFilesCallback = (err: Error | null, result: any)  => void
+type ListFilesCallback = (err: Error | null, result: any)  => void;
 
-type DeleteFileCallback = (err: Error | null, result: any)  => void
+type DeleteFileCallback = (err: Error | null, result: any)  => void;
 
 interface UploadFileParams {
-  filename: string,
-  fileSize: number,
-  fileContent: Blob
-  progressCallback: UploadProgressCallback,
-  finishedCallback: UploadFinishCallback
+  filename: string;
+  fileSize: number;
+  fileContent: Blob;
+  progressCallback: UploadProgressCallback;
+  finishedCallback: UploadFinishCallback;
 }
 
 export class Environment {
-  protected config: EnvironmentConfig
+  protected config: EnvironmentConfig;
 
   constructor(config: EnvironmentConfig) {
-    this.config = config
+    this.config = config;
   }
 
   /**
@@ -67,7 +67,7 @@ export class Environment {
    */
   getInfo(cb: GetInfoCallback): void {
     /* TODO */
-    cb(null, 'Not implemented yet')
+    cb(null, 'Not implemented yet');
   }
 
   /**
@@ -76,7 +76,7 @@ export class Environment {
    */
   getBuckets(cb: GetBucketsCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   /**
@@ -86,7 +86,7 @@ export class Environment {
    */
   getBucketId(bucketName: string, cb: GetBucketIdCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   /**
@@ -96,7 +96,7 @@ export class Environment {
    */
   createBucket(bucketName: string, cb: CreateBucketCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   /**
@@ -106,7 +106,7 @@ export class Environment {
    */
   deleteBucket(bucketId: string, cb: DeleteBucketCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   /**
@@ -117,7 +117,7 @@ export class Environment {
    */
   deleteFile(bucketId: string, fileId: string, cb: DeleteFileCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   /**
@@ -127,44 +127,44 @@ export class Environment {
    */
   listFiles(bucketId: string, cb: ListFilesCallback): void {
     /* TODO */
-    cb(Error('Not implemented yet'), null)
+    cb(Error('Not implemented yet'), null);
   }
 
   setEncryptionKey(newEncryptionKey: string): void {
-    this.config.encryptionKey = newEncryptionKey
+    this.config.encryptionKey = newEncryptionKey;
   }
 
   downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Blob> {
     return Download(this.config, bucketId, fileId, options)
       .then(stream => StreamToBlob(stream, 'application/octet-stream'))
       .then((file: Blob) => {
-        options.finishedCallback(null)
-        return file
-      })
+        options.finishedCallback(null);
+        return file;
+      });
   }
 
   uploadFile(bucketId: string, data: UploadFileParams): void {
     if (!this.config.encryptionKey) {
-      throw new Error('Mnemonic was not provided, please, provide a mnemonic')
+      throw new Error('Mnemonic was not provided, please, provide a mnemonic');
     }
 
-    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = data
+    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = data;
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
-        logger.debug(`Filename ${filename} encrypted is ${name}`)
+        logger.debug(`Filename ${filename} encrypted is ${name}`);
 
-        const content = BlobToStream(fileContent)
-        const fileToUpload: FileMeta = { content, name, size }
+        const content = BlobToStream(fileContent);
+        const fileToUpload: FileMeta = { content, name, size };
 
-        Upload(this.config, bucketId, fileToUpload, progress, finished)
+        Upload(this.config, bucketId, fileToUpload, progress, finished);
       })
       .catch((err: Error) => {
-        logger.error(`Error encrypting filename due to ${err.message}`)
-        console.error(err)
+        logger.error(`Error encrypting filename due to ${err.message}`);
+        console.error(err);
 
-        finished(err, null)
-      })
+        finished(err, null);
+      });
   }
 
   /**
@@ -203,19 +203,19 @@ export class Environment {
    * @param state Download file state at the moment
    */
   resolveFileCancel(state: any): void {
-    throw new Error('Not implemented yet')
+    throw new Error('Not implemented yet');
   }
 
 }
 
 export interface EnvironmentConfig {
-  bridgeUrl?: string
-  bridgeUser: string
-  bridgePass: string
-  encryptionKey?: string
-  logLevel?: number
-  webProxy?: string
+  bridgeUrl?: string;
+  bridgeUser: string;
+  bridgePass: string;
+  encryptionKey?: string;
+  logLevel?: number;
+  webProxy?: string;
   config?: {
     shardRetry: number
-  }
+  };
 }
