@@ -2,7 +2,9 @@ import { EnvironmentConfig } from '../src'
 import { LabEnvironment } from './enviroment'
 
 import * as dotenv from 'dotenv'
-dotenv.config({ path: '/home/inxt/inxt-js/.env' })
+import { resolve } from 'path'
+
+dotenv.config({ path: resolve(__dirname, '../.env') })
 
 const bridgeUser = process.env.TEST_USER
 const bridgePass = process.env.TEST_PASS
