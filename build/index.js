@@ -1,36 +1,18 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Environment = void 0;
-var fs = __importStar(require("fs"));
+exports.rsTest = exports.Environment = void 0;
+// import * as fs from 'fs'
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
 var crypto_1 = require("./lib/crypto");
 var logger_1 = require("./lib/utils/logger");
-var FileObject_1 = require("./api/FileObject");
+var rs_wrapper_1 = require("rs-wrapper");
+var crypto_2 = require("crypto");
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -134,27 +116,26 @@ var Environment = /** @class */ (function () {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
-        if (!options.overwritte && fs.existsSync(filePath)) {
-            return options.finishedCallback(new Error('File already exists'));
-        }
-        var fileStream = fs.createWriteStream(filePath);
-        download_1.Download(this.config, bucketId, fileId, options)
-            .then(function (stream) {
-            console.log('START DUMPING FILE');
-            var dump = stream.pipe(fileStream);
-            dump.on('error', function (err) {
-                console.log('DUMP FILE error', err.message);
-                options.finishedCallback(err);
-            });
-            dump.on('end', function (err) {
-                console.log('DUMP FILE END');
-                options.finishedCallback(err);
-            });
-        }).catch(options.finishedCallback);
-        /* TODO: Returns state object */
-        return;
-    };
+    // resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
+    //   if (!options.overwritte && fs.existsSync(filePath)) {
+    //     return options.finishedCallback(new Error('File already exists'))
+    //   }
+    //   const fileStream = fs.createWriteStream(filePath)
+    //   Download(this.config, bucketId, fileId, options).then(stream => {
+    //     console.log('START DUMPING FILE')
+    //     const dump = stream.pipe(fileStream)
+    //     dump.on('error', (err) => {
+    //       console.log('DUMP FILE error', err.message)
+    //       options.finishedCallback(err)
+    //     })
+    //     dump.on('end', (err) => {
+    //       console.log('DUMP FILE END')
+    //       options.finishedCallback(err)
+    //     })
+    //   })
+    //   /* TODO: Returns state object */
+    //   return
+    // }
     /**
      * Cancels the upload
      * @param state Download file state at the moment
@@ -162,29 +143,21 @@ var Environment = /** @class */ (function () {
     Environment.prototype.resolveFileCancel = function (state) {
         throw new Error('Not implemented yet');
     };
-    /**
-     * Uploads a file, returns state object
-     */
-    Environment.prototype.storeFile = function (bucketId, filePath, options) {
-        var _this = this;
-        if (!this.config.encryptionKey) {
-            throw new Error('Mnemonic was not provided, please, provide a mnemonic');
-        }
-        if (!fs.existsSync(filePath)) {
-            throw new Error('File path does not exist');
-        }
-        var fileBuf = fs.readFileSync(filePath);
-        var size = fileBuf.length;
-        var content = FileObject_1.BufferToStream(fileBuf);
-        var filename = options.filename ? options.filename : filePath;
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
-            .then(function (name) {
-            var fileToUpload = { content: content, name: name, size: size };
-            var progress = options.progressCallback, finish = options.finishedCallback;
-            upload_1.Upload(_this.config, bucketId, fileToUpload, progress, finish);
-        })
-            .catch(options.finishedCallback);
-    };
     return Environment;
 }());
 exports.Environment = Environment;
+function rsTest(size) {
+    var buffer = crypto_2.randomBytes(size);
+    console.log(buffer.length);
+    var shardSize = rs_wrapper_1.utils.determineShardSize(size);
+    var nShards = Math.ceil(size / shardSize);
+    var parityShards = rs_wrapper_1.utils.determineParityShards(nShards);
+    return rs_wrapper_1.encode(buffer, shardSize, nShards, parityShards).then(function (file) {
+        file[1] = 'g'.charCodeAt(0);
+        var totalShards = nShards + parityShards;
+        var arr = new Array(totalShards).fill(true);
+        arr[0] = false;
+        return rs_wrapper_1.reconstruct(file, nShards, parityShards, arr);
+    });
+}
+exports.rsTest = rsTest;

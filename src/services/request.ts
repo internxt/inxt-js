@@ -136,7 +136,7 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
 
   return request(config, 'get', targetUrl, finalParams)
     .then<getBucketByIdResponse>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 interface getFileByIdResponse {
@@ -211,6 +211,9 @@ export interface CreateEntryFromFrameBody {
     type: string,
     value: string
   };
+  erasure?: {
+    type: string
+  }
 }
 
 export interface CreateEntryFromFrameResponse {

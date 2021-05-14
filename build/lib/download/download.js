@@ -50,9 +50,7 @@ function Download(config, bucketId, fileId, options) {
                         throw Error('Encryption key required');
                     }
                     File = new FileObject_1.FileObject(config, bucketId, fileId);
-                    return [4 /*yield*/, File.GetFileInfo()
-                        // API request file mirrors with tokens
-                    ];
+                    return [4 /*yield*/, File.GetFileInfo()];
                 case 1:
                     _a.sent();
                     // API request file mirrors with tokens
@@ -89,8 +87,8 @@ function attachFileObjectListeners(f, notified) {
     f.on(events_1.FILEMUXER.ERROR, function (err) { return notified.emit(events_1.FILEMUXER.ERROR, err); });
     // TODO: Handle fileObject errors
     f.on('error', function (err) { return notified.emit(events_1.FILEOBJECT.ERROR, err); });
-    f.on('end', function () { return notified.emit(events_1.FILEOBJECT.END); });
-    f.decipher.on('end', function () { return notified.emit(events_1.DECRYPT.END); });
+    // f.on('end', () => notified.emit(FILEOBJECT.END))
+    // f.decipher.on('end', () => notified.emit(DECRYPT.END))
     f.decipher.once('error', function (err) { return notified.emit(events_1.DECRYPT.ERROR, err); });
 }
 function handleFileResolving(fl, downloadCb, decryptionCb) {

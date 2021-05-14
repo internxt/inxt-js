@@ -15,6 +15,7 @@ import { ERRORS } from "../lib/errors";
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
 import { logger } from "../lib/utils/logger";
+import { utils } from 'rs-wrapper';
 
 export interface FileMeta {
     size: number;
@@ -40,7 +41,7 @@ export class FileObjectUpload {
     this.fileMeta = fileMeta;
     this.bucketId = bucketId;
     this.frameId = '';
-    this.funnel = new FunnelStream(computeShardSize(fileMeta.size));
+    this.funnel = new FunnelStream(utils.determineShardSize(fileMeta.size));
     this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
     this.fileEncryptionKey = randomBytes(32);
   }
@@ -63,6 +64,7 @@ export class FileObjectUpload {
 
         return false;
     } catch (err) {
+        console.error(err);
         err = { ...err, message: `CheckBucketExistanceError: Due to ${err.message || '??'}` };
 
         if (err.message === ERRORS.BUCKET_NOT_FOUND) {
@@ -120,6 +122,9 @@ export class FileObjectUpload {
 
         return response;
     } catch (err) {
+        console.log('Error for shard with index %s, negotiated size %s: %s', shardMeta.index, shardMeta.size, err.message);
+        console.log({ hash: shardMeta.hash, size: shardMeta.size, index: shardMeta.index, parity: shardMeta.parity })
+
         err = { ...err, message: `NegotiateContractError: Due to ${err.message || '??'}` };
         return Promise.reject(err);
     }
@@ -158,13 +163,15 @@ export class FileObjectUpload {
     return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
   }
 
-  async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number): Promise<ShardMeta> {
-    const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, false);
+  async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
+    const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
     logger.info(`uploading shard ${shardMeta.hash}`);
 
     let negotiatedContract: ContractNegotiated | void;
     let token = "", operation = "";
     let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
+
+    console.log('shardMeta', shardMeta);
 
     try {
         if (negotiatedContract = await this.NegotiateContract(frameId, shardMeta)) {
@@ -174,7 +181,8 @@ export class FileObjectUpload {
         }
 
         const hash = shardMeta.hash;
-        const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity: false, token, farmer, operation };
+
+        const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation };
 
         const exchangeReport = new ExchangeReport(this.config);
         exchangeReport.params.dataHash = hash;
@@ -192,7 +200,7 @@ export class FileObjectUpload {
     } catch (err) {
         if (attemps > 1) {
             logger.error(`upload ${shardMeta.hash} failed. Retrying...`);
-            await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps);
+            await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
         } else {
             err = { ...err, message: `UploadShardError: Shard ${shardMeta.hash} not uploaded due to ${err.message || '??'}` };
             return Promise.reject(err);

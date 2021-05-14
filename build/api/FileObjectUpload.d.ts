@@ -30,5 +30,5 @@ export declare class FileObjectUpload {
     NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean>;
     GenerateHmac(shardMetas: ShardMeta[]): string;
     StartUploadFile(): Promise<EncryptStream>;
-    UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number): Promise<ShardMeta>;
+    UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta>;
 }

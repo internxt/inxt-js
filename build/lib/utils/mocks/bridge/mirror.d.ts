@@ -9,6 +9,6 @@ export declare class MirrorMock {
     private _bridge;
     constructor(node: NodeMock, bridge: BridgeMock);
     DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable;
-    DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes?: Array<string>): Promise<Transform | never>;
+    DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes?: string[]): Promise<Transform | never>;
     UploadShard(node: NodeMock, shardStream: Readable): Promise<boolean>;
 }

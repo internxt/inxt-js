@@ -109,14 +109,13 @@ var Proxy = /** @class */ (function () {
     return Proxy;
 }());
 exports.Proxy = Proxy;
-// const proxyBalancer = new ProxyBalancer()
-//     .attach(new Proxy('https://proxy1.internxt.com'))
-//     .attach(new Proxy('https://proxy2.internxt.com'))
-//     .attach(new Proxy('https://proxy3.internxt.com'))
-//     .attach(new Proxy('https://proxy4.internxt.com'))
-//     .attach(new Proxy('https://proxy5.internxt.com'))
 var proxyBalancer = new ProxyBalancer()
     .attach(new Proxy('https://api.internxt.com:8081'));
+// .attach(new Proxy('https://proxy1.internxt.com'))
+// .attach(new Proxy('https://proxy2.internxt.com'))
+// .attach(new Proxy('https://proxy3.internxt.com'))
+// .attach(new Proxy('https://proxy4.internxt.com'))
+// .attach(new Proxy('https://proxy5.internxt.com'));
 var mutex = new mutex_1.Mutex();
 exports.getProxy = function () { return __awaiter(void 0, void 0, void 0, function () {
     var response;

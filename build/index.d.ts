@@ -1,55 +1,27 @@
+/// <reference types="node" />
 import { CreateEntryFromFrameResponse } from './services/request';
-export interface OnlyErrorCallback {
-    (err: Error | null): void;
-}
-export interface UploadFinishCallback {
-    (err: Error | null, response: CreateEntryFromFrameResponse | null): void;
-}
-export interface DownloadProgressCallback {
-    (progress: number, downloadedBytes: number | null, totalBytes: number | null): void;
-}
-export interface DecryptionProgressCallback {
-    (progress: number, decryptedBytes: number | null, totalBytes: number | null): void;
-}
-export interface UploadProgressCallback {
-    (progress: number, uploadedBytes: number | null, totalBytes: number | null): void;
-}
+export declare type OnlyErrorCallback = (err: Error | null) => void;
+export declare type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
+export declare type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
+export declare type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
+export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export interface ResolveFileOptions {
     progressCallback: DownloadProgressCallback;
     finishedCallback: OnlyErrorCallback;
     overwritte?: boolean;
-}
-export interface StoreFileOptions {
-    filename: string;
-    progressCallback: UploadProgressCallback;
-    finishedCallback: OnlyErrorCallback;
 }
 export interface DownloadFileOptions {
     progressCallback: DownloadProgressCallback;
     decryptionProgressCallback?: DecryptionProgressCallback;
     finishedCallback: OnlyErrorCallback;
 }
-interface GetInfoCallback {
-    (err: Error | null, result: any): void;
-}
-interface GetBucketsCallback {
-    (err: Error | null, result: any): void;
-}
-interface GetBucketIdCallback {
-    (err: Error | null, result: any): void;
-}
-interface CreateBucketCallback {
-    (err: Error | null, result: any): void;
-}
-interface DeleteBucketCallback {
-    (err: Error | null, result: any): void;
-}
-interface ListFilesCallback {
-    (err: Error | null, result: any): void;
-}
-interface DeleteFileCallback {
-    (err: Error | null, result: any): void;
-}
+declare type GetInfoCallback = (err: Error | null, result: any) => void;
+declare type GetBucketsCallback = (err: Error | null, result: any) => void;
+declare type GetBucketIdCallback = (err: Error | null, result: any) => void;
+declare type CreateBucketCallback = (err: Error | null, result: any) => void;
+declare type DeleteBucketCallback = (err: Error | null, result: any) => void;
+declare type ListFilesCallback = (err: Error | null, result: any) => void;
+declare type DeleteFileCallback = (err: Error | null, result: any) => void;
 interface UploadFileParams {
     filename: string;
     fileSize: number;
@@ -111,17 +83,13 @@ export declare class Environment {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void;
     /**
      * Cancels the upload
      * @param state Download file state at the moment
      */
     resolveFileCancel(state: any): void;
-    /**
-     * Uploads a file, returns state object
-     */
-    storeFile(bucketId: string, filePath: string, options: StoreFileOptions): void;
 }
+export declare function rsTest(size: number): Promise<Uint8Array | Buffer>;
 export interface EnvironmentConfig {
     bridgeUrl?: string;
     bridgeUser: string;

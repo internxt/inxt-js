@@ -6,7 +6,7 @@ export interface ShardMeta {
   hash: string;
   size: number; // size of the actual file
   index: number;
-  is_parity: boolean;
+  parity: boolean;
   challenges?: Buffer[];
   challenges_as_str: string[];
   tree: string[];
@@ -18,13 +18,13 @@ function getShardHash(encryptedShardData: Buffer): Buffer {
   return shardHash;
 }
 
-export function getShardMeta(encryptedShardData: Buffer, fileSize: number, index: number, is_parity: boolean, exclude?: any): ShardMeta {
+export function getShardMeta(encryptedShardData: Buffer, fileSize: number, index: number, parity: boolean, exclude?: any): ShardMeta {
   const mT: MerkleTree = merkleTree(encryptedShardData);
   const shardMeta: ShardMeta = {
     hash: getShardHash(encryptedShardData).toString("hex"),
     size: fileSize,
     index,
-    is_parity,
+    parity,
     challenges_as_str: mT.challenges_as_str,
     tree: mT.leaf
   };

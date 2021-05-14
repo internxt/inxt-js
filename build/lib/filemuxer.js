@@ -143,6 +143,15 @@ var FileMuxer = /** @class */ (function (_super) {
             input.push(data);
         });
         readable.on('end', function () { input.end(); });
+        /**
+         * DO NOT REMOVE THE NEXT LINE
+         *
+         * This forces PassThrough to be in flowing mode. Thus, we can force input.end().
+         * If it isn't in flowing mode, the 'end' might not fire, blocking the entire download process.
+         *
+         * See https://nodejs.org/api/stream.html#stream_event_end
+         */
+        input.on('data', function () { });
         input.once('readable', function () {
             // console.log('shard is now readable, start to download')
             // Init exchange report
@@ -156,9 +165,11 @@ var FileMuxer = /** @class */ (function (_super) {
             if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
                 var actualHash = hash.toString('hex');
-                return _this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: expectedHash, actualHash: actualHash }));
+                _this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: expectedHash, actualHash: actualHash }));
             }
-            _this.emit(events_1.FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: expectedHash, digest: digest.toString('hex') }));
+            else {
+                _this.emit(events_1.FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: expectedHash, digest: digest.toString('hex') }));
+            }
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {

@@ -75,11 +75,11 @@ var api = __importStar(require("../services/request"));
 var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
 var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
-var shard_1 = require("../lib/utils/shard");
 var shardMeta_1 = require("../lib/shardMeta");
 var errors_1 = require("../lib/errors");
 var reports_1 = require("./reports");
 var logger_1 = require("../lib/utils/logger");
+var rs_wrapper_1 = require("rs-wrapper");
 var FileObjectUpload = /** @class */ (function () {
     function FileObjectUpload(config, fileMeta, bucketId) {
         this.config = config;
@@ -87,7 +87,7 @@ var FileObjectUpload = /** @class */ (function () {
         this.fileMeta = fileMeta;
         this.bucketId = bucketId;
         this.frameId = '';
-        this.funnel = new funnelStream_1.FunnelStream(shard_1.computeShardSize(fileMeta.size));
+        this.funnel = new funnelStream_1.FunnelStream(rs_wrapper_1.utils.determineShardSize(fileMeta.size));
         this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         this.fileEncryptionKey = crypto_1.randomBytes(32);
     }
@@ -127,6 +127,7 @@ var FileObjectUpload = /** @class */ (function () {
                         return [2 /*return*/, false];
                     case 3:
                         err_1 = _a.sent();
+                        console.error(err_1);
                         err_1 = __assign(__assign({}, err_1), { message: "CheckBucketExistanceError: Due to " + (err_1.message || '??') });
                         if (err_1.message === errors_1.ERRORS.BUCKET_NOT_FOUND) {
                             logger_1.logger.error("Bucket " + this.bucketId + " not found");
@@ -212,6 +213,8 @@ var FileObjectUpload = /** @class */ (function () {
                         return [2 /*return*/, response];
                     case 2:
                         err_4 = _a.sent();
+                        console.log('Error for shard with index %s, negotiated size %s: %s', shardMeta.index, shardMeta.size, err_4.message);
+                        console.log({ hash: shardMeta.hash, size: shardMeta.size, index: shardMeta.index, parity: shardMeta.parity });
                         err_4 = __assign(__assign({}, err_4), { message: "NegotiateContractError: Due to " + (err_4.message || '??') });
                         return [2 /*return*/, Promise.reject(err_4)];
                     case 3: return [2 /*return*/];
@@ -265,16 +268,17 @@ var FileObjectUpload = /** @class */ (function () {
             });
         });
     };
-    FileObjectUpload.prototype.UploadShard = function (encryptedShard, shardSize, frameId, index, attemps) {
+    FileObjectUpload.prototype.UploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
         return __awaiter(this, void 0, void 0, function () {
             var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_6;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, false);
+                        shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
                         logger_1.logger.info("uploading shard " + shardMeta.hash);
                         token = "", operation = "";
                         farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
+                        console.log('shardMeta', shardMeta);
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 5, , 9]);
@@ -286,7 +290,7 @@ var FileObjectUpload = /** @class */ (function () {
                             farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
                         }
                         hash = shardMeta.hash;
-                        shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: false, token: token, farmer: farmer, operation: operation };
+                        shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: parity, token: token, farmer: farmer, operation: operation };
                         exchangeReport = new reports_1.ExchangeReport(this.config);
                         exchangeReport.params.dataHash = hash;
                         exchangeReport.params.farmerId = shard.farmer.nodeID;
@@ -307,7 +311,7 @@ var FileObjectUpload = /** @class */ (function () {
                         err_6 = _a.sent();
                         if (!(attemps > 1)) return [3 /*break*/, 7];
                         logger_1.logger.error("upload " + shardMeta.hash + " failed. Retrying...");
-                        return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps)];
+                        return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity)];
                     case 6:
                         _a.sent();
                         return [3 /*break*/, 8];

@@ -65,6 +65,9 @@ export interface CreateEntryFromFrameBody {
         type: string;
         value: string;
     };
+    erasure?: {
+        type: string;
+    };
 }
 export interface CreateEntryFromFrameResponse {
     id: string;

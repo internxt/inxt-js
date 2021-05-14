@@ -11,7 +11,7 @@ export declare class BridgeMock {
     mirrors: ShardReferenced[];
     DEFAULT_BRIDGE_ERROR_MESSAGE: string;
     constructor(mirrors: ShardReferenced[]);
-    GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes?: Array<string>): Promise<ShardReferenced[]>;
+    GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes?: string[]): Promise<ShardReferenced[]>;
     private _limit;
     private _skip;
     resolve(): Promise<boolean>;

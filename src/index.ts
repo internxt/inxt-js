@@ -10,6 +10,9 @@ import { logger } from './lib/utils/logger';
 import { FileMeta } from "./api/FileObjectUpload";
 import { CreateEntryFromFrameResponse } from './services/request';
 
+import { encode, reconstruct, utils } from 'rs-wrapper';
+import { randomBytes } from 'crypto';
+
 export type OnlyErrorCallback = (err: Error | null) => void;
 
 export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
@@ -208,6 +211,24 @@ export class Environment {
 
 }
 
+export function rsTest(size: number) {
+  const buffer = randomBytes(size);
+  console.log(buffer.length)
+  const shardSize = utils.determineShardSize(size);
+  const nShards = Math.ceil(size / shardSize);
+  const parityShards = utils.determineParityShards(nShards)
+
+  return encode(buffer, shardSize, nShards, parityShards).then((file) => {
+    file[1] = 'g'.charCodeAt(0);
+    const totalShards = nShards + parityShards;
+
+    const arr: boolean[] = new Array(totalShards).fill(true);
+    arr[0] = false;
+
+    return reconstruct(file, nShards, parityShards, arr);
+  });
+}
+
 export interface EnvironmentConfig {
   bridgeUrl?: string;
   bridgeUser: string;
@@ -219,3 +240,5 @@ export interface EnvironmentConfig {
     shardRetry: number
   };
 }
+
+

@@ -80,6 +80,7 @@ var proxy_1 = require("./proxy");
 var logger_1 = require("../lib/utils/logger");
 dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 var INXT_API_URL = process.env.INXT_API_URL;
+var PROXY = 'https://api.internxt.com:8081';
 function request(config, method, targetUrl, params) {
     return __awaiter(this, void 0, void 0, function () {
         var proxy, url, DefaultOptions, options;
@@ -120,7 +121,8 @@ function streamRequest(targetUrl, nodeID) {
                 headers: {
                     'content-type': 'application/octet-stream',
                     'x-storj-node-id': nodeID
-                }
+                },
+                timeout: 3000
             });
         }
         var proxy, URL, uriParts, downloader;
@@ -147,7 +149,9 @@ function streamRequest(targetUrl, nodeID) {
                                             _this.push.bind(_this, null);
                                             _this.emit('end');
                                         }).on('close', _this.emit.bind(_this, 'close'));
-                                    }).on('error', this.emit.bind(this, 'error'));
+                                    })
+                                        .on('error', this.emit.bind(this, 'error'))
+                                        .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
                                 }
                             }
                         })];
@@ -179,7 +183,7 @@ exports.extractErrorMsg = extractErrorMsg;
  */
 function getBucketById(config, bucketId, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = URL + "/buckets/" + bucketId;
+    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -187,8 +191,8 @@ function getBucketById(config, bucketId, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'get', targetUrl, finalParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.getBucketById = getBucketById;
 /**
@@ -201,7 +205,7 @@ exports.getBucketById = getBucketById;
  */
 function getFileById(config, bucketId, fileId, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
+    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -220,7 +224,7 @@ exports.getFileById = getFileById;
  */
 function createFrame(config, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = URL + "/frames";
+    var targetUrl = PROXY + "/" + URL + "/frames";
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -242,7 +246,7 @@ exports.createFrame = createFrame;
  */
 function createEntryFromFrame(config, bucketId, body, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = URL + "/buckets/" + bucketId + "/files";
+    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId + "/files";
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -265,7 +269,7 @@ exports.createEntryFromFrame = createEntryFromFrame;
  */
 function addShardToFrame(config, frameId, body, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = URL + "/frames/" + frameId;
+    var targetUrl = PROXY + "/" + URL + "/frames/" + frameId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -295,7 +299,7 @@ exports.sendUploadExchangeReport = sendUploadExchangeReport;
  * @param content Buffer with shard content
  */
 function sendShardToNode(config, shard, content) {
-    var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
+    var targetUrl = PROXY + "/http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',

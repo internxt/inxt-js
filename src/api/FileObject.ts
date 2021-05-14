@@ -92,7 +92,7 @@ export class FileObject extends EventEmitter {
     const exchangeReport = new ExchangeReport(this.config);
 
     return new Promise((resolve, reject) => {
-      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry) => {
+      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry: any) => {
         exchangeReport.params.exchangeStart = new Date();
         exchangeReport.params.farmerId = shard.farmer.nodeID;
         exchangeReport.params.dataHash = shard.hash;
@@ -134,9 +134,9 @@ export class FileObject extends EventEmitter {
         const buffer = await shardObject.StartDownloadShard();
 
         oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
-      }, async (err, result: Buffer) => {
+      }, async (err: Error | null | undefined, result: any) => {
         try {
-          if (!err) {
+          if (!err && result) {
             return resolve(result);
           } else {
             excluded.push(shard.farmer.nodeID);

@@ -14,12 +14,12 @@ export default class ReedSolomon {
     private dataShardsN: number
     private gf: GaloisField
     private parityShardsN: number
-    private m
-    private parity // also called matrixRows
-    private fecBlocks
-    private dataShardIndex
-    private totalNumOfShards
-    private blockSize
+    private m: Uint8Array
+    private parity: Uint8Array // also called matrixRows
+    private fecBlocks: Uint8Array[]
+    private dataShardIndex: number
+    private totalNumOfShards: number
+    // private blockSize
 
     constructor(dataShardsN: number, parityShardsN:number, blockSize: number) { // check if block size is really needed
       this.gf = new GaloisField()
@@ -38,7 +38,7 @@ export default class ReedSolomon {
         this.fecBlocks[i] = new Uint8Array(blockSize)
       }
       this.dataShardIndex = 0 // is it possible to remove?
-      this.blockSize = blockSize
+      // this.blockSize = blockSize
     }
 
 
@@ -54,11 +54,11 @@ export default class ReedSolomon {
             )
         }
         else {
-          this.gf.dotProduct()
+          // this.gf.dotProduct()
         }
       }
       this.dataShardIndex++
-      calback()
+      // calback()
     }
 }
 

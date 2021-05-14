@@ -44,6 +44,9 @@ var ExchangeReport = /** @class */ (function () {
         return true;
     };
     ExchangeReport.prototype.sendReport = function () {
+        if (this.params.exchangeEnd == null) {
+            this.params.exchangeEnd = new Date();
+        }
         if (!this.validate()) {
             return Promise.reject(Error('Not valid report to send'));
         }
@@ -54,6 +57,14 @@ var ExchangeReport = /** @class */ (function () {
         this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_SHARD_DOWNLOADED;
     };
     ExchangeReport.prototype.DownloadError = function () {
+        this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
+        this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR;
+    };
+    ExchangeReport.prototype.UploadOk = function () {
+        this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS;
+        this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_SHARD_UPLOADED;
+    };
+    ExchangeReport.prototype.UploadError = function () {
         this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
         this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR;
     };

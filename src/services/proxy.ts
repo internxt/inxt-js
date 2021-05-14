@@ -66,11 +66,12 @@ interface ProxyManager {
 }
 
 const proxyBalancer = new ProxyBalancer()
-    .attach(new Proxy('https://proxy1.internxt.com'))
-    .attach(new Proxy('https://proxy2.internxt.com'))
-    .attach(new Proxy('https://proxy3.internxt.com'))
-    .attach(new Proxy('https://proxy4.internxt.com'))
-    .attach(new Proxy('https://proxy5.internxt.com'));
+    .attach(new Proxy('https://api.internxt.com:8081'))
+    // .attach(new Proxy('https://proxy1.internxt.com'))
+    // .attach(new Proxy('https://proxy2.internxt.com'))
+    // .attach(new Proxy('https://proxy3.internxt.com'))
+    // .attach(new Proxy('https://proxy4.internxt.com'))
+    // .attach(new Proxy('https://proxy5.internxt.com'));
 
 const mutex = new Mutex();
 

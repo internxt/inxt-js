@@ -52,7 +52,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FileObject = exports.BufferToStream = void 0;
+exports.FileObject = void 0;
 var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var events_1 = require("events");
@@ -70,7 +70,6 @@ function BufferToStream(buffer) {
     stream.push(null);
     return stream;
 }
-exports.BufferToStream = BufferToStream;
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -116,9 +115,7 @@ var FileObject = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)
-                            // Sanitize address
-                        ];
+                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
                     case 1:
                         _a.rawShards = _b.sent();
                         // Sanitize address
@@ -170,6 +167,8 @@ var FileObject = /** @class */ (function (_super) {
                                 switch (_a.label) {
                                     case 0:
                                         exchangeReport.params.exchangeStart = new Date();
+                                        exchangeReport.params.farmerId = shard.farmer.nodeID;
+                                        exchangeReport.params.dataHash = shard.hash;
                                         downloadHasError = false;
                                         downloadError = null;
                                         oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
@@ -180,6 +179,10 @@ var FileObject = /** @class */ (function (_super) {
                                             downloadError = err;
                                             _this.emit(events_2.FILEMUXER.ERROR, err);
                                             // Should emit Exchange Report?
+                                            exchangeReport.DownloadError();
+                                            exchangeReport.sendReport().catch(function (err) { err; });
+                                            // Force to finish this attempt
+                                            oneFileMuxer.emit('drain');
                                         });
                                         buffs = [];
                                         oneFileMuxer.on('data', function (data) { buffs.push(data); });
@@ -188,6 +191,8 @@ var FileObject = /** @class */ (function (_super) {
                                                 nextTry(downloadError);
                                             }
                                             else {
+                                                exchangeReport.DownloadOk();
+                                                exchangeReport.sendReport().catch(function (err) { err; });
                                                 nextTry(null, Buffer.concat(buffs));
                                             }
                                         });
@@ -204,7 +209,7 @@ var FileObject = /** @class */ (function (_super) {
                                 switch (_a.label) {
                                     case 0:
                                         _a.trys.push([0, 5, , 6]);
-                                        if (!!err) return [3 /*break*/, 1];
+                                        if (!(!err && result)) return [3 /*break*/, 1];
                                         return [2 /*return*/, resolve(result)];
                                     case 1:
                                         excluded.push(shard.farmer.nodeID);
@@ -245,15 +250,10 @@ var FileObject = /** @class */ (function (_super) {
         fileMuxer.on('error', function (err) { return _this.emit('download-filemuxer-error', err); });
         fileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
         var shardObject;
-        var exchangeReport = new reports_1.ExchangeReport(this.config);
         async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
             if (!shard) {
                 return nextItem(Error('Null shard found'));
             }
-            exchangeReport = new reports_1.ExchangeReport(_this.config);
-            exchangeReport.params.exchangeEnd = new Date();
-            exchangeReport.params.farmerId = shard.farmer.nodeID;
-            exchangeReport.params.dataHash = shard.hash;
             shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
             _this.shards.push(shardObject);
             // We add the stream buffer to the muxer, and will be downloaded to the main stream.
@@ -265,22 +265,18 @@ var FileObject = /** @class */ (function (_super) {
                     .once('error', function (err) { throw err; })
                     .once('drain', function () {
                     // continue just if drain fired, 'drain' = decrypted correctly and ready for more
-                    exchangeReport.DownloadOk();
-                    exchangeReport.sendReport();
                     _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
                     nextItem();
                 });
             }).catch(function (err) {
-                exchangeReport.DownloadError();
-                exchangeReport.sendReport();
                 nextItem(err);
             });
         }, function (err) {
-            if (err) {
-                return _this.emit(events_2.FILEOBJECT.ERROR, err);
-            }
+            // if (err) {        
+            //   // this.emit(FILEOBJECT.ERROR, err)
+            // }
             _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
-            _this.emit('end');
+            _this.emit('end', err);
         });
         return fileMuxer;
     };

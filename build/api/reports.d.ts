@@ -29,4 +29,6 @@ export declare class ExchangeReport {
     sendReport(): Promise<import("axios").AxiosResponse<JSON>>;
     DownloadOk(): void;
     DownloadError(): void;
+    UploadOk(): void;
+    UploadError(): void;
 }
