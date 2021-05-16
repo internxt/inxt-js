@@ -1,11 +1,10 @@
+import { encode, utils } from "rs-wrapper";
+
 import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
-import EncryptStream from "../encryptStream";
 import { ShardMeta } from '../shardMeta';
 import * as api from '../../services/request';
 import { logger } from "../utils/logger";
-
-import { encode, utils } from "rs-wrapper";
 
 const MIN_SHARD_SIZE = 2097152; // 2Mb
 
@@ -32,8 +31,6 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
     const totalBytes = fileMeta.size;
 
     let currentBytesUploaded = 0;
-
-    const uploadShardPromises: Promise<ShardMeta>[] = [];
 
     progress(0, 0, totalBytes);
 
