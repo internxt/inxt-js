@@ -114,21 +114,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                         throw new Error('no upload requests has been made'); 
                     }
 
-                    const bucketEntry: api.CreateEntryFromFrameBody = {
-                        frame: File.frameId,
-                        filename: fileMeta.name,
-                        index: File.index.toString('hex'),
-                        hmac: {
-                            type: 'sha512',
-                            value: File.GenerateHmac(uploadShardResponses)
-                        }
-                    };
-
-                    if (rs) {
-                        bucketEntry.erasure = { type: "reedsolomon" };
-                    }
-
-                    const savingFileResponse = await File.SaveFileInNetwork(bucketEntry);
+                    const savingFileResponse = await createBucketEntry(File, fileMeta, uploadShardResponses, rs);
 
                     // TODO: Change message and way of handling
                     if (!savingFileResponse) { 
@@ -151,4 +137,22 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
 
         finish(err, null);
     });
+}
+
+function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
+    const bucketEntry: api.CreateEntryFromFrameBody = {
+        frame: fileObject.frameId,
+        filename: fileMeta.name,
+        index: fileObject.index.toString('hex'),
+        hmac: {
+            type: 'sha512',
+            value: fileObject.GenerateHmac(shardMetas)
+        }
+    };
+
+    if (rs) {
+        bucketEntry.erasure = { type: "reedsolomon" };
+    }
+
+    return fileObject.SaveFileInNetwork(bucketEntry);
 }
