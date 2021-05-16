@@ -48,17 +48,15 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                 const nShards = Math.ceil(fileSize / shardSize);
                 const parityShards = utils.determineParityShards(nShards);
 
+                const rs = fileSize >= MIN_SHARD_SIZE;
+
                 console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
 
                 let from = 0;
                 let currentIndex = 0;
                 let currentShard = null;
 
-                let totalSize = fileSize;
-
-                if (fileSize >= MIN_SHARD_SIZE) {
-                    totalSize += parityShards * shardSize;
-                }
+                const totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
 
                 const sendShard = async (encryptedShard: Buffer, index: number, isParity: boolean): Promise<ShardMeta> => {
                     const response = await File.UploadShard(encryptedShard, encryptedShard.length, File.frameId, index, 3, isParity);
@@ -84,8 +82,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
 
                 from = 0;
 
-                if (fileSize >= MIN_SHARD_SIZE) {
-                    // =========== RS ============
+                if (rs) {
                     console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
                     console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
@@ -93,7 +90,6 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                     
 
                     const parities = fileEncoded.slice(nShards * shardSize);
-                    // ===========================
                     console.log("Parities content size", parities.length);
 
                     // upload parities
@@ -128,7 +124,7 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                         }
                     };
 
-                    if (fileSize >= MIN_SHARD_SIZE) {
+                    if (rs) {
                         bucketEntry.erasure = { type: "reedsolomon" };
                     }
 
