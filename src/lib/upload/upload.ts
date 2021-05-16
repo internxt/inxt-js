@@ -25,7 +25,6 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
     const File = new FileObjectUpload(config, fileMeta, bucketId);
 
     let fileContent: Buffer = Buffer.alloc(0);
-    let fileSize = 0;
 
     File.init().then(() => File.StartUploadFile()).then((out: EncryptStream) => {
         return new Promise((resolve, reject) => {
@@ -37,29 +36,14 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
 
             progress(0, uploadedBytes, totalBytes);
 
-            out.on('data', async (encryptedShard: Buffer) => {
-                fileContent = Buffer.concat([fileContent, encryptedShard]);
-
-                const rawShard = out.shards.pop();
-
-                // TODO: Review this message and if is required
-                if (!rawShard) {
-                    return reject('File content is empty');
-                }
-
-                // TODO: Review this
-                const { size, index } = rawShard;
-
-                fileSize += size;
-
-                if (size !== encryptedShard.length) {
-                    return reject(`shard size calculated ${size} and encrypted shard size ${encryptedShard.length} do not match`);
-                }
+            out.on('data', async (shard: Buffer) => {
+                fileContent = Buffer.concat([fileContent, shard]);
             });
 
             out.on('error', reject);
 
             out.on('end', async () => {
+                const fileSize = fileContent.length;
                 const shardSize = utils.determineShardSize(fileSize);
                 const nShards = Math.ceil(fileSize / shardSize);
                 const parityShards = utils.determineParityShards(nShards);
