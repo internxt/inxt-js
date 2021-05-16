@@ -17,7 +17,7 @@ const MIN_SHARD_SIZE = 2097152; // 2Mb
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): void {
+export async function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void> {
     if (!config.encryptionKey) {
         throw new Error('Encryption key is null');
     }
@@ -26,91 +26,84 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
 
     let fileContent: Buffer = Buffer.alloc(0);
 
-    File.init().then(() => File.StartUploadFile()).then((out: EncryptStream) => {
-        return new Promise((resolve, reject) => {
-            const totalBytes = fileMeta.size;
+    await File.init();
+    const Output = await File.StartUploadFile();
 
-            let currentBytesUploaded = 0;
+    const totalBytes = fileMeta.size;
 
-            const uploadShardPromises: Promise<ShardMeta>[] = [];
+    let currentBytesUploaded = 0;
 
-            progress(0, 0, totalBytes);
+    const uploadShardPromises: Promise<ShardMeta>[] = [];
 
-            out.on('data', async (shard: Buffer) => {
-                fileContent = Buffer.concat([fileContent, shard]);
-            });
+    progress(0, 0, totalBytes);
 
-            out.on('error', reject);
+    Output.on('data', async (shard: Buffer) => {
+        fileContent = Buffer.concat([fileContent, shard]);
+    });
 
-            out.on('end', async () => {
-                const fileSize = fileContent.length;
-                const shardSize = utils.determineShardSize(fileSize);
-                const nShards = Math.ceil(fileSize / shardSize);
-                const parityShards = utils.determineParityShards(nShards);
+    Output.on('error', (err) => finish(err, null));
 
-                const rs = fileSize >= MIN_SHARD_SIZE;
-                const totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
+    Output.on('end', async () => {
+        const fileSize = fileContent.length;
+        const shardSize = utils.determineShardSize(fileSize);
+        const nShards = Math.ceil(fileSize / shardSize);
+        const parityShards = utils.determineParityShards(nShards);
 
-                const action: UploadShardsAction = {
-                    fileContent, nShards, shardSize, fileObject: File, firstIndex: 0, parity: false
-                }
+        const rs = fileSize >= MIN_SHARD_SIZE;
+        const totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
 
-                console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
+        const action: UploadShardsAction = {
+            fileContent, nShards, shardSize, fileObject: File, firstIndex: 0, parity: false
+        }
 
-                let shardUploadRequests = uploadShards(action);
-                let paritiesUploadRequests: Promise<ShardMeta>[] = [];
+        console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
 
-                if (rs) {
-                    console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
-                    console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+        let shardUploadRequests = uploadShards(action);
+        let paritiesUploadRequests: Promise<ShardMeta>[] = [];
 
-                    const parities = await getParities(fileContent, shardSize, nShards, parityShards);
+        if (rs) {
+            console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
+            console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
-                    console.log("Parities content size", parities.length);
+            const parities = await getParities(fileContent, shardSize, nShards, parityShards);
 
-                    action.fileContent = Buffer.from(parities);
-                    action.firstIndex = shardUploadRequests.length;
-                    action.parity = true;
-                    action.nShards = parityShards;
+            console.log("Parities content size", parities.length);
 
-                    // upload parities
-                    paritiesUploadRequests = uploadShards(action);
-                } else {
-                    console.log('File too small (%s), not creating parities', fileSize);
-                }
+            action.fileContent = Buffer.from(parities);
+            action.firstIndex = shardUploadRequests.length;
+            action.parity = true;
+            action.nShards = parityShards;
 
-                try {
-                    console.log('Waiting for upload to progress');
-                    const uploadResponses = await Promise.all(shardUploadRequests.concat(paritiesUploadRequests));
-                    console.log('Upload finished');
+            // upload parities
+            paritiesUploadRequests = uploadShards(action);
+        } else {
+            console.log('File too small (%s), not creating parities', fileSize);
+        }
 
-                    // TODO: Check message and way of handling
-                    if (uploadResponses.length === 0) { 
-                        throw new Error('no upload requests has been made'); 
-                    }
+        try {
+            console.log('Waiting for upload to progress');
+            const uploadResponses = await Promise.all(shardUploadRequests.concat(paritiesUploadRequests));
+            console.log('Upload finished');
 
-                    const savingFileResponse = await createBucketEntry(File, fileMeta, uploadResponses, rs);
+            // TODO: Check message and way of handling
+            if (uploadResponses.length === 0) {
+                throw new Error('no upload requests has been made');
+            }
 
-                    // TODO: Change message and way of handling
-                    if (!savingFileResponse) { 
-                        throw new Error('Can not save the file in network'); 
-                    }
+            const savingFileResponse = await createBucketEntry(File, fileMeta, uploadResponses, rs);
 
-                    progress(100, totalBytes, totalBytes);
-                    finish(null, savingFileResponse);
+            // TODO: Change message and way of handling
+            if (!savingFileResponse) {
+                throw new Error('Can not save the file in network');
+            }
 
-                    console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
+            progress(100, totalBytes, totalBytes);
+            finish(null, savingFileResponse);
 
-                    return resolve(null);
-                } catch (err) {
-                    return reject(err);
-                }
-            });
-        });
-    }).catch((err: Error) => {
-        logger.error(`File upload went wrong due to ${err.message}`);
-
-        finish(err, null);
+            console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
+        } catch (err) {
+            finish(err, null);
+        }
     });
 }
 
