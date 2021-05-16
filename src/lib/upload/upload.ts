@@ -86,10 +86,8 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                     console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
                     console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
-                    const fileEncoded = await encode(fileContent, shardSize, nShards, parityShards);
-                    
+                    const parities = await getParities(fileContent, shardSize, nShards, parityShards);
 
-                    const parities = fileEncoded.slice(nShards * shardSize);
                     console.log("Parities content size", parities.length);
 
                     // upload parities
@@ -155,4 +153,10 @@ function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, sha
     }
 
     return fileObject.SaveFileInNetwork(bucketEntry);
+}
+
+async function getParities(file: Buffer, shardSize: number, totalShards: number, parityShards: number) {
+    const fileEncoded = await encode(file, shardSize, totalShards, parityShards);
+
+    return fileEncoded.slice(totalShards * shardSize);
 }
