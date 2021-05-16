@@ -79,7 +79,17 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
         try {
             console.log('Waiting for upload to progress');
-            const uploadResponses = await Promise.all(shardUploadRequests.concat(paritiesUploadRequests));
+
+            const uploadResponses = await Promise.all(
+                shardUploadRequests.concat(paritiesUploadRequests).map(async (request) => {
+                    const shardMeta = await request;
+
+                    currentBytesUploaded = updateProgress(totalSize, currentBytesUploaded, shardMeta.size, progress);
+
+                    return shardMeta;
+                })
+            );
+
             console.log('Upload finished');
 
             // TODO: Check message and way of handling
