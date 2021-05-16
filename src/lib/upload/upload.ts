@@ -3,7 +3,7 @@ import { encode, utils } from "rs-wrapper";
 import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
 import { ShardMeta } from '../shardMeta';
-import * as api from '../../services/request';
+import { CreateEntryFromFrameBody } from '../../services/request';
 import { logger } from "../utils/logger";
 
 const MIN_SHARD_SIZE = 2097152; // 2Mb
@@ -115,7 +115,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 }
 
 function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
-    const bucketEntry: api.CreateEntryFromFrameBody = {
+    const bucketEntry: CreateEntryFromFrameBody = {
         frame: fileObject.frameId,
         filename: fileMeta.name,
         index: fileObject.index.toString('hex'),
