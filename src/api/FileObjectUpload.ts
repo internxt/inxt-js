@@ -46,11 +46,13 @@ export class FileObjectUpload {
     this.fileEncryptionKey = randomBytes(32);
   }
 
-  async init(): Promise<void> {
+  async init(): Promise<FileObjectUpload> {
     this.index = randomBytes(32);
     this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
 
     this.cipher = new EncryptStream(this.fileEncryptionKey, this.index.slice(0, 16));
+
+    return this;
   }
 
   async CheckBucketExistance(): Promise<boolean> {

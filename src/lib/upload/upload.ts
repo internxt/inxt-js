@@ -21,18 +21,13 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         throw new Error('Encryption key is null');
     }
 
-    const File = new FileObjectUpload(config, fileMeta, bucketId);
-
+    const File = await new FileObjectUpload(config, fileMeta, bucketId).init();
+    const Output = await File.StartUploadFile();
+    
+    const fileSize = fileMeta.size;
     let fileContent: Buffer = Buffer.alloc(0);
 
-    await File.init();
-    const Output = await File.StartUploadFile();
-
-    const totalBytes = fileMeta.size;
-
-    let currentBytesUploaded = 0;
-
-    progress(0, 0, totalBytes);
+    progress(0, 0, fileSize);
 
     Output.on('data', async (shard: Buffer) => {
         fileContent = Buffer.concat([fileContent, shard]);
@@ -41,7 +36,6 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
     Output.on('error', (err) => finish(err, null));
 
     Output.on('end', async () => {
-        const fileSize = fileContent.length;
         const shardSize = utils.determineShardSize(fileSize);
         const nShards = Math.ceil(fileSize / shardSize);
         const parityShards = utils.determineParityShards(nShards);
@@ -80,6 +74,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         try {
             console.log('Waiting for upload to progress');
 
+            let currentBytesUploaded = 0;
             const uploadResponses = await Promise.all(
                 shardUploadRequests.concat(paritiesUploadRequests).map(async (request) => {
                     const shardMeta = await request;
@@ -104,7 +99,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
                 throw new Error('Can not save the file in network');
             }
 
-            progress(100, totalBytes, totalBytes);
+            progress(100, fileSize, fileSize);
             finish(null, savingFileResponse);
 
             console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
