@@ -29,12 +29,12 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
     File.init().then(() => File.StartUploadFile()).then((out: EncryptStream) => {
         return new Promise((resolve, reject) => {
             const totalBytes = fileMeta.size;
-            let uploadedBytes = 0;
-            let progressCounter = 0;
+
+            let currentBytesUploaded = 0;
 
             const uploadShardPromises: Promise<ShardMeta>[] = [];
 
-            progress(0, uploadedBytes, totalBytes);
+            progress(0, 0, totalBytes);
 
             out.on('data', async (shard: Buffer) => {
                 fileContent = Buffer.concat([fileContent, shard]);
@@ -61,12 +61,9 @@ export function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: Fi
                 const sendShard = async (encryptedShard: Buffer, index: number, isParity: boolean): Promise<ShardMeta> => {
                     const response = await File.UploadShard(encryptedShard, encryptedShard.length, File.frameId, index, 3, isParity);
 
-                    uploadedBytes += encryptedShard.length;
-                    progressCounter += (encryptedShard.length / totalSize) * 100;
+                    currentBytesUploaded = updateProgress(totalSize, currentBytesUploaded, encryptedShard.length, progress);
 
-                    console.log('Upload bytes %s (%s)', uploadedBytes, progressCounter);
-
-                    progress(progressCounter, uploadedBytes, totalSize);
+                    console.log('Upload %s bytes from %s bytes', currentBytesUploaded, totalSize);
 
                     return response;
                 };
@@ -159,4 +156,12 @@ async function getParities(file: Buffer, shardSize: number, totalShards: number,
     const fileEncoded = await encode(file, shardSize, totalShards, parityShards);
 
     return fileEncoded.slice(totalShards * shardSize);
+}
+
+function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
+    const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
+    const progressCounter = Math.ceil((newCurrentBytes / totalBytes) * 100);
+    progress(progressCounter, newCurrentBytes, totalBytes);
+
+    return newCurrentBytes;
 }
