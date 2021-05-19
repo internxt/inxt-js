@@ -84,9 +84,17 @@ function Download(config, bucketId, fileId, options) {
                     out.on('error', function (err) { throw err; });
                     attachFileObjectListeners(File, out);
                     handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
+                    fileContent = Buffer.alloc(0);
                     logger_1.logger.info('Starting file download');
-                    fileEncryptedStream = File.StartDownloadFile();
+                    return [4 /*yield*/, File.StartDownloadFile2()];
+                case 3:
+                    fileEncryptedStream = (_a.sent()).pipe(new stream_1.PassThrough());
+                    console.log('tengo el stream!', Object.keys(fileEncryptedStream));
+                    console.log("Es readable -->", fileEncryptedStream.readable instanceof stream_1.Readable);
+                    console.log("Es buffer -->", fileEncryptedStream.readable instanceof Buffer);
+                    // COMO ESTA AHORA
                     fileEncryptedStream.on('data', function (chunk) {
+                        // console.log(chunk);
                         fileContent = Buffer.concat([fileContent, chunk]);
                     });
                     return [2 /*return*/, new Promise(function (resolve, reject) {

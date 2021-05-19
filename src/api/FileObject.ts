@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { Duplex } from 'stream';
+import { Duplex, Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { eachLimit, retry } from 'async';
 
@@ -18,11 +18,20 @@ import { utils } from 'rs-wrapper';
 import { logger } from '../lib/utils/logger';
 import { bufferToStream } from '../lib/utils/buffer';
 
+// const MultiStream = require('multistream');
+
+const MultiStream = require('./multistream.js');
+
 function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex();
   stream.push(buffer);
   stream.push(null);
   return stream;
+}
+
+interface DownloadStream {
+  content: Readable, 
+  index: number
 }
 
 export class FileObject extends EventEmitter {
@@ -163,6 +172,60 @@ export class FileObject extends EventEmitter {
       });
     });
 
+  }
+
+  async StartDownloadFile2(): Promise<any> {
+    if (!this.fileInfo) {
+      throw new Error('Undefined fileInfo');
+    }
+
+    this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
+
+    this.decipher.on('error', (err) => this.emit(DECRYPT.ERROR, err));
+    this.decipher.on(DECRYPT.PROGRESS, (msg) => this.emit(DECRYPT.PROGRESS, msg));
+
+    let shardSize = utils.determineShardSize(this.final_length);
+
+    const lastShardIndex = this.rawShards.filter(shard => !shard.parity).length - 1;
+    const lastShardSize = this.rawShards[lastShardIndex].size; 
+    const sizeToFillToZeroes = shardSize - lastShardSize;
+
+    logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
+
+    let streams: DownloadStream[] = [];
+
+    await Promise.all(this.rawShards.map(async (shard, i) => {
+      try {
+        const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
+        let content = shardBuffer;
+
+        if (i === lastShardIndex && sizeToFillToZeroes > 0) {
+          // refill to zeroes content
+
+          logger.info('Filling with zeroes last shard');
+
+          content = Buffer.concat([content, Buffer.alloc(sizeToFillToZeroes).fill(0)]);
+
+          logger.info('After filling with zeroes, shard size is %s', content.length);
+        }
+
+        streams.push({
+          content: bufferToStream(content),
+          index: shard.index
+        });
+
+        shard.healthy = true;
+      } catch (err) {
+        shard.healthy = false;
+      }
+      
+    }));
+
+    // JOIN STREAMS IN ORDER
+    streams.sort((sA, sB) => sA.index - sB.index);
+
+    // RETURN ONE STREAM UNIFIED
+    return new MultiStream(streams.map(s => s.content));
   }
 
   StartDownloadFile(): FileMuxer {

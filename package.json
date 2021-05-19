@@ -37,6 +37,7 @@
     "buffer-to-stream": "^1.0.0",
     "commander": "^5.1.0",
     "memory-blob-store": "^5.0.1",
+    "multistream": "^4.1.0",
     "mux-demux": "^3.7.9",
     "rs-wrapper": "jalbertogonzalez/rs-wrapper",
     "stream-to-blob": "^2.0.1",

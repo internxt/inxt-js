@@ -66,6 +66,9 @@ var reports_1 = require("./reports");
 var events_2 = require("../lib/events");
 var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../lib/utils/logger");
+var buffer_1 = require("../lib/utils/buffer");
+// const MultiStream = require('multistream');
+var MultiStream = require('./multistream.js');
 function BufferToStream(buffer) {
     var stream = new stream_1.Duplex();
     stream.push(buffer);
@@ -175,6 +178,7 @@ var FileObject = /** @class */ (function (_super) {
                             var buffs = [];
                             oneFileMuxer.on('data', function (data) { buffs.push(data); });
                             oneFileMuxer.once('drain', function () {
+                                console.log('ENTRO AQUI');
                                 if (downloadHasError) {
                                     nextTry(downloadError);
                                 }
@@ -218,6 +222,65 @@ var FileObject = /** @class */ (function (_super) {
             });
         });
     };
+    FileObject.prototype.StartDownloadFile2 = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!this.fileInfo) {
+                            throw new Error('Undefined fileInfo');
+                        }
+                        this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
+                        this.decipher.on('error', function (err) { return _this.emit(events_2.DECRYPT.ERROR, err); });
+                        this.decipher.on(events_2.DECRYPT.PROGRESS, function (msg) { return _this.emit(events_2.DECRYPT.PROGRESS, msg); });
+                        shardSize = rs_wrapper_1.utils.determineShardSize(this.final_length);
+                        lastShardIndex = this.rawShards.filter(function (shard) { return !shard.parity; }).length - 1;
+                        lastShardSize = this.rawShards[lastShardIndex].size;
+                        sizeToFillToZeroes = shardSize - lastShardSize;
+                        logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
+                        streams = [];
+                        return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
+                                var shardBuffer, content, err_2;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            _a.trys.push([0, 2, , 3]);
+                                            return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
+                                        case 1:
+                                            shardBuffer = _a.sent();
+                                            content = shardBuffer;
+                                            if (i === lastShardIndex && sizeToFillToZeroes > 0) {
+                                                // refill to zeroes content
+                                                logger_1.logger.info('Filling with zeroes last shard');
+                                                content = Buffer.concat([content, Buffer.alloc(sizeToFillToZeroes).fill(0)]);
+                                                logger_1.logger.info('After filling with zeroes, shard size is %s', content.length);
+                                            }
+                                            streams.push({
+                                                content: buffer_1.bufferToStream(content),
+                                                index: shard.index
+                                            });
+                                            shard.healthy = true;
+                                            return [3 /*break*/, 3];
+                                        case 2:
+                                            err_2 = _a.sent();
+                                            shard.healthy = false;
+                                            return [3 /*break*/, 3];
+                                        case 3: return [2 /*return*/];
+                                    }
+                                });
+                            }); }))];
+                    case 1:
+                        _a.sent();
+                        // JOIN STREAMS IN ORDER
+                        streams.sort(function (sA, sB) { return sA.index - sB.index; });
+                        // RETURN ONE STREAM UNIFIED
+                        return [2 /*return*/, new MultiStream(streams.map(function (s) { return s.content; }))];
+                }
+            });
+        });
+    };
     FileObject.prototype.StartDownloadFile = function () {
         var _this = this;
         if (!this.fileInfo) {
@@ -239,7 +302,7 @@ var FileObject = /** @class */ (function (_super) {
         var sizeToFillToZeroes = shardSize - lastShardSize;
         var currentShard = 0;
         async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) { return __awaiter(_this, void 0, void 0, function () {
-            var shardBuffer_1, err_2;
+            var shardBuffer_1, err_3;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -251,13 +314,12 @@ var FileObject = /** @class */ (function (_super) {
                         this.shards.push(shardObject);
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 3, 4, 5]);
+                        _a.trys.push([1, 3, , 4]);
                         return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
                     case 2:
                         shardBuffer_1 = _a.sent();
                         logger_1.logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer_1.length);
-                        fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null, 5);
-                        fileMuxer.on('drain', function () {
+                        fileMuxer.once('drain', function () {
                             // fill to zeroes last shard
                             if (currentShard === lastShardIndex) {
                                 if (sizeToFillToZeroes > 0) {
@@ -279,18 +341,18 @@ var FileObject = /** @class */ (function (_super) {
                             _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer_1.length);
                             shard.healthy = true;
                             // currentShard++;
-                            // nextItem();
+                            nextItem();
                         });
-                        return [3 /*break*/, 5];
+                        fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null, 5);
+                        return [3 /*break*/, 4];
                     case 3:
-                        err_2 = _a.sent();
-                        logger_1.logger.warn('Shard download failed. Reason: %s', err_2.message);
+                        err_3 = _a.sent();
+                        logger_1.logger.warn('Shard download failed. Reason: %s', err_3.message);
                         shard.healthy = false;
-                        return [3 /*break*/, 5];
-                    case 4:
+                        // currentShard++;
                         nextItem();
-                        return [7 /*endfinally*/];
-                    case 5: return [2 /*return*/];
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
                 }
             });
         }); }, function (err) {

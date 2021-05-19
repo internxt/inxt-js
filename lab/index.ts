@@ -1,4 +1,4 @@
-import { createReadStream, readdirSync, statSync } from 'fs'
+import { createReadStream, createWriteStream, readdirSync, statSync } from 'fs'
 import { randomBytes } from 'crypto'
 import { resolve } from 'path'
 import { getBucketId, getEnvironment } from './setup'
@@ -41,13 +41,16 @@ function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyEr
   return new Promise((resolve, reject) => {
     env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
       .then((outputStream) => {
-        outputStream.on('data', () => {});
-        outputStream.on('error', reject);
-        outputStream.on('end', () => {
-          console.log('here');
-          resolve(null);
+        outputStream.pipe(createWriteStream('test.pdf'))
+        // outputStream.on('data', () => {
 
-        });
+        // });
+        // outputStream.on('error', reject);
+        // outputStream.on('end', () => {
+        //   console.log('here');
+        //   resolve(null);
+
+        // });
       })
       .catch((err) => {
         reject(err);
