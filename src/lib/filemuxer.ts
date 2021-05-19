@@ -143,7 +143,7 @@ class FileMuxer extends Readable {
    * @param hash - Hash of the shard
    * @param echangeReport - Instance of exchange report
    */
-  addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any): FileMuxer {
+  addInputSource(readable: Readable, shardSize: number, hash: Buffer, echangeReport: any, id?: number): FileMuxer {
     assert(typeof readable.pipe === 'function', 'Invalid input stream supplied');
     assert(this.added < this.shards, 'Inputs exceed defined number of shards');
 
@@ -165,11 +165,6 @@ class FileMuxer extends Readable {
 
     input.once('end', () => {
       console.log('passthorugh end here');
-      
-      // const digest = this.hasher.digest();
-      // const inputHash = ripemd160(digest);
-      // const expectedHash = inputHash.toString('hex');
-      // this.hasher = createHash('sha256');
 
       const inputHash = ripemd160(this.hasher.digest())
       this.hasher = createHash('sha256')
@@ -187,7 +182,7 @@ class FileMuxer extends Readable {
         // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
       }
 
-      console.log('Emiiting drain');
+      console.log('Emiiting drain %s', id);
       this.emit('drain', input);
     });
 

@@ -207,7 +207,7 @@ export class FileObject extends EventEmitter {
         
         logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer.length);
 
-        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5)
           
         fileMuxer.once('drain', () => {
             // fill to zeroes last shard
@@ -239,7 +239,7 @@ export class FileObject extends EventEmitter {
             shard.healthy = true;
             // currentShard++;
 
-            nextItem();
+            // nextItem();
           });
 
       } catch (err) {
@@ -247,7 +247,9 @@ export class FileObject extends EventEmitter {
         shard.healthy = false;
         // currentShard++;
 
-        nextItem();  
+        // nextItem();  
+      } finally {
+        nextItem();
       }
       
 

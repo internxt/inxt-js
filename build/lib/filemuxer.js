@@ -133,7 +133,7 @@ var FileMuxer = /** @class */ (function (_super) {
      * @param hash - Hash of the shard
      * @param echangeReport - Instance of exchange report
      */
-    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport) {
+    FileMuxer.prototype.addInputSource = function (readable, shardSize, hash, echangeReport, id) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
@@ -150,10 +150,6 @@ var FileMuxer = /** @class */ (function (_super) {
         // input.on('data', () => {});
         input.once('end', function () {
             console.log('passthorugh end here');
-            // const digest = this.hasher.digest();
-            // const inputHash = ripemd160(digest);
-            // const expectedHash = inputHash.toString('hex');
-            // this.hasher = createHash('sha256');
             var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
@@ -168,7 +164,7 @@ var FileMuxer = /** @class */ (function (_super) {
                 console.log('Shard %s OK', inputHash.toString('hex'));
                 // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
             }
-            console.log('Emiiting drain');
+            console.log('Emiiting drain %s', id);
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {

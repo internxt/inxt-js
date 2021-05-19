@@ -251,12 +251,12 @@ var FileObject = /** @class */ (function (_super) {
                         this.shards.push(shardObject);
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 3, , 4]);
+                        _a.trys.push([1, 3, 4, 5]);
                         return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
                     case 2:
                         shardBuffer_1 = _a.sent();
                         logger_1.logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer_1.length);
-                        fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null, 5);
                         fileMuxer.once('drain', function () {
                             // fill to zeroes last shard
                             if (currentShard === lastShardIndex) {
@@ -279,17 +279,18 @@ var FileObject = /** @class */ (function (_super) {
                             _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer_1.length);
                             shard.healthy = true;
                             // currentShard++;
-                            nextItem();
+                            // nextItem();
                         });
-                        return [3 /*break*/, 4];
+                        return [3 /*break*/, 5];
                     case 3:
                         err_2 = _a.sent();
                         logger_1.logger.warn('Shard download failed. Reason: %s', err_2.message);
                         shard.healthy = false;
-                        // currentShard++;
+                        return [3 /*break*/, 5];
+                    case 4:
                         nextItem();
-                        return [3 /*break*/, 4];
-                    case 4: return [2 /*return*/];
+                        return [7 /*endfinally*/];
+                    case 5: return [2 /*return*/];
                 }
             });
         }); }, function (err) {
