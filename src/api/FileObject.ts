@@ -209,7 +209,7 @@ export class FileObject extends EventEmitter {
 
         fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5)
           
-        fileMuxer.once('drain', () => {
+        fileMuxer.on('drain', () => {
             // fill to zeroes last shard
             if (currentShard === lastShardIndex) {
               if (sizeToFillToZeroes > 0) {

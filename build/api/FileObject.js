@@ -257,7 +257,7 @@ var FileObject = /** @class */ (function (_super) {
                         shardBuffer_1 = _a.sent();
                         logger_1.logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer_1.length);
                         fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null, 5);
-                        fileMuxer.once('drain', function () {
+                        fileMuxer.on('drain', function () {
                             // fill to zeroes last shard
                             if (currentShard === lastShardIndex) {
                                 if (sizeToFillToZeroes > 0) {
