@@ -147,7 +147,7 @@ var FileMuxer = /** @class */ (function (_super) {
             // console.log('shard is now readable, start to download')
             // Init exchange report
         });
-        input.on('data', function () { });
+        // input.on('data', () => {});
         input.once('end', function () {
             console.log('passthorugh end here');
             // const digest = this.hasher.digest();

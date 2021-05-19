@@ -161,7 +161,7 @@ class FileMuxer extends Readable {
       // Init exchange report
     });
 
-    input.on('data', () => {});
+    // input.on('data', () => {});
 
     input.once('end', () => {
       console.log('passthorugh end here');

@@ -67,7 +67,6 @@ var events_2 = require("../lib/events");
 var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../lib/utils/logger");
 var buffer_1 = require("../lib/utils/buffer");
-// const toStream = require('buffer-to-stream');
 function BufferToStream(buffer) {
     var stream = new stream_1.Duplex();
     stream.push(buffer);
