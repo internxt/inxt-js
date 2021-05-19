@@ -157,11 +157,8 @@ class FileMuxer extends Readable {
     readable.on('end', () => { input.end(); });
 
     input.once('readable', () => {
-      // console.log('shard is now readable, start to download')
       // Init exchange report
     });
-
-    // input.on('data', () => {});
 
     input.once('end', () => {
       console.log('passthorugh end here');

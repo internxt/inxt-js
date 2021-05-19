@@ -3,7 +3,6 @@ import { FileObject } from '../../api/FileObject';
 import { PassThrough, Readable, Transform } from 'stream';
 import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events';
 
-// import toStream from 'buffer-to-stream';
 import { reconstruct } from 'rs-wrapper';
 import { logger } from '../utils/logger';
 import { bufferToStream } from '../utils/buffer';
@@ -51,19 +50,11 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   let fileContent: Buffer = Buffer.alloc(0);
 
   logger.info('Starting file download');
-  // COMO ESTABA ANTES
-  // return File.StartDownloadFile().pipe(File.decipher).pipe(out);
 
   const fileEncryptedStream = (await File.StartDownloadFile2()).pipe(new PassThrough());
 
-  console.log('tengo el stream!', Object.keys(fileEncryptedStream))
-
-  console.log("Es readable -->", fileEncryptedStream.readable instanceof Readable);
-  console.log("Es buffer -->", fileEncryptedStream.readable instanceof Buffer);
-
   // COMO ESTA AHORA
   fileEncryptedStream.on('data', (chunk: Buffer) => {
-    // console.log(chunk);
     fileContent = Buffer.concat([ fileContent, chunk ])
   });
 
@@ -82,12 +73,9 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
 
       // =========== CORRUPT INTENTIONALLY
-      shardsStatus[0] = false;
-      fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
+      // shardsStatus[0] = false;
+      // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
       // ===========
-
-      console.log('shardsStatus', shardsStatus);
-      console.log('rs', rs);
 
       let someShardCorrupt = shardsStatus.some((shardStatus: boolean) => !shardStatus);
 
