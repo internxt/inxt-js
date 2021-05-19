@@ -14,7 +14,7 @@ API and CLI for the Internxt network
 </details>
 
 <details>
-  <summary>Download (65%)</summary>
+  <summary>Download (85%)</summary>
   
 - - [X] Research C project (download logic)
 - - [X] Make API request
@@ -25,7 +25,7 @@ API and CLI for the Internxt network
 - - - [X] Check shard integrity after download
 - - - [X] Try to download shard again if it fails
 - - [ ] Exchange reports for each shard downloaded
-- - [ ] FileMuxer
+- - [X] FileMuxer
 - - - [X] Get original code from js lib
 - - - [X] Transcribe original code to TypeScript
 - - - [X] Test
@@ -43,29 +43,29 @@ API and CLI for the Internxt network
 - - [ ] Serve file
 - - - [ ] As path on CLI version
 - - - [ ] As blob in Browser version
-- - [ ] Use erasure codes
-- - - [ ] Detect if file can be recovered (has erasure codes)
-- - - [ ] Detect if file NEEDS to be recovered (missing shards)
-- - - [ ] Use parity shards to recompose the missing shards
+- - [X] Use erasure codes
+- - - [X] Detect if file can be recovered (has erasure codes)
+- - - [X] Detect if file NEEDS to be recovered (missing shards)
+- - - [X] Use parity shards to recompose the missing shards
 
   </details>
 
 <details>
-  <summary>Upload (0%)</summary>
+  <summary>Upload (100%)</summary>
 
-- - [ ] Research C project
-- - [ ] Make API request
-- - [ ] Analize file info
-- - [ ] Encrypt the file
-- - [ ] File Demuxer
-- - - [ ] Calculate the suitable size of shards
-- - - [ ] Split file into shards (all w/ same size)
-- - - [ ] Upload as a stream
-- - - [ ] Report upload progress
-- - [ ] Publish shards on nodes
-- - [ ] Check if shards are published
-- - [ ] Exchange reports for each shard uploaded (to trigger mirror creation)
-- - [ ] Create parity shards with erasure codes
-- - [ ] Publish all file info into the bucket
+- - [X] Research C project
+- - [X] Make API request
+- - [X] Analize file info
+- - [X] Encrypt the file
+- - [X] File Demuxer
+- - - [X] Calculate the suitable size of shards
+- - - [X] Split file into shards (all w/ same size)
+- - - [X] Upload as a stream
+- - - [X] Report upload progress
+- - [x] Publish shards on nodes
+- - [X] Check if shards are published
+- - [X] Exchange reports for each shard uploaded (to trigger mirror creation)
+- - [X] Create parity shards with erasure codes
+- - [X] Publish all file info into the bucket
 
 </details>
