@@ -18,9 +18,9 @@ import { utils } from 'rs-wrapper';
 import { logger } from '../lib/utils/logger';
 import { bufferToStream } from '../lib/utils/buffer';
 
-// const MultiStream = require('multistream');
+const MultiStream = require('multistream');
 
-const MultiStream = require('./multistream.js');
+// const MultiStream = require('./multistream.js');
 
 function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex();

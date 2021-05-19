@@ -67,8 +67,8 @@ var events_2 = require("../lib/events");
 var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../lib/utils/logger");
 var buffer_1 = require("../lib/utils/buffer");
-// const MultiStream = require('multistream');
-var MultiStream = require('./multistream.js');
+var MultiStream = require('multistream');
+// const MultiStream = require('./multistream.js');
 function BufferToStream(buffer) {
     var stream = new stream_1.Duplex();
     stream.push(buffer);
