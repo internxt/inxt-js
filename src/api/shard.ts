@@ -17,6 +17,7 @@ export interface Shard {
   size: number;
   parity: boolean;
   token: string;
+  healthy?: boolean;
   farmer: {
     userAgent: string
     protocol: string
@@ -28,7 +29,7 @@ export interface Shard {
   operation: string;
 }
 
-export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable> {
+export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
   return api.streamRequest(fetchUrl, nodeID);
 }

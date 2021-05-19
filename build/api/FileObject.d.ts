@@ -21,7 +21,7 @@ export declare class FileObject extends EventEmitter {
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     GetFileInfo(): Promise<FileInfo | undefined>;
     GetFileMirrors(): Promise<void>;
-    StartDownloadShard(index: number): Promise<FileMuxer>;
+    StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
     StartDownloadFile(): FileMuxer;
 }

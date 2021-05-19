@@ -8,6 +8,7 @@ export interface Shard {
     size: number;
     parity: boolean;
     token: string;
+    healthy?: boolean;
     farmer: {
         userAgent: string;
         protocol: string;
@@ -18,5 +19,5 @@ export interface Shard {
     };
     operation: string;
 }
-export declare function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable>;
+export declare function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable;
 export declare function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes?: string[]): Promise<Transform | never>;

@@ -22,7 +22,7 @@ export declare class FileObjectUpload {
     funnel: FunnelStream;
     fileEncryptionKey: Buffer;
     constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string);
-    init(): Promise<void>;
+    init(): Promise<FileObjectUpload>;
     CheckBucketExistance(): Promise<boolean>;
     StageFile(): Promise<api.FrameStaging | void>;
     SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse>;

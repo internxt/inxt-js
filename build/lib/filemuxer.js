@@ -32,7 +32,6 @@ var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var assert_1 = __importDefault(require("assert"));
 var crypto_2 = require("./crypto");
-var events_1 = require("./events");
 var FileMuxerError = /** @class */ (function (_super) {
     __extends(FileMuxerError, _super);
     function FileMuxerError() {
@@ -76,6 +75,7 @@ var FileMuxer = /** @class */ (function (_super) {
         _this.hasher = crypto_1.createHash('sha256');
         _this.shards = options.shards;
         _this.length = options.length;
+        // this.setMaxListeners(3000);
         _this.options = __assign(__assign({}, FileMuxer.DEFAULTS), options);
         return _this;
     }
@@ -143,33 +143,32 @@ var FileMuxer = /** @class */ (function (_super) {
             input.push(data);
         });
         readable.on('end', function () { input.end(); });
-        /**
-         * DO NOT REMOVE THE NEXT LINE
-         *
-         * This forces PassThrough to be in flowing mode. Thus, we can force input.end().
-         * If it isn't in flowing mode, the 'end' might not fire, blocking the entire download process.
-         *
-         * See https://nodejs.org/api/stream.html#stream_event_end
-         */
-        input.on('data', function () { });
         input.once('readable', function () {
             // console.log('shard is now readable, start to download')
             // Init exchange report
         });
+        input.on('data', function () { });
         input.once('end', function () {
-            var digest = _this.hasher.digest();
-            var inputHash = crypto_2.ripemd160(digest);
-            var expectedHash = inputHash.toString('hex');
+            console.log('passthorugh end here');
+            // const digest = this.hasher.digest();
+            // const inputHash = ripemd160(digest);
+            // const expectedHash = inputHash.toString('hex');
+            // this.hasher = createHash('sha256');
+            var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
             if (Buffer.compare(inputHash, hash) !== 0) {
                 // Send exchange report FAILED_INTEGRITY
-                var actualHash = hash.toString('hex');
-                _this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: expectedHash, actualHash: actualHash }));
+                // const actualHash = hash.toString('hex');
+                console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
+                _this.emit('error', Error('Shard failed integrity check'));
+                // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
             }
             else {
-                _this.emit(events_1.FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: expectedHash, digest: digest.toString('hex') }));
+                console.log('Shard %s OK', inputHash.toString('hex'));
+                // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
             }
+            console.log('Emiiting drain');
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {

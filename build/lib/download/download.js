@@ -40,9 +40,14 @@ exports.Download = void 0;
 var FileObject_1 = require("../../api/FileObject");
 var stream_1 = require("stream");
 var events_1 = require("../events");
+// import toStream from 'buffer-to-stream';
+var rs_wrapper_1 = require("rs-wrapper");
+var logger_1 = require("../utils/logger");
+var buffer_1 = require("../utils/buffer");
 function Download(config, bucketId, fileId, options) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, totalSize, out;
+        var File, shards, shardSize, parities, totalSize, out, fileContent, fileEncryptedStream;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -50,14 +55,19 @@ function Download(config, bucketId, fileId, options) {
                         throw Error('Encryption key required');
                     }
                     File = new FileObject_1.FileObject(config, bucketId, fileId);
+                    logger_1.logger.info('Retrieving file info...');
                     return [4 /*yield*/, File.GetFileInfo()];
                 case 1:
                     _a.sent();
-                    // API request file mirrors with tokens
+                    logger_1.logger.info('Retrieving mirrors...');
                     return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:
-                    // API request file mirrors with tokens
                     _a.sent();
+                    shards = File.rawShards.filter(function (s) { return !s.parity; }).length;
+                    shardSize = File.rawShards[0].size;
+                    console.log('shardSize', shardSize);
+                    parities = File.rawShards.length - shards;
+                    logger_1.logger.info('Found %s shards and %s parities', shards, parities);
                     totalSize = File.final_length;
                     out = new stream_1.Transform({
                         transform: function (chunk, enc, cb) {
@@ -70,10 +80,56 @@ function Download(config, bucketId, fileId, options) {
                             }
                         }
                     });
+                    logger_1.logger.info('File size is %s bytes', totalSize);
                     out.on('error', function (err) { throw err; });
                     attachFileObjectListeners(File, out);
                     handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
-                    return [2 /*return*/, File.StartDownloadFile().pipe(File.decipher).pipe(out)];
+                    logger_1.logger.info('Starting file download');
+                    fileEncryptedStream = File.StartDownloadFile();
+                    fileEncryptedStream.on('data', function (chunk) {
+                        fileContent = Buffer.concat([fileContent, chunk]);
+                    });
+                    return [2 /*return*/, new Promise(function (resolve, reject) {
+                            fileEncryptedStream.on('error', reject);
+                            fileEncryptedStream.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
+                                var rs, passThrough, shardsStatus, someShardCorrupt, fileContentRecovered;
+                                var _a;
+                                return __generator(this, function (_b) {
+                                    switch (_b.label) {
+                                        case 0:
+                                            logger_1.logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
+                                            rs = File.fileInfo && File.fileInfo.erasure && ((_a = File.fileInfo) === null || _a === void 0 ? void 0 : _a.erasure.type) === 'reedsolomon';
+                                            passThrough = null;
+                                            shardsStatus = File.rawShards.map(function (shard) { return shard.healthy; });
+                                            shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
+                                            // =========== CORRUPT INTENTIONALLY
+                                            shardsStatus[0] = false;
+                                            fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)]);
+                                            // ===========
+                                            console.log('shardsStatus', shardsStatus);
+                                            console.log('rs', rs);
+                                            someShardCorrupt = shardsStatus.some(function (shardStatus) { return !shardStatus; });
+                                            if (!someShardCorrupt) return [3 /*break*/, 4];
+                                            if (!rs) return [3 /*break*/, 2];
+                                            logger_1.logger.info('Some shard is corrupy and rs is available. Recovering');
+                                            return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
+                                        case 1:
+                                            fileContentRecovered = _b.sent();
+                                            console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
+                                            passThrough = buffer_1.bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
+                                            return [2 /*return*/, resolve(passThrough.pipe(File.decipher).pipe(out))];
+                                        case 2:
+                                            reject(new Error('File missing shard error'));
+                                            _b.label = 3;
+                                        case 3: return [3 /*break*/, 5];
+                                        case 4:
+                                            logger_1.logger.info('Reed solomon not required for this file');
+                                            _b.label = 5;
+                                        case 5: return [2 /*return*/, resolve(buffer_1.bufferToStream(fileContent).pipe(File.decipher).pipe(out))];
+                                    }
+                                });
+                            }); });
+                        })];
             }
         });
     });

@@ -3,6 +3,8 @@ import { Readable, PassThrough } from 'stream';
 import assert from 'assert';
 import { ripemd160 } from './crypto';
 import { FILEMUXER } from './events';
+import { bufferToStream } from './utils/buffer';
+import { logger } from './utils/logger';
 
 export class FileMuxerError extends Error {
   content: any;
@@ -73,6 +75,8 @@ class FileMuxer extends Readable {
     this.hasher = createHash('sha256');
     this.shards = options.shards;
     this.length = options.length;
+
+    // this.setMaxListeners(3000);
 
     this.options = { ...FileMuxer.DEFAULTS, ...options };
   }
@@ -152,37 +156,38 @@ class FileMuxer extends Readable {
 
     readable.on('end', () => { input.end(); });
 
-    /**
-     * DO NOT REMOVE THE NEXT LINE
-     * 
-     * This forces PassThrough to be in flowing mode. Thus, we can force input.end().
-     * If it isn't in flowing mode, the 'end' might not fire, blocking the entire download process.
-     * 
-     * See https://nodejs.org/api/stream.html#stream_event_end
-     */
-    input.on('data', () => { });
-
     input.once('readable', () => {
       // console.log('shard is now readable, start to download')
       // Init exchange report
     });
 
+    input.on('data', () => {});
+
     input.once('end', () => {
-      const digest = this.hasher.digest();
-      const inputHash = ripemd160(digest);
-      const expectedHash = inputHash.toString('hex');
-      this.hasher = createHash('sha256');
+      console.log('passthorugh end here');
+      
+      // const digest = this.hasher.digest();
+      // const inputHash = ripemd160(digest);
+      // const expectedHash = inputHash.toString('hex');
+      // this.hasher = createHash('sha256');
+
+      const inputHash = ripemd160(this.hasher.digest())
+      this.hasher = createHash('sha256')
 
       this.inputs.splice(this.inputs.indexOf(input), 1);
 
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
-        const actualHash = hash.toString('hex');
-        this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash, actualHash }));
+        // const actualHash = hash.toString('hex');
+        console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
+        this.emit('error', Error('Shard failed integrity check'))
+        // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
       } else {
-        this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash, digest: digest.toString('hex') }));
+        console.log('Shard %s OK', inputHash.toString('hex'))
+        // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
       }
 
+      console.log('Emiiting drain');
       this.emit('drain', input);
     });
 

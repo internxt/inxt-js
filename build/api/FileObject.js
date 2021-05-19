@@ -64,6 +64,10 @@ var ShardObject_1 = require("./ShardObject");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var events_2 = require("../lib/events");
+var rs_wrapper_1 = require("rs-wrapper");
+var logger_1 = require("../lib/utils/logger");
+var buffer_1 = require("../lib/utils/buffer");
+// const toStream = require('buffer-to-stream');
 function BufferToStream(buffer) {
     var stream = new stream_1.Duplex();
     stream.push(buffer);
@@ -119,7 +123,7 @@ var FileObject = /** @class */ (function (_super) {
                     case 1:
                         _a.rawShards = _b.sent();
                         // Sanitize address
-                        this.rawShards.map(function (shard) {
+                        this.rawShards.forEach(function (shard) {
                             shard.farmer.address = shard.farmer.address.trim();
                         });
                         this.length = this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
@@ -130,26 +134,16 @@ var FileObject = /** @class */ (function (_super) {
         });
     };
     FileObject.prototype.StartDownloadShard = function (index) {
-        return __awaiter(this, void 0, void 0, function () {
-            var shardIndex, shard, fileMuxer, shardObject, buffer;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.fileInfo) {
-                            throw new Error('Undefined fileInfo');
-                        }
-                        shardIndex = this.rawShards.map(function (x) { return x.index; }).indexOf(index);
-                        shard = this.rawShards[shardIndex];
-                        fileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
-                        shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
-                        return [4 /*yield*/, shardObject.StartDownloadShard()];
-                    case 1:
-                        buffer = _a.sent();
-                        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
-                        return [2 /*return*/, fileMuxer];
-                }
-            });
-        });
+        if (!this.fileInfo) {
+            throw new Error('Undefined fileInfo');
+        }
+        var shardIndex = this.rawShards.map(function (x) { return x.index; }).indexOf(index);
+        var shard = this.rawShards[shardIndex];
+        var fileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
+        var shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+        var buffer = shardObject.StartDownloadShard();
+        fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
+        return fileMuxer;
     };
     FileObject.prototype.TryDownloadShardWithFileMuxer = function (shard, excluded) {
         if (excluded === void 0) { excluded = []; }
@@ -160,50 +154,41 @@ var FileObject = /** @class */ (function (_super) {
                 exchangeReport = new reports_1.ExchangeReport(this.config);
                 return [2 /*return*/, new Promise(function (resolve, reject) {
                         var _a;
-                        async_1.retry({ times: ((_a = _this.config.config) === null || _a === void 0 ? void 0 : _a.shardRetry) || 3, interval: 1000 }, function (nextTry) { return __awaiter(_this, void 0, void 0, function () {
-                            var downloadHasError, downloadError, oneFileMuxer, shardObject, buffs, buffer;
-                            var _this = this;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        exchangeReport.params.exchangeStart = new Date();
-                                        exchangeReport.params.farmerId = shard.farmer.nodeID;
-                                        exchangeReport.params.dataHash = shard.hash;
-                                        downloadHasError = false;
-                                        downloadError = null;
-                                        oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
-                                        shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
-                                        oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
-                                        oneFileMuxer.on('error', function (err) {
-                                            downloadHasError = true;
-                                            downloadError = err;
-                                            _this.emit(events_2.FILEMUXER.ERROR, err);
-                                            // Should emit Exchange Report?
-                                            exchangeReport.DownloadError();
-                                            exchangeReport.sendReport().catch(function (err) { err; });
-                                            // Force to finish this attempt
-                                            oneFileMuxer.emit('drain');
-                                        });
-                                        buffs = [];
-                                        oneFileMuxer.on('data', function (data) { buffs.push(data); });
-                                        oneFileMuxer.once('drain', function () {
-                                            if (downloadHasError) {
-                                                nextTry(downloadError);
-                                            }
-                                            else {
-                                                exchangeReport.DownloadOk();
-                                                exchangeReport.sendReport().catch(function (err) { err; });
-                                                nextTry(null, Buffer.concat(buffs));
-                                            }
-                                        });
-                                        return [4 /*yield*/, shardObject.StartDownloadShard()];
-                                    case 1:
-                                        buffer = _a.sent();
-                                        oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
-                                        return [2 /*return*/];
+                        async_1.retry({ times: ((_a = _this.config.config) === null || _a === void 0 ? void 0 : _a.shardRetry) || 3, interval: 1000 }, function (nextTry) {
+                            exchangeReport.params.exchangeStart = new Date();
+                            exchangeReport.params.farmerId = shard.farmer.nodeID;
+                            exchangeReport.params.dataHash = shard.hash;
+                            var downloadHasError = false;
+                            var downloadError = null;
+                            var oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
+                            var shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
+                            oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
+                            oneFileMuxer.on('error', function (err) {
+                                console.log('ONEFXError %s', err.message);
+                                downloadHasError = true;
+                                downloadError = err;
+                                _this.emit(events_2.FILEMUXER.ERROR, err);
+                                // Should emit Exchange Report?
+                                exchangeReport.DownloadError();
+                                // exchangeReport.sendReport().catch((err) => { err; });
+                                // Force to finish this attempt
+                                oneFileMuxer.emit('drain');
+                            });
+                            var buffs = [];
+                            oneFileMuxer.on('data', function (data) { buffs.push(data); });
+                            oneFileMuxer.once('drain', function () {
+                                if (downloadHasError) {
+                                    nextTry(downloadError);
+                                }
+                                else {
+                                    exchangeReport.DownloadOk();
+                                    // exchangeReport.sendReport().catch((err) => { err; });
+                                    nextTry(null, Buffer.concat(buffs));
                                 }
                             });
-                        }); }, function (err, result) { return __awaiter(_this, void 0, void 0, function () {
+                            var downloaderStream = shardObject.StartDownloadShard();
+                            oneFileMuxer.addInputSource(downloaderStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        }, function (err, result) { return __awaiter(_this, void 0, void 0, function () {
                             var newShard, buffer, err_1;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
@@ -250,31 +235,66 @@ var FileObject = /** @class */ (function (_super) {
         fileMuxer.on('error', function (err) { return _this.emit('download-filemuxer-error', err); });
         fileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
         var shardObject;
-        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
-            if (!shard) {
-                return nextItem(Error('Null shard found'));
-            }
-            shardObject = new ShardObject_1.ShardObject(_this.config, shard, _this.bucketId, _this.fileId);
-            _this.shards.push(shardObject);
-            // We add the stream buffer to the muxer, and will be downloaded to the main stream.
-            // We should download the shard isolated, and check if its ok.
-            // If it fails, try another mirror.
-            // If its ok, add it to the muxer.
-            _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
-                fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
-                    .once('error', function (err) { throw err; })
-                    .once('drain', function () {
-                    // continue just if drain fired, 'drain' = decrypted correctly and ready for more
-                    _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
-                    nextItem();
-                });
-            }).catch(function (err) {
-                nextItem(err);
+        var shardSize = rs_wrapper_1.utils.determineShardSize(this.final_length);
+        var lastShardIndex = this.rawShards.filter(function (shard) { return !shard.parity; }).length - 1;
+        var lastShardSize = this.rawShards[lastShardIndex].size;
+        var sizeToFillToZeroes = shardSize - lastShardSize;
+        var currentShard = 0;
+        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) { return __awaiter(_this, void 0, void 0, function () {
+            var shardBuffer_1, err_2;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!shard) {
+                            return [2 /*return*/, nextItem(new Error("Shard is null"))];
+                        }
+                        shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+                        this.shards.push(shardObject);
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
+                    case 2:
+                        shardBuffer_1 = _a.sent();
+                        logger_1.logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer_1.length);
+                        fileMuxer.addInputSource(buffer_1.bufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        fileMuxer.once('drain', function () {
+                            // fill to zeroes last shard
+                            if (currentShard === lastShardIndex) {
+                                if (sizeToFillToZeroes > 0) {
+                                    logger_1.logger.info('Last shard size is not standard shard size, size to fill to zeroes %s', sizeToFillToZeroes);
+                                    var buf = Buffer.alloc(sizeToFillToZeroes).fill(0);
+                                    var start = 0;
+                                    var chunkSize = 65536;
+                                    var len = buf.length;
+                                    while (fileMuxer.push(buf.slice(start, (start += chunkSize)))) {
+                                        // If all data pushed, just break the loop.
+                                        if (start >= len) {
+                                            // fileMuxer.push(null)
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            console.log('draining');
+                            _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer_1.length);
+                            shard.healthy = true;
+                            // currentShard++;
+                            nextItem();
+                        });
+                        return [3 /*break*/, 4];
+                    case 3:
+                        err_2 = _a.sent();
+                        logger_1.logger.warn('Shard download failed. Reason: %s', err_2.message);
+                        shard.healthy = false;
+                        // currentShard++;
+                        nextItem();
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
+                }
             });
-        }, function (err) {
-            // if (err) {        
-            //   // this.emit(FILEOBJECT.ERROR, err)
-            // }
+        }); }, function (err) {
             _this.shards.forEach(function (shard) { _this.totalSizeWithECs += shard.shardInfo.size; });
             _this.emit('end', err);
         });

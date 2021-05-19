@@ -90,7 +90,6 @@ function request(config, method, targetUrl, params) {
                 case 1:
                     proxy = _a.sent();
                     url = proxy.url + "/" + targetUrl;
-                    logger_1.logger.info('Request to: ' + url);
                     DefaultOptions = {
                         method: method,
                         auth: {
@@ -110,53 +109,44 @@ function request(config, method, targetUrl, params) {
 }
 exports.request = request;
 function streamRequest(targetUrl, nodeID) {
-    return __awaiter(this, void 0, void 0, function () {
-        function _createDownloadStream() {
-            new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
-            return https.get({
-                protocol: uriParts.protocol,
-                hostname: uriParts.hostname,
-                port: uriParts.port,
-                path: uriParts.path,
-                headers: {
-                    'content-type': 'application/octet-stream',
-                    'x-storj-node-id': nodeID
-                },
-                timeout: 3000
-            });
-        }
-        var proxy, URL, uriParts, downloader;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, proxy_1.getProxy()];
-                case 1:
-                    proxy = _a.sent();
-                    URL = proxy.url + "/" + targetUrl;
-                    logger_1.logger.info('StreamRequest to: ', URL);
-                    uriParts = url.parse(URL);
-                    downloader = null;
-                    return [2 /*return*/, new stream_1.Readable({
-                            read: function () {
-                                var _this = this;
-                                if (!downloader) {
-                                    downloader = _createDownloadStream();
-                                    proxy.free();
-                                    downloader.on('response', function (res) {
-                                        res
-                                            .on('data', _this.push.bind(_this))
-                                            .on('error', _this.emit.bind(_this, 'error'))
-                                            .on('end', function () {
-                                            _this.push.bind(_this, null);
-                                            _this.emit('end');
-                                        }).on('close', _this.emit.bind(_this, 'close'));
-                                    })
-                                        .on('error', this.emit.bind(this, 'error'))
-                                        .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
-                                }
-                            }
-                        })];
-            }
+    // const proxy = await getProxy();
+    var URL = PROXY + "/" + targetUrl;
+    logger_1.logger.info('StreamRequest to %s', URL);
+    var uriParts = url.parse(URL);
+    var downloader = null;
+    function _createDownloadStream() {
+        // new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
+        return https.get({
+            protocol: uriParts.protocol,
+            hostname: uriParts.hostname,
+            port: uriParts.port,
+            path: uriParts.path,
+            headers: {
+                'content-type': 'application/octet-stream',
+                'x-storj-node-id': nodeID
+            },
+            timeout: 3000
         });
+    }
+    return new stream_1.Readable({
+        read: function () {
+            var _this = this;
+            if (!downloader) {
+                downloader = _createDownloadStream();
+                // proxy.free();
+                downloader.on('response', function (res) {
+                    res
+                        .on('data', _this.push.bind(_this))
+                        .on('error', _this.emit.bind(_this, 'error'))
+                        .on('end', function () {
+                        _this.push.bind(_this, null);
+                        _this.emit('end');
+                    }).on('close', _this.emit.bind(_this, 'close'));
+                })
+                    .on('error', this.emit.bind(this, 'error'))
+                    .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
+            }
+        }
     });
 }
 exports.streamRequest = streamRequest;

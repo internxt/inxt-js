@@ -103,7 +103,7 @@ var FileObjectUpload = /** @class */ (function () {
                     case 1:
                         _a.fileEncryptionKey = _b.sent();
                         this.cipher = new encryptStream_1.default(this.fileEncryptionKey, this.index.slice(0, 16));
-                        return [2 /*return*/];
+                        return [2 /*return*/, this];
                 }
             });
         });

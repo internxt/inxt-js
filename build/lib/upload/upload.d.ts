@@ -8,4 +8,4 @@ import { FileMeta } from "../../api/FileObjectUpload";
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export declare function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): void;
+export declare function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void>;

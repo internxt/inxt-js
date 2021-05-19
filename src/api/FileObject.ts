@@ -3,6 +3,7 @@ import { Duplex } from 'stream';
 import { EventEmitter } from 'events';
 import { eachLimit, retry } from 'async';
 
+
 import DecryptStream from "../lib/decryptstream";
 import FileMuxer from "../lib/filemuxer";
 import { GenerateFileKey } from "../lib/crypto";
@@ -13,6 +14,9 @@ import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
 import { ExchangeReport } from './reports';
 import { DECRYPT, DOWNLOAD, FILEMUXER, FILEOBJECT } from '../lib/events';
+import { utils } from 'rs-wrapper';
+import { logger } from '../lib/utils/logger';
+import { bufferToStream } from '../lib/utils/buffer';
 
 function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex();
@@ -62,7 +66,7 @@ export class FileObject extends EventEmitter {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
 
     // Sanitize address
-    this.rawShards.map(shard => {
+    this.rawShards.forEach(shard => {
       shard.farmer.address = shard.farmer.address.trim();
     });
 
@@ -70,7 +74,7 @@ export class FileObject extends EventEmitter {
     this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size }; }, { size: 0 }).size;
   }
 
-  async StartDownloadShard(index: number): Promise<FileMuxer> {
+  StartDownloadShard(index: number): FileMuxer {
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo');
     }
@@ -81,7 +85,7 @@ export class FileObject extends EventEmitter {
     const fileMuxer = new FileMuxer({ shards: 1, length: shard.size });
 
     const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
-    const buffer = await shardObject.StartDownloadShard();
+    const buffer = shardObject.StartDownloadShard();
 
     fileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
 
@@ -92,7 +96,7 @@ export class FileObject extends EventEmitter {
     const exchangeReport = new ExchangeReport(this.config);
 
     return new Promise((resolve, reject) => {
-      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, async (nextTry: any) => {
+      retry({ times: this.config.config?.shardRetry || 3, interval: 1000 }, (nextTry: any) => {
         exchangeReport.params.exchangeStart = new Date();
         exchangeReport.params.farmerId = shard.farmer.nodeID;
         exchangeReport.params.dataHash = shard.hash;
@@ -105,13 +109,15 @@ export class FileObject extends EventEmitter {
 
         oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
         oneFileMuxer.on('error', (err) => {
+          console.log('ONEFXError %s', err.message);
+
           downloadHasError = true;
           downloadError = err;
           this.emit(FILEMUXER.ERROR, err);
 
           // Should emit Exchange Report?
           exchangeReport.DownloadError();
-          exchangeReport.sendReport().catch((err) => { err; });
+          // exchangeReport.sendReport().catch((err) => { err; });
 
           // Force to finish this attempt
           oneFileMuxer.emit('drain');
@@ -125,15 +131,15 @@ export class FileObject extends EventEmitter {
             nextTry(downloadError);
           } else {
             exchangeReport.DownloadOk();
-            exchangeReport.sendReport().catch((err) => { err; });
+            // exchangeReport.sendReport().catch((err) => { err; });
 
             nextTry(null, Buffer.concat(buffs));
           }
         });
 
-        const buffer = await shardObject.StartDownloadShard();
+        const downloaderStream = shardObject.StartDownloadShard();
+        oneFileMuxer.addInputSource(downloaderStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
 
-        oneFileMuxer.addInputSource(buffer, shard.size, Buffer.from(shard.hash, 'hex'), null);
       }, async (err: Error | null | undefined, result: any) => {
         try {
           if (!err && result) {
@@ -177,10 +183,16 @@ export class FileObject extends EventEmitter {
     fileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
 
     let shardObject;
+    let shardSize = utils.determineShardSize(this.final_length);
 
-    eachLimit(this.rawShards, 1, (shard, nextItem) => {
+    const lastShardIndex = this.rawShards.filter(shard => !shard.parity).length - 1;
+    const lastShardSize = this.rawShards[lastShardIndex].size; 
+    const sizeToFillToZeroes = shardSize - lastShardSize;
+    let currentShard = 0;
+
+    eachLimit(this.rawShards, 1, async (shard, nextItem) => {
       if (!shard) {
-        return nextItem(Error('Null shard found'));
+        return nextItem(new Error("Shard is null"));
       }
 
       shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
@@ -190,25 +202,82 @@ export class FileObject extends EventEmitter {
       // We should download the shard isolated, and check if its ok.
       // If it fails, try another mirror.
       // If its ok, add it to the muxer.
-      this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
-        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
-          .once('error', (err) => { throw err; })
-          .once('drain', () => {
-            // continue just if drain fired, 'drain' = decrypted correctly and ready for more
+      try {
+        const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
+        
+        logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer.length);
+
+        fileMuxer.addInputSource(bufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+          
+        fileMuxer.once('drain', () => {
+            // fill to zeroes last shard
+            if (currentShard === lastShardIndex) {
+              if (sizeToFillToZeroes > 0) {
+                logger.info('Last shard size is not standard shard size, size to fill to zeroes %s', sizeToFillToZeroes);
+
+                const buf = Buffer.alloc(sizeToFillToZeroes).fill(0);
+                let start = 0;
+                const chunkSize = 65536;
+                const len = buf.length;
+
+                while (fileMuxer.push(
+                  buf.slice(start, (start += chunkSize))
+                )) {
+                  // If all data pushed, just break the loop.
+                  if (start >= len) {
+                    // fileMuxer.push(null)
+                    break
+                  }
+                }
+                
+              }
+            }
+            
+            console.log('draining')
             this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
+
+            shard.healthy = true;
+            // currentShard++;
+
             nextItem();
           });
 
-      }).catch((err) => {
-        nextItem(err);
-      });
+      } catch (err) {
+        logger.warn('Shard download failed. Reason: %s', err.message);
+        shard.healthy = false;
+        // currentShard++;
+
+        nextItem();  
+      }
+      
+
+      // this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
+      //   logger.info('Download with file muxer finished succesfully');
+
+      //   fileMuxer.addInputSource(bufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+      //     .once('error', (err) => { throw err; })
+      //     .once('drain', () => {
+      //       console.log('here drain');
+
+      //       this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
+      //       shard.healthy = true;
+
+      //       nextItem();
+      //     });
+
+      // }).catch((err) => {
+      //   logger.warn('Shard download failed. Reason: %s', err.message);
+
+      //   const fakeHash = Buffer.alloc(40).fill(0).toString('hex')
+      //   fileMuxer.addInputSource(bufferToStream(Buffer.alloc(shardSize).fill(0)), shard.size, Buffer.from(fakeHash, 'hex'), null);
+      //   shard.healthy = false;
+
+      //   nextItem();
+      // }).finally(() => {
+      //   logger.warn("Downloading next shard");
+      // })
 
     }, (err: Error | null | undefined) => {
-      // if (err) {        
-      //   // this.emit(FILEOBJECT.ERROR, err)
-
-      // }
-
       this.shards.forEach(shard => { this.totalSizeWithECs += shard.shardInfo.size; });
       this.emit('end', err);
     });

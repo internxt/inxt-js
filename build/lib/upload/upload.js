@@ -37,9 +37,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Upload = void 0;
-var FileObjectUpload_1 = require("../../api/FileObjectUpload");
-var logger_1 = require("../utils/logger");
 var rs_wrapper_1 = require("rs-wrapper");
+var FileObjectUpload_1 = require("../../api/FileObjectUpload");
 var MIN_SHARD_SIZE = 2097152; // 2Mb
 /**
  * Uploads a file to the network
@@ -50,142 +49,160 @@ var MIN_SHARD_SIZE = 2097152; // 2Mb
  * @param finish finish progress callback
  */
 function Upload(config, bucketId, fileMeta, progress, finish) {
-    var _this = this;
-    if (!config.encryptionKey) {
-        throw new Error('Encryption key is null');
-    }
-    var File = new FileObjectUpload_1.FileObjectUpload(config, fileMeta, bucketId);
-    var fileContent = Buffer.alloc(0);
-    var fileSize = 0;
-    File.init().then(function () { return File.StartUploadFile(); }).then(function (out) {
-        return new Promise(function (resolve, reject) {
-            var totalBytes = fileMeta.size;
-            var uploadedBytes = 0;
-            var progressCounter = 0;
-            var uploadShardPromises = [];
-            progress(0, uploadedBytes, totalBytes);
-            out.on('data', function (encryptedShard) { return __awaiter(_this, void 0, void 0, function () {
-                var rawShard, size, index;
-                return __generator(this, function (_a) {
-                    fileContent = Buffer.concat([fileContent, encryptedShard]);
-                    rawShard = out.shards.pop();
-                    // TODO: Review this message and if is required
-                    if (!rawShard) {
-                        return [2 /*return*/, reject('File content is empty')];
+    return __awaiter(this, void 0, void 0, function () {
+        var File, Output, fileSize, fileContent;
+        var _this = this;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!config.encryptionKey) {
+                        throw new Error('Encryption key is null');
                     }
-                    size = rawShard.size, index = rawShard.index;
-                    fileSize += size;
-                    if (size !== encryptedShard.length) {
-                        return [2 /*return*/, reject("shard size calculated " + size + " and encrypted shard size " + encryptedShard.length + " do not match")];
-                    }
-                    return [2 /*return*/];
-                });
-            }); });
-            out.on('error', reject);
-            out.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
-                var shardSize, nShards, parityShards, from, currentIndex, currentShard, totalSize, sendShard, i, fileEncoded, parities, i, uploadShardResponses, bucketEntry, savingFileResponse, err_1;
-                var _this = this;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            shardSize = rs_wrapper_1.utils.determineShardSize(fileSize);
-                            nShards = Math.ceil(fileSize / shardSize);
-                            parityShards = rs_wrapper_1.utils.determineParityShards(nShards);
-                            console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
-                            from = 0;
-                            currentIndex = 0;
-                            currentShard = null;
-                            totalSize = fileSize;
-                            if (fileSize >= MIN_SHARD_SIZE) {
-                                totalSize += parityShards * shardSize;
-                            }
-                            sendShard = function (encryptedShard, index, isParity) { return __awaiter(_this, void 0, void 0, function () {
-                                var response;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0: return [4 /*yield*/, File.UploadShard(encryptedShard, encryptedShard.length, File.frameId, index, 3, isParity)];
-                                        case 1:
-                                            response = _a.sent();
-                                            uploadedBytes += encryptedShard.length;
-                                            progressCounter += (encryptedShard.length / totalSize) * 100;
-                                            console.log('Upload bytes %s (%s)', uploadedBytes, progressCounter);
-                                            progress(progressCounter, uploadedBytes, totalSize);
-                                            return [2 /*return*/, response];
+                    return [4 /*yield*/, new FileObjectUpload_1.FileObjectUpload(config, fileMeta, bucketId).init()];
+                case 1:
+                    File = _a.sent();
+                    return [4 /*yield*/, File.StartUploadFile()];
+                case 2:
+                    Output = _a.sent();
+                    fileSize = fileMeta.size;
+                    fileContent = Buffer.alloc(0);
+                    progress(0, 0, fileSize);
+                    Output.on('data', function (shard) { return __awaiter(_this, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            fileContent = Buffer.concat([fileContent, shard]);
+                            return [2 /*return*/];
+                        });
+                    }); });
+                    Output.on('error', function (err) { return finish(err, null); });
+                    Output.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
+                        var shardSize, nShards, parityShards, rs, totalSize, action, shardUploadRequests, paritiesUploadRequests, parities, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
+                        var _this = this;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    shardSize = rs_wrapper_1.utils.determineShardSize(fileSize);
+                                    nShards = Math.ceil(fileSize / shardSize);
+                                    parityShards = rs_wrapper_1.utils.determineParityShards(nShards);
+                                    rs = fileSize >= MIN_SHARD_SIZE;
+                                    totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
+                                    action = {
+                                        fileContent: fileContent, nShards: nShards, shardSize: shardSize,
+                                        fileObject: File, firstIndex: 0, parity: false
+                                    };
+                                    console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
+                                    shardUploadRequests = uploadShards(action);
+                                    paritiesUploadRequests = [];
+                                    if (!rs) return [3 /*break*/, 2];
+                                    console.log({ shardSize: shardSize, nShards: nShards, parityShards: parityShards, fileContentSize: fileContent.length });
+                                    console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+                                    return [4 /*yield*/, getParities(fileContent, shardSize, nShards, parityShards)];
+                                case 1:
+                                    parities = _a.sent();
+                                    console.log("Parities content size", parities.length);
+                                    action.fileContent = Buffer.from(parities);
+                                    action.firstIndex = shardUploadRequests.length;
+                                    action.parity = true;
+                                    action.nShards = parityShards;
+                                    // upload parities
+                                    paritiesUploadRequests = uploadShards(action);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    console.log('File too small (%s), not creating parities', fileSize);
+                                    _a.label = 3;
+                                case 3:
+                                    _a.trys.push([3, 6, , 7]);
+                                    console.log('Waiting for upload to progress');
+                                    currentBytesUploaded_1 = 0;
+                                    return [4 /*yield*/, Promise.all(shardUploadRequests.concat(paritiesUploadRequests).map(function (request) { return __awaiter(_this, void 0, void 0, function () {
+                                            var shardMeta;
+                                            return __generator(this, function (_a) {
+                                                switch (_a.label) {
+                                                    case 0: return [4 /*yield*/, request];
+                                                    case 1:
+                                                        shardMeta = _a.sent();
+                                                        currentBytesUploaded_1 = updateProgress(totalSize, currentBytesUploaded_1, shardMeta.size, progress);
+                                                        return [2 /*return*/, shardMeta];
+                                                }
+                                            });
+                                        }); }))];
+                                case 4:
+                                    uploadResponses = _a.sent();
+                                    console.log('Upload finished');
+                                    // TODO: Check message and way of handling
+                                    if (uploadResponses.length === 0) {
+                                        throw new Error('no upload requests has been made');
                                     }
-                                });
-                            }); };
-                            // upload content
-                            for (i = 0; i < nShards; i++, currentIndex++, from += shardSize) {
-                                currentShard = fileContent.slice(from, from + shardSize);
-                                console.log("Uploading std shard with size %s, index %s", currentShard.length, currentIndex);
-                                uploadShardPromises.push(sendShard(currentShard, currentIndex, false));
+                                    return [4 /*yield*/, createBucketEntry(File, fileMeta, uploadResponses, rs)];
+                                case 5:
+                                    savingFileResponse = _a.sent();
+                                    // TODO: Change message and way of handling
+                                    if (!savingFileResponse) {
+                                        throw new Error('Can not save the file in network');
+                                    }
+                                    progress(100, fileSize, fileSize);
+                                    finish(null, savingFileResponse);
+                                    console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
+                                    return [3 /*break*/, 7];
+                                case 6:
+                                    err_1 = _a.sent();
+                                    finish(err_1, null);
+                                    return [3 /*break*/, 7];
+                                case 7: return [2 /*return*/];
                             }
-                            from = 0;
-                            if (!(fileSize >= MIN_SHARD_SIZE)) return [3 /*break*/, 2];
-                            // =========== RS ============
-                            console.log({ shardSize: shardSize, nShards: nShards, parityShards: parityShards, fileContentSize: fileContent.length });
-                            console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
-                            return [4 /*yield*/, rs_wrapper_1.encode(fileContent, shardSize, nShards, parityShards)];
-                        case 1:
-                            fileEncoded = _a.sent();
-                            parities = fileEncoded.slice(nShards * shardSize);
-                            // ===========================
-                            console.log("Parities content size", parities.length);
-                            // upload parities
-                            for (i = 0; i < parityShards; i++, currentIndex++, from += shardSize) {
-                                currentShard = Buffer.from(parities.slice(from, from + shardSize));
-                                console.log("Uploading parity shard with size %s, index %s", currentShard.length, currentIndex);
-                                uploadShardPromises.push(sendShard(currentShard, currentIndex, true));
-                            }
-                            return [3 /*break*/, 3];
-                        case 2:
-                            console.log('File too small (%s), not creating parities', fileSize);
-                            _a.label = 3;
-                        case 3:
-                            _a.trys.push([3, 6, , 7]);
-                            console.log('Waiting for upload to progress');
-                            return [4 /*yield*/, Promise.all(uploadShardPromises)];
-                        case 4:
-                            uploadShardResponses = _a.sent();
-                            console.log('Upload finished');
-                            // TODO: Check message and way of handling
-                            if (uploadShardResponses.length === 0) {
-                                throw new Error('no upload requests has been made');
-                            }
-                            bucketEntry = {
-                                frame: File.frameId,
-                                filename: fileMeta.name,
-                                index: File.index.toString('hex'),
-                                hmac: {
-                                    type: 'sha512',
-                                    value: File.GenerateHmac(uploadShardResponses)
-                                }
-                            };
-                            if (fileSize >= MIN_SHARD_SIZE) {
-                                bucketEntry.erasure = { type: "reedsolomon" };
-                            }
-                            return [4 /*yield*/, File.SaveFileInNetwork(bucketEntry)];
-                        case 5:
-                            savingFileResponse = _a.sent();
-                            // TODO: Change message and way of handling
-                            if (!savingFileResponse) {
-                                throw new Error('Can not save the file in network');
-                            }
-                            progress(100, totalBytes, totalBytes);
-                            finish(null, savingFileResponse);
-                            console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
-                            return [2 /*return*/, resolve(null)];
-                        case 6:
-                            err_1 = _a.sent();
-                            return [2 /*return*/, reject(err_1)];
-                        case 7: return [2 /*return*/];
-                    }
-                });
-            }); });
+                        });
+                    }); });
+                    return [2 /*return*/];
+            }
         });
-    }).catch(function (err) {
-        logger_1.logger.error("File upload went wrong due to " + err.message);
-        finish(err, null);
     });
 }
 exports.Upload = Upload;
+function createBucketEntry(fileObject, fileMeta, shardMetas, rs) {
+    var bucketEntry = {
+        frame: fileObject.frameId,
+        filename: fileMeta.name,
+        index: fileObject.index.toString('hex'),
+        hmac: {
+            type: 'sha512',
+            value: fileObject.GenerateHmac(shardMetas)
+        }
+    };
+    if (rs) {
+        bucketEntry.erasure = { type: "reedsolomon" };
+    }
+    return fileObject.SaveFileInNetwork(bucketEntry);
+}
+function getParities(file, shardSize, totalShards, parityShards) {
+    return __awaiter(this, void 0, void 0, function () {
+        var fileEncoded;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, rs_wrapper_1.encode(file, shardSize, totalShards, parityShards)];
+                case 1:
+                    fileEncoded = _a.sent();
+                    return [2 /*return*/, fileEncoded.slice(totalShards * shardSize)];
+            }
+        });
+    });
+}
+function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
+    var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
+    var progressCounter = Math.ceil((newCurrentBytes / totalBytes) * 100);
+    progress(progressCounter, newCurrentBytes, totalBytes);
+    return newCurrentBytes;
+}
+function uploadShards(action) {
+    var from = 0;
+    var currentShard = null;
+    var shardUploadRequests = [];
+    for (var i = action.firstIndex; i < (action.firstIndex + action.nShards); i++) {
+        currentShard = action.fileContent.slice(from, from + action.shardSize);
+        console.log('Uploading shard index %s size %s parity %s', i, currentShard.length, action.parity);
+        shardUploadRequests.push(uploadShard(action.fileObject, currentShard, i, action.parity));
+        from += action.shardSize;
+    }
+    return shardUploadRequests;
+}
+function uploadShard(fileObject, shard, index, isParity) {
+    return fileObject.UploadShard(shard, shard.length, fileObject.frameId, index, 3, isParity);
+}

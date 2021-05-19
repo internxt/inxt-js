@@ -33,9 +33,8 @@ export class ShardObject extends EventEmitter {
     this.exchangeReport = new ExchangeReport(config);
   }
 
-  async StartDownloadShard(): Promise<Readable> {
-    const downloader = await DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID);
-    return downloader;
+  StartDownloadShard(): Readable {
+    return DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID);
   }
 
   isFinished(): boolean { return this._isFinished; }

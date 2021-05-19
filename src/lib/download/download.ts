@@ -3,16 +3,32 @@ import { FileObject } from '../../api/FileObject';
 import { Readable, Transform } from 'stream';
 import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events';
 
+// import toStream from 'buffer-to-stream';
+import { reconstruct } from 'rs-wrapper';
+import { logger } from '../utils/logger';
+import { bufferToStream } from '../utils/buffer';
+
+
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
   if (!config.encryptionKey) {
     throw Error('Encryption key required');
   }
 
   const File = new FileObject(config, bucketId, fileId);
+
+  logger.info('Retrieving file info...');
   await File.GetFileInfo();
 
-  // API request file mirrors with tokens
+  logger.info('Retrieving mirrors...');
   await File.GetFileMirrors();
+
+  const shards = File.rawShards.filter(s => !s.parity).length;
+  const shardSize = File.rawShards[0].size;
+
+  console.log('shardSize', shardSize);
+
+  const parities = File.rawShards.length - shards;
+  logger.info('Found %s shards and %s parities', shards, parities);
 
   let totalSize = File.final_length;
   const out = new Transform({
@@ -25,13 +41,67 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       }
     }
   });
+  logger.info('File size is %s bytes', totalSize);
 
   out.on('error', (err) => { throw err; });
 
   attachFileObjectListeners(File, out);
   handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
 
-  return File.StartDownloadFile().pipe(File.decipher).pipe(out);
+  let fileContent: Buffer;
+
+  logger.info('Starting file download');
+  const fileEncryptedStream = File.StartDownloadFile();
+
+  fileEncryptedStream.on('data', (chunk: Buffer) => {
+    fileContent = Buffer.concat([ fileContent, chunk ])
+  });
+
+
+  return new Promise((resolve, reject) => {
+    fileEncryptedStream.on('error', reject);
+
+    fileEncryptedStream.on('end', async () => {
+      logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
+
+      // TODO: Rellenar contenido de los shards corruptos, marcar shards corruptos y su indice, recoger de File
+      let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
+      let passThrough = null;
+
+      let shardsStatus = File.rawShards.map(shard => shard.healthy!);
+      shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
+
+      // =========== CORRUPT INTENTIONALLY
+      shardsStatus[0] = false;
+      fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
+      // ===========
+
+      console.log('shardsStatus', shardsStatus);
+      console.log('rs', rs);
+
+      let someShardCorrupt = shardsStatus.some((shardStatus: boolean) => !shardStatus);
+
+      if (someShardCorrupt) {
+        if (rs) {
+          logger.info('Some shard is corrupy and rs is available. Recovering');
+
+          const fileContentRecovered = await reconstruct(fileContent, shards, parities, shardsStatus);
+
+          console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
+
+          passThrough = bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
+
+          return resolve(passThrough.pipe(File.decipher).pipe(out));
+        } else {
+          reject(new Error('File missing shard error'));
+        }
+      } else {
+        logger.info('Reed solomon not required for this file');
+      }
+
+      return resolve(bufferToStream(fileContent).pipe(File.decipher).pipe(out));
+    }); 
+  });
 }
 
 // TODO: use propagate lib

@@ -17,6 +17,6 @@ export declare class ShardObject extends EventEmitter {
     private _isFinished;
     private _isErrored;
     constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string);
-    StartDownloadShard(): Promise<Readable>;
+    StartDownloadShard(): Readable;
     isFinished(): boolean;
 }

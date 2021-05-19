@@ -36,9 +36,11 @@ const getLoggerInstance = (level: number): Winston.Logger => {
         transports: [new Winston.transports.Console()]
     });
 
-    if (process.env.STAGE !== 'development') {
-        logger.silent = true;
-    }
+    // console.log(process.env.STAGE)
+
+    // if (process.env.STAGE !== 'development') {
+    //     logger.silent = true;
+    // }
 
     return logger;
 };

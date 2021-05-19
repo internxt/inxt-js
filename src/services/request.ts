@@ -23,8 +23,6 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   const proxy = await getProxy();
   const url = `${proxy.url}/${targetUrl}`;
 
-  logger.info('Request to: ' + url);
-
   const DefaultOptions: AxiosRequestConfig = {
     method,
     auth: {
@@ -42,17 +40,17 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   });
 }
 
-export async function streamRequest(targetUrl: string, nodeID: string): Promise<Readable> {
-  const proxy = await getProxy();
-  const URL = `${proxy.url}/${targetUrl}`;
+export function streamRequest(targetUrl: string, nodeID: string): Readable {
+  // const proxy = await getProxy();
+  const URL = `${PROXY}/${targetUrl}`;
 
-  logger.info('StreamRequest to: ', URL);
+  logger.info('StreamRequest to %s', URL);
 
   const uriParts = url.parse(URL);
   let downloader: ClientRequest | null = null;
 
   function _createDownloadStream(): ClientRequest {
-    new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
+    // new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
 
     return https.get({
       protocol: uriParts.protocol,
@@ -72,7 +70,7 @@ export async function streamRequest(targetUrl: string, nodeID: string): Promise<
       if (!downloader) {
         downloader = _createDownloadStream();
 
-        proxy.free();
+        // proxy.free();
 
         downloader.on('response', (res: IncomingMessage) => {
           res

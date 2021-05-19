@@ -12,7 +12,7 @@ export interface FileInfo {
         value: string;
         type: string;
     };
-    erasure: {
+    erasure?: {
         type: string;
     };
     index: string;
