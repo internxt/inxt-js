@@ -51,57 +51,59 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   let fileContent: Buffer;
 
   logger.info('Starting file download');
-  const fileEncryptedStream = File.StartDownloadFile();
+  // COMO ESTABA ANTES
+  return File.StartDownloadFile().pipe(File.decipher).pipe(out);
 
-  fileEncryptedStream.on('data', (chunk: Buffer) => {
-    fileContent = Buffer.concat([ fileContent, chunk ])
-  });
+  // COMO ESTA AHORA
+  // fileEncryptedStream.on('data', (chunk: Buffer) => {
+  //   fileContent = Buffer.concat([ fileContent, chunk ])
+  // });
 
 
-  return new Promise((resolve, reject) => {
-    fileEncryptedStream.on('error', reject);
+  // return new Promise((resolve, reject) => {
+  //   fileEncryptedStream.on('error', reject);
 
-    fileEncryptedStream.on('end', async () => {
-      logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
+  //   fileEncryptedStream.on('end', async () => {
+  //     logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
 
-      // TODO: Rellenar contenido de los shards corruptos, marcar shards corruptos y su indice, recoger de File
-      let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
-      let passThrough = null;
+  //     // TODO: Rellenar contenido de los shards corruptos, marcar shards corruptos y su indice, recoger de File
+  //     let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
+  //     let passThrough = null;
 
-      let shardsStatus = File.rawShards.map(shard => shard.healthy!);
-      shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
+  //     let shardsStatus = File.rawShards.map(shard => shard.healthy!);
+  //     shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
 
-      // =========== CORRUPT INTENTIONALLY
-      shardsStatus[0] = false;
-      fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
-      // ===========
+  //     // =========== CORRUPT INTENTIONALLY
+  //     shardsStatus[0] = false;
+  //     fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
+  //     // ===========
 
-      console.log('shardsStatus', shardsStatus);
-      console.log('rs', rs);
+  //     console.log('shardsStatus', shardsStatus);
+  //     console.log('rs', rs);
 
-      let someShardCorrupt = shardsStatus.some((shardStatus: boolean) => !shardStatus);
+  //     let someShardCorrupt = shardsStatus.some((shardStatus: boolean) => !shardStatus);
 
-      if (someShardCorrupt) {
-        if (rs) {
-          logger.info('Some shard is corrupy and rs is available. Recovering');
+  //     if (someShardCorrupt) {
+  //       if (rs) {
+  //         logger.info('Some shard is corrupy and rs is available. Recovering');
 
-          const fileContentRecovered = await reconstruct(fileContent, shards, parities, shardsStatus);
+  //         const fileContentRecovered = await reconstruct(fileContent, shards, parities, shardsStatus);
 
-          console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
+  //         console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
 
-          passThrough = bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
+  //         passThrough = bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
 
-          return resolve(passThrough.pipe(File.decipher).pipe(out));
-        } else {
-          reject(new Error('File missing shard error'));
-        }
-      } else {
-        logger.info('Reed solomon not required for this file');
-      }
+  //         return resolve(passThrough.pipe(File.decipher).pipe(out));
+  //       } else {
+  //         reject(new Error('File missing shard error'));
+  //       }
+  //     } else {
+  //       logger.info('Reed solomon not required for this file');
+  //     }
 
-      return resolve(bufferToStream(fileContent).pipe(File.decipher).pipe(out));
-    }); 
-  });
+  //     return resolve(bufferToStream(fileContent).pipe(File.decipher).pipe(out));
+  //   }); 
+  // });
 }
 
 // TODO: use propagate lib

@@ -37,13 +37,17 @@ const bucketId = getBucketId()
 //   env.upload(bucketId, labUploadParams, progress, finish)
 // }
 
-async function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyErrorCallback) {
+function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyErrorCallback) {
   return new Promise((resolve, reject) => {
     env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
       .then((outputStream) => {
         outputStream.on('data', () => {});
         outputStream.on('error', reject);
-        outputStream.on('end', resolve);
+        outputStream.on('end', () => {
+          console.log('here');
+          resolve(null);
+
+        });
       })
       .catch((err) => {
         reject(err);
@@ -79,4 +83,14 @@ down('c7ed55531176bb1f251c71a6', (progress: number, downloadedBytes: number | nu
   } else {
     logger.info('download finished!')
   }
-}).catch(logger.error)
+}).then(() => console.log('here')).catch(logger.error)
+
+// function BufferToStream(buffer: Buffer): Duplex {
+//   const stream = new Duplex();
+//   stream.push(buffer);
+//   stream.push(null);
+//   return stream;
+// }
+
+// bufferToStream(randomBytes(10000000)).on('data', () => {}).on('end', () => { console.log('FINX!'); })
+// BufferToStream(randomBytes(10000000)).on('data', () => {}).on('end', () => console.log('FIN2'));

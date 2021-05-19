@@ -1,6 +1,6 @@
 import { Hash, createHash } from 'crypto';
 import { Readable, PassThrough } from 'stream';
-import assert from 'assert';
+import * as assert from 'assert';
 import { ripemd160 } from './crypto';
 import { FILEMUXER } from './events';
 import { bufferToStream } from './utils/buffer';

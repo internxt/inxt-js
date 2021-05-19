@@ -127,6 +127,7 @@ export class FileObject extends EventEmitter {
         oneFileMuxer.on('data', (data: Buffer) => { buffs.push(data); });
 
         oneFileMuxer.once('drain', () => {
+          console.log('ENTRO AQUI')
           if (downloadHasError) {
             nextTry(downloadError);
           } else {
@@ -206,10 +207,8 @@ export class FileObject extends EventEmitter {
         const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
         
         logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer.length);
-
-        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5)
           
-        fileMuxer.on('drain', () => {
+        fileMuxer.once('drain', () => {
             // fill to zeroes last shard
             if (currentShard === lastShardIndex) {
               if (sizeToFillToZeroes > 0) {
@@ -239,20 +238,20 @@ export class FileObject extends EventEmitter {
             shard.healthy = true;
             // currentShard++;
 
-            // nextItem();
+            nextItem();
           });
+
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5)
 
       } catch (err) {
         logger.warn('Shard download failed. Reason: %s', err.message);
         shard.healthy = false;
         // currentShard++;
 
-        // nextItem();  
-      } finally {
-        nextItem();
-      }
+        nextItem();  
+      } 
       
-
+      
       // this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
       //   logger.info('Download with file muxer finished succesfully');
 
