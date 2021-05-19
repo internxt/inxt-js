@@ -66,7 +66,6 @@ var reports_1 = require("./reports");
 var events_2 = require("../lib/events");
 var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../lib/utils/logger");
-var buffer_1 = require("../lib/utils/buffer");
 function BufferToStream(buffer) {
     var stream = new stream_1.Duplex();
     stream.push(buffer);
@@ -257,7 +256,7 @@ var FileObject = /** @class */ (function (_super) {
                     case 2:
                         shardBuffer_1 = _a.sent();
                         logger_1.logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer_1.length);
-                        fileMuxer.addInputSource(buffer_1.bufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null);
+                        fileMuxer.addInputSource(BufferToStream(shardBuffer_1), shard.size, Buffer.from(shard.hash, 'hex'), null);
                         fileMuxer.once('drain', function () {
                             // fill to zeroes last shard
                             if (currentShard === lastShardIndex) {

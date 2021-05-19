@@ -207,7 +207,7 @@ export class FileObject extends EventEmitter {
         
         logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer.length);
 
-        fileMuxer.addInputSource(bufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null)
           
         fileMuxer.once('drain', () => {
             // fill to zeroes last shard

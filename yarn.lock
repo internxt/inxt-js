@@ -2133,7 +2133,7 @@ rs-wrapper@jalbertogonzalez/rs-wrapper:
   version "1.0.0"
   resolved "https://codeload.github.com/jalbertogonzalez/rs-wrapper/tar.gz/27565ab22bd6411daff36933e98a78a11f9ab931"
   dependencies:
-    "@subspace/reed-solomon-erasure.wasm" JAlbertoGonzalez/reed-solomon-erasure.wasm
+    "@subspace/reed-solomon-erasure.wasm" "^0.2.5"
 
 safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
   version "5.2.1"
