@@ -51,6 +51,10 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
 
   logger.info('Starting file download');
 
+  setInterval(() => {
+    console.log('still alive')
+  }, 20000)
+
   const fileEncryptedStream = await File.StartDownloadFile2();
 
   console.log('I HAVE THE STREAM UNIFIED HERE', fileEncryptedStream);
@@ -78,9 +82,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
       // ===========
 
-      setInterval(() => {
-        console.log('still alive')
-      }, 20000)
+      
 
       const nCorruptShards = shardsStatus.map((shardStatus) => !shardStatus).length;
 

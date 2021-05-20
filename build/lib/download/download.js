@@ -85,6 +85,9 @@ function Download(config, bucketId, fileId, options) {
                     handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
                     fileContent = Buffer.alloc(0);
                     logger_1.logger.info('Starting file download');
+                    setInterval(function () {
+                        console.log('still alive');
+                    }, 20000);
                     return [4 /*yield*/, File.StartDownloadFile2()];
                 case 3:
                     fileEncryptedStream = _a.sent();
@@ -105,13 +108,6 @@ function Download(config, bucketId, fileId, options) {
                                             passThrough = null;
                                             shardsStatus = File.rawShards.map(function (shard) { return shard.healthy; });
                                             shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
-                                            // =========== CORRUPT INTENTIONALLY
-                                            // shardsStatus[0] = false;
-                                            // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
-                                            // ===========
-                                            setInterval(function () {
-                                                console.log('still alive');
-                                            }, 20000);
                                             nCorruptShards = shardsStatus.map(function (shardStatus) { return !shardStatus; }).length;
                                             if (!(nCorruptShards > 0)) return [3 /*break*/, 5];
                                             if (!rs) return [3 /*break*/, 4];
