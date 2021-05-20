@@ -204,6 +204,7 @@ export class FileObject extends EventEmitter {
         let content = shardBuffer;
 
         logger.info('Shard %s downloaded OK', shard.index);
+        this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
 
         if (i === lastShardIndex && sizeToFillToZeroes > 0) {
           logger.info('Filling with zeroes last shard');

@@ -125,7 +125,9 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
 function handleFileResolving(fl: FileObject, downloadCb: DownloadProgressCallback, decryptionCb?: DecryptionProgressCallback) {
   let totalBytesDownloaded = 0, totalBytesDecrypted = 0;
   let progress = 0;
-  const totalBytes = fl.fileInfo ? fl.fileInfo.size : 0;
+  const totalBytes = fl.rawShards.length > 0 ? 
+    fl.rawShards.reduce((a, b) =>({ size: a.size + b.size }), { size: 0 }).size : 
+    0;
 
   function getDownloadProgress() {
     return (totalBytesDownloaded / totalBytes) * 100;
