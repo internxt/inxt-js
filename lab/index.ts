@@ -42,15 +42,7 @@ function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyEr
     env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
       .then((outputStream) => {
         outputStream.pipe(createWriteStream('test.pdf'))
-        // outputStream.on('data', () => {
-
-        // });
-        // outputStream.on('error', reject);
-        // outputStream.on('end', () => {
-        //   console.log('here');
-        //   resolve(null);
-
-        // });
+          .on('end', () => resolve(null));
       })
       .catch((err) => {
         reject(err);
@@ -86,7 +78,14 @@ down('c7ed55531176bb1f251c71a6', (progress: number, downloadedBytes: number | nu
   } else {
     logger.info('download finished!')
   }
-}).then(() => console.log('here')).catch(logger.error)
+})
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    logger.error(err);
+    process.exit(-1);
+  })
 
 // function BufferToStream(buffer: Buffer): Duplex {
 //   const stream = new Duplex();
