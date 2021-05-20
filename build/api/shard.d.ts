@@ -19,5 +19,5 @@ export interface Shard {
     };
     operation: string;
 }
-export declare function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable;
+export declare function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable>;
 export declare function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes?: string[]): Promise<Transform | never>;

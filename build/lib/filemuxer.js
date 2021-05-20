@@ -75,7 +75,6 @@ var FileMuxer = /** @class */ (function (_super) {
         _this.hasher = crypto_1.createHash('sha256');
         _this.shards = options.shards;
         _this.length = options.length;
-        // this.setMaxListeners(3000);
         _this.options = __assign(__assign({}, FileMuxer.DEFAULTS), options);
         return _this;
     }
@@ -143,13 +142,7 @@ var FileMuxer = /** @class */ (function (_super) {
             input.push(data);
         });
         readable.on('end', function () { input.end(); });
-        input.once('readable', function () {
-            // console.log('shard is now readable, start to download')
-            // Init exchange report
-        });
-        // input.on('data', () => {});
         input.once('end', function () {
-            console.log('passthorugh end here');
             var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
@@ -161,14 +154,11 @@ var FileMuxer = /** @class */ (function (_super) {
                 // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
             }
             else {
-                console.log('Shard %s OK', inputHash.toString('hex'));
                 // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
             }
-            console.log('Emiiting drain %s', id);
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {
-            // Send failure exchange report DOWNLOAD_EERROR
             _this.emit('error', err);
         });
         this.added++;

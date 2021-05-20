@@ -81,26 +81,34 @@ var logger_1 = require("../lib/utils/logger");
 dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 var INXT_API_URL = process.env.INXT_API_URL;
 var PROXY = 'https://api.internxt.com:8081';
-function request(config, method, targetUrl, params) {
+function request(config, method, targetUrl, params, useProxy) {
+    if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
-        var proxy, url, DefaultOptions, options;
+        var reqUrl, proxy, DefaultOptions, options;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, proxy_1.getProxy()];
+                case 0:
+                    reqUrl = targetUrl;
+                    if (!useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
                 case 1:
                     proxy = _a.sent();
-                    url = proxy.url + "/" + targetUrl;
+                    reqUrl = proxy.url + "/" + targetUrl;
+                    _a.label = 2;
+                case 2:
                     DefaultOptions = {
                         method: method,
                         auth: {
                             username: config.bridgeUser,
                             password: crypto_1.sha256(Buffer.from(config.bridgePass)).toString('hex')
                         },
-                        url: url
+                        url: reqUrl
                     };
                     options = __assign(__assign({}, DefaultOptions), params);
                     return [2 /*return*/, axios_1.default.request(options).then(function (value) {
-                            proxy.free();
+                            if (useProxy && proxy) {
+                                proxy.free();
+                            }
                             return value;
                         })];
             }
@@ -108,45 +116,61 @@ function request(config, method, targetUrl, params) {
     });
 }
 exports.request = request;
-function streamRequest(targetUrl, nodeID) {
-    // const proxy = await getProxy();
-    var URL = PROXY + "/" + targetUrl;
-    logger_1.logger.info('StreamRequest to %s', URL);
-    var uriParts = url.parse(URL);
-    var downloader = null;
-    function _createDownloadStream() {
-        // new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
-        return https.get({
-            protocol: uriParts.protocol,
-            hostname: uriParts.hostname,
-            port: uriParts.port,
-            path: uriParts.path,
-            headers: {
-                'content-type': 'application/octet-stream',
-                'x-storj-node-id': nodeID
-            },
-            timeout: 3000
-        });
-    }
-    return new stream_1.Readable({
-        read: function () {
-            var _this = this;
-            if (!downloader) {
-                downloader = _createDownloadStream();
-                // proxy.free();
-                downloader.on('response', function (res) {
-                    res
-                        .on('data', _this.push.bind(_this))
-                        .on('error', _this.emit.bind(_this, 'error'))
-                        .on('end', function () {
-                        _this.push.bind(_this, null);
-                        _this.emit('end');
-                    }).on('close', _this.emit.bind(_this, 'close'));
-                })
-                    .on('error', this.emit.bind(this, 'error'))
-                    .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
-            }
+function streamRequest(targetUrl, nodeID, useProxy) {
+    if (useProxy === void 0) { useProxy = true; }
+    return __awaiter(this, void 0, void 0, function () {
+        function _createDownloadStream() {
+            return https.get({
+                protocol: uriParts.protocol,
+                hostname: uriParts.hostname,
+                port: uriParts.port,
+                path: uriParts.path,
+                headers: {
+                    'content-type': 'application/octet-stream',
+                    'x-storj-node-id': nodeID
+                },
+                timeout: 3000
+            });
         }
+        var proxy, reqUrl, uriParts, downloader;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    reqUrl = targetUrl;
+                    if (!useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    reqUrl = proxy.url + "/" + targetUrl;
+                    _a.label = 2;
+                case 2:
+                    logger_1.logger.info('Stream req (using proxy %s) to %s', useProxy, reqUrl);
+                    uriParts = url.parse(reqUrl);
+                    downloader = null;
+                    return [2 /*return*/, new stream_1.Readable({
+                            read: function () {
+                                var _this = this;
+                                if (!downloader) {
+                                    downloader = _createDownloadStream();
+                                    if (useProxy && proxy) {
+                                        proxy.free();
+                                    }
+                                    downloader.on('response', function (res) {
+                                        res
+                                            .on('data', _this.push.bind(_this))
+                                            .on('error', _this.emit.bind(_this, 'error'))
+                                            .on('end', function () {
+                                            _this.push.bind(_this, null);
+                                            _this.emit('end');
+                                        }).on('close', _this.emit.bind(_this, 'close'));
+                                    })
+                                        .on('error', this.emit.bind(this, 'error'))
+                                        .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
+                                }
+                            }
+                        })];
+            }
+        });
     });
 }
 exports.streamRequest = streamRequest;

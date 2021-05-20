@@ -40,7 +40,6 @@ exports.Download = void 0;
 var FileObject_1 = require("../../api/FileObject");
 var stream_1 = require("stream");
 var events_1 = require("../events");
-// import toStream from 'buffer-to-stream';
 var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../utils/logger");
 var buffer_1 = require("../utils/buffer");
@@ -89,18 +88,14 @@ function Download(config, bucketId, fileId, options) {
                     return [4 /*yield*/, File.StartDownloadFile2()];
                 case 3:
                     fileEncryptedStream = (_a.sent()).pipe(new stream_1.PassThrough());
-                    console.log('tengo el stream!', Object.keys(fileEncryptedStream));
-                    console.log("Es readable -->", fileEncryptedStream.readable instanceof stream_1.Readable);
-                    console.log("Es buffer -->", fileEncryptedStream.readable instanceof Buffer);
                     // COMO ESTA AHORA
                     fileEncryptedStream.on('data', function (chunk) {
-                        // console.log(chunk);
                         fileContent = Buffer.concat([fileContent, chunk]);
                     });
                     return [2 /*return*/, new Promise(function (resolve, reject) {
                             fileEncryptedStream.on('error', reject);
                             fileEncryptedStream.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
-                                var rs, passThrough, shardsStatus, someShardCorrupt, fileContentRecovered;
+                                var rs, passThrough, shardsStatus, nCorruptShards, fileContentRecovered, err_1;
                                 var _a;
                                 return __generator(this, function (_b) {
                                     switch (_b.label) {
@@ -110,30 +105,32 @@ function Download(config, bucketId, fileId, options) {
                                             passThrough = null;
                                             shardsStatus = File.rawShards.map(function (shard) { return shard.healthy; });
                                             shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
-                                            // =========== CORRUPT INTENTIONALLY
-                                            shardsStatus[0] = false;
-                                            fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)]);
-                                            // ===========
-                                            console.log('shardsStatus', shardsStatus);
-                                            console.log('rs', rs);
-                                            someShardCorrupt = shardsStatus.some(function (shardStatus) { return !shardStatus; });
-                                            if (!someShardCorrupt) return [3 /*break*/, 4];
-                                            if (!rs) return [3 /*break*/, 2];
-                                            logger_1.logger.info('Some shard is corrupy and rs is available. Recovering');
-                                            return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
+                                            nCorruptShards = shardsStatus.map(function (shardStatus) { return !shardStatus; }).length;
+                                            if (!(nCorruptShards > 0)) return [3 /*break*/, 5];
+                                            if (!rs) return [3 /*break*/, 4];
+                                            logger_1.logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
+                                            _b.label = 1;
                                         case 1:
+                                            _b.trys.push([1, 3, , 4]);
+                                            return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
+                                        case 2:
                                             fileContentRecovered = _b.sent();
-                                            console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
                                             passThrough = buffer_1.bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
                                             return [2 /*return*/, resolve(passThrough.pipe(File.decipher).pipe(out))];
-                                        case 2:
-                                            reject(new Error('File missing shard error'));
-                                            _b.label = 3;
-                                        case 3: return [3 /*break*/, 5];
+                                        case 3:
+                                            err_1 = _b.sent();
+                                            logger_1.logger.error('File download error, reason: %s', err_1.message);
+                                            if (err_1.message !== 'RESULT_ERROR_TOO_FEW_SHARDS_PRESENT') {
+                                                return [2 /*return*/, reject(err_1)];
+                                            }
+                                            return [3 /*break*/, 4];
                                         case 4:
+                                            reject(new Error(nCorruptShards + " file shard(s) is/are corrupt"));
+                                            return [3 /*break*/, 6];
+                                        case 5:
                                             logger_1.logger.info('Reed solomon not required for this file');
-                                            _b.label = 5;
-                                        case 5: return [2 /*return*/, resolve(buffer_1.bufferToStream(fileContent).pipe(File.decipher).pipe(out))];
+                                            _b.label = 6;
+                                        case 6: return [2 /*return*/, resolve(buffer_1.bufferToStream(fileContent).pipe(File.decipher).pipe(out))];
                                     }
                                 });
                             }); });
@@ -159,7 +156,9 @@ function handleFileResolving(fl, downloadCb, decryptionCb) {
     var _this = this;
     var totalBytesDownloaded = 0, totalBytesDecrypted = 0;
     var progress = 0;
-    var totalBytes = fl.fileInfo ? fl.fileInfo.size : 0;
+    var totalBytes = fl.rawShards.length > 0 ?
+        fl.rawShards.reduce(function (a, b) { return ({ size: a.size + b.size }); }, { size: 0 }).size :
+        0;
     function getDownloadProgress() {
         return (totalBytesDownloaded / totalBytes) * 100;
     }

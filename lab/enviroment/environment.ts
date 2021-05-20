@@ -75,7 +75,6 @@ class DownloadLogsManager {
     
         this.output.on(FILEMUXER.PROGRESS, (msg: ShardSuccesfulIntegrityCheck) => {
             logger.debug('digest %s', msg.content.digest)
-            logger.info('shard %s OK', msg.content.expectedHash)
         })
     }
 
