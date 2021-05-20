@@ -293,8 +293,10 @@ var FileObject = /** @class */ (function (_super) {
                             }); }))];
                     case 1:
                         _a.sent();
+                        console.log('STREAMS HERE', streams);
                         // JOIN STREAMS IN ORDER
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });
+                        console.log('STREAMS SORTED', streams);
                         // RETURN ONE STREAM UNIFIED
                         return [2 /*return*/, new MultiStream(streams.map(function (s) { return s.content; }))];
                 }

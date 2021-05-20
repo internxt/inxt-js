@@ -51,16 +51,20 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
 
   logger.info('Starting file download');
 
-  const fileEncryptedStream = (await File.StartDownloadFile2()).pipe(new PassThrough());
+  const fileEncryptedStream = await File.StartDownloadFile2();
 
-  fileEncryptedStream.on('data', (chunk: Buffer) => {
-    fileContent = Buffer.concat([ fileContent, chunk ])
-  });
+  console.log('I HAVE THE STREAM UNIFIED HERE', fileEncryptedStream);
+
+  const buffs: Buffer[] = [];
+
+  fileEncryptedStream.on('data', (chunk: Buffer) => { buffs.push(chunk); });
 
   return new Promise((resolve, reject) => {
     fileEncryptedStream.on('error', reject);
 
     fileEncryptedStream.on('end', async () => {
+      fileContent = Buffer.concat(buffs);
+
       logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
 
       let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';

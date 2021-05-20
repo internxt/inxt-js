@@ -41,7 +41,7 @@ function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyEr
   return new Promise((resolve, reject) => {
     env.download(bucketId, fileId, { progressCallback: progress, finishedCallback: finish })
       .then((outputStream) => {
-        outputStream.pipe(createWriteStream('test.pdf'))
+        outputStream.pipe(createWriteStream('test.zip'))
           .on('end', () => resolve(null));
       })
       .catch((err) => {
@@ -70,7 +70,7 @@ function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyEr
 //   }
 // })
 
-down('c7ed55531176bb1f251c71a6', (progress: number, downloadedBytes: number | null, totalBytes: number | null) => {
+down('a1f80b2d0d89fe644f17a3a6', (progress: number, downloadedBytes: number | null, totalBytes: number | null) => {
   logger.warn(`progress ${progress}% (${downloadedBytes} from ${totalBytes})`)
 }, (err: Error | null) => {
   if(err) {

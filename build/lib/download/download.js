@@ -45,7 +45,7 @@ var logger_1 = require("../utils/logger");
 var buffer_1 = require("../utils/buffer");
 function Download(config, bucketId, fileId, options) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, shards, shardSize, parities, totalSize, out, fileContent, fileEncryptedStream;
+        var File, shards, shardSize, parities, totalSize, out, fileContent, fileEncryptedStream, buffs;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -87,10 +87,10 @@ function Download(config, bucketId, fileId, options) {
                     logger_1.logger.info('Starting file download');
                     return [4 /*yield*/, File.StartDownloadFile2()];
                 case 3:
-                    fileEncryptedStream = (_a.sent()).pipe(new stream_1.PassThrough());
-                    fileEncryptedStream.on('data', function (chunk) {
-                        fileContent = Buffer.concat([fileContent, chunk]);
-                    });
+                    fileEncryptedStream = _a.sent();
+                    console.log('I HAVE THE STREAM UNIFIED HERE', fileEncryptedStream);
+                    buffs = [];
+                    fileEncryptedStream.on('data', function (chunk) { buffs.push(chunk); });
                     return [2 /*return*/, new Promise(function (resolve, reject) {
                             fileEncryptedStream.on('error', reject);
                             fileEncryptedStream.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
@@ -99,6 +99,7 @@ function Download(config, bucketId, fileId, options) {
                                 return __generator(this, function (_b) {
                                     switch (_b.label) {
                                         case 0:
+                                            fileContent = Buffer.concat(buffs);
                                             logger_1.logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
                                             rs = File.fileInfo && File.fileInfo.erasure && ((_a = File.fileInfo) === null || _a === void 0 ? void 0 : _a.erasure.type) === 'reedsolomon';
                                             passThrough = null;

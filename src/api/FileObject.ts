@@ -234,8 +234,12 @@ export class FileObject extends EventEmitter {
       } 
     }));
 
+    console.log('STREAMS HERE', streams);
+
     // JOIN STREAMS IN ORDER
     streams.sort((sA, sB) => sA.index - sB.index);
+
+    console.log('STREAMS SORTED', streams);
 
     // RETURN ONE STREAM UNIFIED
     return new MultiStream(streams.map(s => s.content));
