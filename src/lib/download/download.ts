@@ -53,11 +53,9 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
 
   const fileEncryptedStream = (await File.StartDownloadFile2()).pipe(new PassThrough());
 
-  // COMO ESTA AHORA
   fileEncryptedStream.on('data', (chunk: Buffer) => {
     fileContent = Buffer.concat([ fileContent, chunk ])
   });
-
 
   return new Promise((resolve, reject) => {
     fileEncryptedStream.on('error', reject);
@@ -75,6 +73,10 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       // shardsStatus[0] = false;
       // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
       // ===========
+
+      setInterval(() => {
+        console.log('still alive')
+      }, 20000)
 
       const nCorruptShards = shardsStatus.map((shardStatus) => !shardStatus).length;
 
