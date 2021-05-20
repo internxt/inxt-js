@@ -76,8 +76,6 @@ class FileMuxer extends Readable {
     this.shards = options.shards;
     this.length = options.length;
 
-    // this.setMaxListeners(3000);
-
     this.options = { ...FileMuxer.DEFAULTS, ...options };
   }
 
@@ -156,13 +154,7 @@ class FileMuxer extends Readable {
 
     readable.on('end', () => { input.end(); });
 
-    input.once('readable', () => {
-      // Init exchange report
-    });
-
     input.once('end', () => {
-      console.log('passthorugh end here');
-
       const inputHash = ripemd160(this.hasher.digest())
       this.hasher = createHash('sha256')
 
@@ -175,16 +167,13 @@ class FileMuxer extends Readable {
         this.emit('error', Error('Shard failed integrity check'))
         // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
       } else {
-        console.log('Shard %s OK', inputHash.toString('hex'))
         // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
       }
 
-      console.log('Emiiting drain %s', id);
       this.emit('drain', input);
     });
 
     readable.on('error', (err) => {
-      // Send failure exchange report DOWNLOAD_EERROR
       this.emit('error', err);
     });
 

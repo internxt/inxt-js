@@ -116,8 +116,6 @@ export class FileObject extends EventEmitter {
 
         oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
         oneFileMuxer.on('error', (err) => {
-          console.log('ONEFXError %s', err.message);
-
           downloadHasError = true;
           downloadError = err;
           this.emit(FILEMUXER.ERROR, err);
@@ -127,6 +125,8 @@ export class FileObject extends EventEmitter {
           // exchangeReport.sendReport().catch((err) => { err; });
 
           // Force to finish this attempt
+          logger.info('Emitting drain for shard %s', shard.index);
+
           oneFileMuxer.emit('drain');
         });
 
@@ -134,7 +134,8 @@ export class FileObject extends EventEmitter {
         oneFileMuxer.on('data', (data: Buffer) => { buffs.push(data); });
 
         oneFileMuxer.once('drain', () => {
-          console.log('ENTRO AQUI')
+          logger.info('Drain received for shard %s', shard.index);
+
           if (downloadHasError) {
             nextTry(downloadError);
           } else {
@@ -153,6 +154,8 @@ export class FileObject extends EventEmitter {
           if (!err && result) {
             return resolve(result);
           } else {
+            logger.warn('It seems that shard %s download went wrong. Retrying', shard.index);
+
             excluded.push(shard.farmer.nodeID);
 
             const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded);
@@ -193,13 +196,19 @@ export class FileObject extends EventEmitter {
     let streams: DownloadStream[] = [];
 
     await Promise.all(this.rawShards.map(async (shard, i) => {
+      const intervalId = setInterval(() => {
+        console.log('Still here for shard %s', shard.index)
+      }, 10000);
+
       try {
+        logger.info('Downloading shard %s', shard.index);
+
         const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
         let content = shardBuffer;
 
-        if (i === lastShardIndex && sizeToFillToZeroes > 0) {
-          // refill to zeroes content
+        logger.info('Shard %s downloaded OK', shard.index);
 
+        if (i === lastShardIndex && sizeToFillToZeroes > 0) {
           logger.info('Filling with zeroes last shard');
 
           content = Buffer.concat([content, Buffer.alloc(sizeToFillToZeroes).fill(0)]);
@@ -214,9 +223,19 @@ export class FileObject extends EventEmitter {
 
         shard.healthy = true;
       } catch (err) {
+        logger.error('Error downloading shard %s reason %s', shard.index, err.message);
+        console.error(err);
+
+        // Fake shard and continue with the next
+        streams.push({
+          content: bufferToStream(Buffer.alloc(shardSize).fill(0)),
+          index: shard.index
+        })
+
         shard.healthy = false;
+      } finally {
+        clearInterval(intervalId);
       }
-      
     }));
 
     // JOIN STREAMS IN ORDER

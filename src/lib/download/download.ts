@@ -65,7 +65,6 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
     fileEncryptedStream.on('end', async () => {
       logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
 
-      // TODO: Rellenar contenido de los shards corruptos, marcar shards corruptos y su indice, recoger de File
       let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
       let passThrough = null;
 
@@ -77,22 +76,27 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
       // ===========
 
-      let someShardCorrupt = shardsStatus.some((shardStatus: boolean) => !shardStatus);
+      const nCorruptShards = shardsStatus.map((shardStatus) => !shardStatus).length;
 
-      if (someShardCorrupt) {
+      if (nCorruptShards > 0) {
         if (rs) {
-          logger.info('Some shard is corrupy and rs is available. Recovering');
+          logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
 
-          const fileContentRecovered = await reconstruct(fileContent, shards, parities, shardsStatus);
+          try {
+            const fileContentRecovered = await reconstruct(fileContent, shards, parities, shardsStatus);
+            passThrough = bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
 
-          console.log(fileContentRecovered instanceof Uint8Array, fileContentRecovered instanceof Buffer);
+            return resolve(passThrough.pipe(File.decipher).pipe(out));
+          } catch (err) {
+            logger.error('File download error, reason: %s', err.message);
 
-          passThrough = bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
+            if (err.message !== 'RESULT_ERROR_TOO_FEW_SHARDS_PRESENT') {
+              return reject(err);
+            }
+          }
+        } 
 
-          return resolve(passThrough.pipe(File.decipher).pipe(out));
-        } else {
-          reject(new Error('File missing shard error'));
-        }
+        reject(new Error(`${nCorruptShards} file shard(s) is/are corrupt`));
       } else {
         logger.info('Reed solomon not required for this file');
       }

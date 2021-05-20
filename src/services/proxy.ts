@@ -3,7 +3,7 @@ import { Mutex } from '../lib/utils/mutex';
 
 const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const MAX_CONCURRENT_BROWSER_CONNECTIONS = 6;
+const MAX_CONCURRENT_BROWSER_CONNECTIONS = 10000;
 
 export class ProxyBalancer {
     private proxies: Proxy[];
