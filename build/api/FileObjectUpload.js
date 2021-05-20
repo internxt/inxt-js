@@ -195,36 +195,11 @@ var FileObjectUpload = /** @class */ (function () {
         });
     };
     FileObjectUpload.prototype.NegotiateContract = function (frameId, shardMeta) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, err_4;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, api.addShardToFrame(this.config, frameId, shardMeta)];
-                    case 1:
-                        response = _a.sent();
-                        if (response) {
-                            logger_1.logger.debug("negotiated a contract for shard " + shardMeta.hash + "(index " + shardMeta.index + ", size " + shardMeta.size + ") with token " + response.token);
-                        }
-                        else {
-                            throw new Error('Negotiate contract response was empty');
-                        }
-                        return [2 /*return*/, response];
-                    case 2:
-                        err_4 = _a.sent();
-                        console.log('Error for shard with index %s, negotiated size %s: %s', shardMeta.index, shardMeta.size, err_4.message);
-                        console.log({ hash: shardMeta.hash, size: shardMeta.size, index: shardMeta.index, parity: shardMeta.parity });
-                        err_4 = __assign(__assign({}, err_4), { message: "NegotiateContractError: Due to " + (err_4.message || '??') });
-                        return [2 /*return*/, Promise.reject(err_4)];
-                    case 3: return [2 /*return*/];
-                }
-            });
-        });
+        return api.addShardToFrame(this.config, frameId, shardMeta);
     };
     FileObjectUpload.prototype.NodeRejectedShard = function (encryptedShard, shard) {
         return __awaiter(this, void 0, void 0, function () {
-            var err_5;
+            var err_4;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -235,8 +210,8 @@ var FileObjectUpload = /** @class */ (function () {
                         logger_1.logger.debug("node " + shard.farmer.nodeID + " accepted shard " + shard.hash);
                         return [2 /*return*/, false];
                     case 2:
-                        err_5 = _a.sent();
-                        return [2 /*return*/, Promise.reject(err_5)];
+                        err_4 = _a.sent();
+                        return [2 /*return*/, Promise.reject(err_4)];
                     case 3: return [2 /*return*/];
                 }
             });
@@ -270,15 +245,14 @@ var FileObjectUpload = /** @class */ (function () {
     };
     FileObjectUpload.prototype.UploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
         return __awaiter(this, void 0, void 0, function () {
-            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_6;
+            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_5;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-                        logger_1.logger.info("uploading shard " + shardMeta.hash);
+                        logger_1.logger.info('Uploading shard %s', shardMeta.hash);
                         token = "", operation = "";
                         farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
-                        console.log('shardMeta', shardMeta);
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 5, , 9]);
@@ -288,6 +262,10 @@ var FileObjectUpload = /** @class */ (function () {
                             token = negotiatedContract.token;
                             operation = negotiatedContract.operation;
                             farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
+                            logger_1.logger.debug("Contract for shard " + shardMeta.hash + "(index " + shardMeta.index + ", size " + shardMeta.size + ") with token " + token);
+                        }
+                        else {
+                            throw new Error('Negotiated contract is empty');
                         }
                         hash = shardMeta.hash;
                         shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: parity, token: token, farmer: farmer, operation: operation };
@@ -308,19 +286,17 @@ var FileObjectUpload = /** @class */ (function () {
                         _a.sent();
                         return [3 /*break*/, 9];
                     case 5:
-                        err_6 = _a.sent();
+                        err_5 = _a.sent();
                         if (!(attemps > 1)) return [3 /*break*/, 7];
-                        logger_1.logger.error("upload " + shardMeta.hash + " failed. Retrying...");
+                        logger_1.logger.error('Upload for shard %s failed. Retrying ...', shardMeta.hash);
                         return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity)];
                     case 6:
                         _a.sent();
                         return [3 /*break*/, 8];
-                    case 7:
-                        err_6 = __assign(__assign({}, err_6), { message: "UploadShardError: Shard " + shardMeta.hash + " not uploaded due to " + (err_6.message || '??') });
-                        return [2 /*return*/, Promise.reject(err_6)];
+                    case 7: return [2 /*return*/, Promise.reject(err_5)];
                     case 8: return [3 /*break*/, 9];
                     case 9:
-                        logger_1.logger.info("shard " + shardMeta.hash + " uploaded successfully");
+                        logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
                         return [2 /*return*/, shardMeta];
                 }
             });

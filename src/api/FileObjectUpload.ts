@@ -112,24 +112,8 @@ export class FileObjectUpload {
     }
   }
 
-  async NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
-    try {
-        const response = await api.addShardToFrame(this.config, frameId, shardMeta);
-
-        if (response) {
-            logger.debug(`negotiated a contract for shard ${shardMeta.hash}(index ${shardMeta.index}, size ${shardMeta.size}) with token ${response.token}`);
-        } else {
-            throw new Error('Negotiate contract response was empty');
-        }
-
-        return response;
-    } catch (err) {
-        console.log('Error for shard with index %s, negotiated size %s: %s', shardMeta.index, shardMeta.size, err.message);
-        console.log({ hash: shardMeta.hash, size: shardMeta.size, index: shardMeta.index, parity: shardMeta.parity })
-
-        err = { ...err, message: `NegotiateContractError: Due to ${err.message || '??'}` };
-        return Promise.reject(err);
-    }
+  NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
+    return api.addShardToFrame(this.config, frameId, shardMeta);
   }
 
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
@@ -167,23 +151,25 @@ export class FileObjectUpload {
 
   async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
     const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
-    logger.info(`uploading shard ${shardMeta.hash}`);
+
+    logger.info('Uploading shard %s', shardMeta.hash);
 
     let negotiatedContract: ContractNegotiated | void;
     let token = "", operation = "";
     let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
-
-    console.log('shardMeta', shardMeta);
 
     try {
         if (negotiatedContract = await this.NegotiateContract(frameId, shardMeta)) {
             token = negotiatedContract.token;
             operation = negotiatedContract.operation;
             farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
+
+            logger.debug(`Contract for shard ${shardMeta.hash}(index ${shardMeta.index}, size ${shardMeta.size}) with token ${token}`);
+        } else {
+            throw new Error('Negotiated contract is empty');
         }
 
         const hash = shardMeta.hash;
-
         const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation };
 
         const exchangeReport = new ExchangeReport(this.config);
@@ -201,15 +187,14 @@ export class FileObjectUpload {
 
     } catch (err) {
         if (attemps > 1) {
-            logger.error(`upload ${shardMeta.hash} failed. Retrying...`);
+            logger.error('Upload for shard %s failed. Retrying ...', shardMeta.hash);
             await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
         } else {
-            err = { ...err, message: `UploadShardError: Shard ${shardMeta.hash} not uploaded due to ${err.message || '??'}` };
             return Promise.reject(err);
         }
     }
 
-    logger.info(`shard ${shardMeta.hash} uploaded successfully`);
+    logger.info('Shard %s uploaded succesfully', shardMeta.hash);
     return shardMeta;
   }
 
