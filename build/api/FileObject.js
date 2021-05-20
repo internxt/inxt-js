@@ -252,6 +252,10 @@ var FileObject = /** @class */ (function (_super) {
                         sizeToFillToZeroes = shardSize - lastShardSize;
                         logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
                         streams = [];
+                        setInterval(function () {
+                            console.log("shards number %s, but downloaded %s", _this.rawShards.length, streams.length);
+                        }, 10000);
+                        console.time('download-time');
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, content, err_2;
                                 return __generator(this, function (_a) {
@@ -293,6 +297,7 @@ var FileObject = /** @class */ (function (_super) {
                             }); }))];
                     case 1:
                         _a.sent();
+                        console.timeEnd('download-time');
                         console.log('STREAMS HERE', streams);
                         // JOIN STREAMS IN ORDER
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });

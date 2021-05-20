@@ -196,6 +196,12 @@ export class FileObject extends EventEmitter {
 
     let streams: DownloadStream[] = [];
 
+    setInterval(() => {
+      console.log("shards number %s, but downloaded %s", this.rawShards.length, streams.length);
+    }, 10000);
+
+    console.time('download-time');
+
     await Promise.all(this.rawShards.map(async (shard, i) => {
       try {
         logger.info('Downloading shard %s', shard.index);
@@ -233,6 +239,8 @@ export class FileObject extends EventEmitter {
         shard.healthy = false;
       } 
     }));
+
+    console.timeEnd('download-time');
 
     console.log('STREAMS HERE', streams);
 
