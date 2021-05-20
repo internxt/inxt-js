@@ -33,7 +33,7 @@ export class ShardObject extends EventEmitter {
     this.exchangeReport = new ExchangeReport(config);
   }
 
-  StartDownloadShard(): Readable {
+  StartDownloadShard(): Promise<Readable> {
     return DownloadShardRequest(this.config, this.shardInfo.farmer.address, this.shardInfo.farmer.port, this.shardInfo.hash, this.shardInfo.token, this.shardInfo.farmer.nodeID);
   }
 

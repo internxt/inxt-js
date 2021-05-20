@@ -60,7 +60,7 @@ export interface ProxyRequest {
     id: string;
 }
 
-interface ProxyManager {
+export interface ProxyManager {
     url: string;
     free: () => void;
 }

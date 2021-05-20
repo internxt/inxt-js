@@ -12,16 +12,21 @@ import { ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';
 import * as dotenv from 'dotenv';
 import { Shard } from '../api/shard';
-import { getProxy } from './proxy';
+import { getProxy, ProxyManager } from './proxy';
 import { logger } from '../lib/utils/logger';
 dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 
 const INXT_API_URL = process.env.INXT_API_URL;
 const PROXY = 'https://api.internxt.com:8081';
 
-export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig): Promise<AxiosResponse<JSON>> {
-  const proxy = await getProxy();
-  const url = `${proxy.url}/${targetUrl}`;
+export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy: boolean = true): Promise<AxiosResponse<JSON>> {
+  let reqUrl = targetUrl;
+  let proxy: ProxyManager;
+
+  if (useProxy) {
+    proxy = await getProxy();
+    reqUrl = `${proxy.url}/${targetUrl}`;
+  }
 
   const DefaultOptions: AxiosRequestConfig = {
     method,
@@ -29,29 +34,32 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
     },
-    url
+    url: reqUrl
   };
 
   const options = { ...DefaultOptions, ...params };
 
   return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
-    proxy.free();
+    if (useProxy && proxy) { proxy.free(); }
     return value;
   });
 }
 
-export function streamRequest(targetUrl: string, nodeID: string): Readable {
-  // const proxy = await getProxy();
-  const URL = `${PROXY}/${targetUrl}`;
+export async function streamRequest(targetUrl: string, nodeID: string, useProxy: boolean = true): Promise<Readable> {
+  let proxy: ProxyManager;
+  let reqUrl = targetUrl;
 
-  logger.info('StreamRequest to %s', URL);
+  if (useProxy) {
+    proxy = await getProxy();
+    reqUrl = `${proxy.url}/${targetUrl}`;
+  }
 
-  const uriParts = url.parse(URL);
+  logger.info('Stream req (using proxy %s) to %s', useProxy, reqUrl);
+
+  const uriParts = url.parse(reqUrl);
   let downloader: ClientRequest | null = null;
 
   function _createDownloadStream(): ClientRequest {
-    // new https.Agent({ keepAlive: true, keepAliveMsecs: 25000 });
-
     return https.get({
       protocol: uriParts.protocol,
       hostname: uriParts.hostname,
@@ -70,7 +78,7 @@ export function streamRequest(targetUrl: string, nodeID: string): Readable {
       if (!downloader) {
         downloader = _createDownloadStream();
 
-        // proxy.free();
+        if (useProxy && proxy) { proxy.free(); }
 
         downloader.on('response', (res: IncomingMessage) => {
           res
