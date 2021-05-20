@@ -196,10 +196,6 @@ export class FileObject extends EventEmitter {
     let streams: DownloadStream[] = [];
 
     await Promise.all(this.rawShards.map(async (shard, i) => {
-      const intervalId = setInterval(() => {
-        console.log('Still here for shard %s', shard.index)
-      }, 10000);
-
       try {
         logger.info('Downloading shard %s', shard.index);
 
@@ -233,9 +229,7 @@ export class FileObject extends EventEmitter {
         })
 
         shard.healthy = false;
-      } finally {
-        clearInterval(intervalId);
-      }
+      } 
     }));
 
     // JOIN STREAMS IN ORDER
