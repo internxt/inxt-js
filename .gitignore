@@ -6,3 +6,5 @@ notes.*
 
 # Files for testing
 lab/files
+
+.DS_Store
