@@ -1,21 +1,19 @@
-import { EnvironmentConfig } from "..";
+import { utils } from 'rs-wrapper';
 import { Readable } from 'stream';
 import { randomBytes } from 'crypto';
 
+import { EnvironmentConfig } from '..';
 import * as api from '../services/request';
 
-import EncryptStream from "../lib/encryptStream";
+import EncryptStream from '../lib/encryptStream';
 import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
 import { FunnelStream } from "../lib/funnelStream";
-import { computeShardSize } from "../lib/utils/shard";
 import { getShardMeta, ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';
-import { ERRORS } from "../lib/errors";
+import { logger } from "../lib/utils/logger";
 
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
-import { logger } from "../lib/utils/logger";
-import { utils } from 'rs-wrapper';
 
 export interface FileMeta {
     size: number;
