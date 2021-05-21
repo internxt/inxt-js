@@ -54,7 +54,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
         if (rs) {
             // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
-            logger.info("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+            logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
             const parities = await getParities(fileContent, shardSize, nShards, parityShards);
 
