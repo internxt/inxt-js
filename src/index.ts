@@ -164,7 +164,7 @@ export class Environment {
       })
       .catch((err: Error) => {
         logger.error(`Error encrypting filename due to ${err.message}`);
-        console.error(err);
+        logger.error(err);
 
         finished(err, null);
       });

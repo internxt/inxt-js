@@ -53,7 +53,6 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         let paritiesUploadRequests: Promise<ShardMeta>[] = [];
 
         if (rs) {
-            // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
             logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
             const parities = await getParities(fileContent, shardSize, nShards, parityShards);
@@ -65,7 +64,6 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
             action.parity = true;
             action.nShards = parityShards;
 
-            // upload parities
             paritiesUploadRequests = uploadShards(action);
         } else {
             logger.debug('File too small (%s), not creating parities', fileSize);
@@ -91,7 +89,6 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
             const savingFileResponse = await createBucketEntry(File, fileMeta, uploadResponses, rs);
 
-            // TODO: Change message and way of handling
             if (!savingFileResponse) {
                 throw new Error('Can not save the file in network');
             }
