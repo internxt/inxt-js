@@ -83,7 +83,9 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
                     return shardMeta;
                 })
-            );
+            ).catch((err) => {
+                throw new Error('Farmer request error');
+            });
 
             logger.debug('Upload finished');
 
