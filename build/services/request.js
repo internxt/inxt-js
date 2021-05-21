@@ -102,7 +102,8 @@ function request(config, method, targetUrl, params, useProxy) {
                             username: config.bridgeUser,
                             password: crypto_1.sha256(Buffer.from(config.bridgePass)).toString('hex')
                         },
-                        url: reqUrl
+                        url: reqUrl,
+                        maxContentLength: Infinity
                     };
                     options = __assign(__assign({}, DefaultOptions), params);
                     return [2 /*return*/, axios_1.default.request(options).then(function (value) {
@@ -227,8 +228,8 @@ function getFileById(config, bucketId, fileId, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'get', targetUrl, finalParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.getFileById = getFileById;
 /**
@@ -246,8 +247,8 @@ function createFrame(config, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'post', targetUrl, finalParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.createFrame = createFrame;
 /**
@@ -269,8 +270,8 @@ function createEntryFromFrame(config, bucketId, body, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'post', targetUrl, finalParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.createEntryFromFrame = createEntryFromFrame;
 /**
@@ -292,8 +293,8 @@ function addShardToFrame(config, frameId, body, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'put', targetUrl, finalParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.addShardToFrame = addShardToFrame;
 /**
@@ -302,8 +303,8 @@ exports.addShardToFrame = addShardToFrame;
  * @param body
  */
 function sendUploadExchangeReport(config, exchangeReport) {
-    return exchangeReport.sendReport()
-        .catch(extractErrorMsg);
+    return exchangeReport.sendReport();
+    // .catch(extractErrorMsg);
 }
 exports.sendUploadExchangeReport = sendUploadExchangeReport;
 /**
@@ -313,7 +314,7 @@ exports.sendUploadExchangeReport = sendUploadExchangeReport;
  * @param content Buffer with shard content
  */
 function sendShardToNode(config, shard, content) {
-    var targetUrl = PROXY + "/http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
+    var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -322,7 +323,7 @@ function sendShardToNode(config, shard, content) {
         data: content
     };
     return request(config, 'post', targetUrl, defParams)
-        .then(function (res) { return res.data; })
-        .catch(extractErrorMsg);
+        .then(function (res) { return res.data; });
+    // .catch(extractErrorMsg);
 }
 exports.sendShardToNode = sendShardToNode;

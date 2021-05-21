@@ -34,7 +34,8 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
       username: config.bridgeUser,
       password: sha256(Buffer.from(config.bridgePass)).toString('hex')
     },
-    url: reqUrl
+    url: reqUrl,
+    maxContentLength: Infinity
   };
 
   const options = { ...DefaultOptions, ...params };
@@ -171,7 +172,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
 
   return request(config, 'get', targetUrl, finalParams)
     .then<getFileByIdResponse>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 export interface FrameStaging {
@@ -206,7 +207,7 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
 
   return request(config, 'post', targetUrl, finalParams)
     .then<FrameStaging>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 export interface CreateEntryFromFrameBody {
@@ -266,7 +267,7 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
 
   return request(config, 'post', targetUrl, finalParams)
     .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 interface AddShardToFrameBody {
@@ -307,7 +308,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 
   return request(config, 'put', targetUrl, finalParams)
     .then<ContractNegotiated>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 /**
@@ -317,7 +318,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
   return exchangeReport.sendReport()
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }
 
 interface SendShardToNodeResponse {
@@ -331,7 +332,7 @@ interface SendShardToNodeResponse {
  * @param content Buffer with shard content
  */
 export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): Promise<SendShardToNodeResponse | void> {
-  const targetUrl = `${PROXY}/http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
+  const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
   const defParams: AxiosRequestConfig = {
     headers: {
@@ -343,5 +344,5 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
 
   return request(config, 'post', targetUrl, defParams)
     .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
-    .catch(extractErrorMsg);
+    // .catch(extractErrorMsg);
 }

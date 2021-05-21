@@ -25,17 +25,17 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
     const Output = await File.StartUploadFile();
     
     const fileSize = fileMeta.size;
-    let fileContent: Buffer = Buffer.alloc(0);
+    const buffs: Buffer[] = [];
 
     progress(0, 0, fileSize);
 
-    Output.on('data', async (shard: Buffer) => {
-        fileContent = Buffer.concat([fileContent, shard]);
-    });
+    Output.on('data', async (shard: Buffer) => { buffs.push(shard); });
 
     Output.on('error', (err) => finish(err, null));
 
     Output.on('end', async () => {
+        let fileContent = Buffer.concat(buffs);
+
         const shardSize = utils.determineShardSize(fileSize);
         const nShards = Math.ceil(fileSize / shardSize);
         const parityShards = utils.determineParityShards(nShards);
@@ -47,18 +47,18 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
             fileContent, nShards, shardSize, fileObject: File, firstIndex: 0, parity: false
         }
 
-        console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
+        logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
 
         let shardUploadRequests = uploadShards(action);
         let paritiesUploadRequests: Promise<ShardMeta>[] = [];
 
         if (rs) {
-            console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
-            console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+            // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
+            logger.info("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
 
             const parities = await getParities(fileContent, shardSize, nShards, parityShards);
 
-            console.log("Parities content size", parities.length);
+            logger.debug("Parities content size %s", parities.length);
 
             action.fileContent = Buffer.from(parities);
             action.firstIndex = shardUploadRequests.length;
@@ -68,11 +68,11 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
             // upload parities
             paritiesUploadRequests = uploadShards(action);
         } else {
-            console.log('File too small (%s), not creating parities', fileSize);
+            logger.debug('File too small (%s), not creating parities', fileSize);
         }
 
         try {
-            console.log('Waiting for upload to progress');
+            logger.debug('Waiting for upload to progress');
 
             let currentBytesUploaded = 0;
             const uploadResponses = await Promise.all(
@@ -85,12 +85,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
                 })
             );
 
-            console.log('Upload finished');
-
-            // TODO: Check message and way of handling
-            if (uploadResponses.length === 0) {
-                throw new Error('no upload requests has been made');
-            }
+            logger.debug('Upload finished');
 
             const savingFileResponse = await createBucketEntry(File, fileMeta, uploadResponses, rs);
 
@@ -102,7 +97,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
             progress(100, fileSize, fileSize);
             finish(null, savingFileResponse);
 
-            console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
+            logger.info('File uploaded with id %s', savingFileResponse.id);
         } catch (err) {
             finish(err, null);
         }
@@ -157,8 +152,6 @@ function uploadShards(action: UploadShardsAction): Promise<ShardMeta>[] {
 
     for (let i = action.firstIndex; i < (action.firstIndex + action.nShards); i++) {
         currentShard = action.fileContent.slice(from, from + action.shardSize);
-
-        console.log('Uploading shard index %s size %s parity %s', i, currentShard.length, action.parity);
 
         shardUploadRequests.push(uploadShard(action.fileObject, currentShard, i, action.parity));
 

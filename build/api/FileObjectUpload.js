@@ -76,7 +76,6 @@ var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
 var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
-var errors_1 = require("../lib/errors");
 var reports_1 = require("./reports");
 var logger_1 = require("../lib/utils/logger");
 var rs_wrapper_1 = require("rs-wrapper");
@@ -110,96 +109,39 @@ var FileObjectUpload = /** @class */ (function () {
     };
     FileObjectUpload.prototype.CheckBucketExistance = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0:
-                        logger_1.logger.info("checking if bucket " + this.bucketId + " exists");
-                        _a.label = 1;
+                    case 0: 
+                    // if bucket not exists, bridge returns an error
+                    return [4 /*yield*/, api.getBucketById(this.config, this.bucketId)];
                     case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        // if bucket not exists, bridge returns an error
-                        return [4 /*yield*/, api.getBucketById(this.config, this.bucketId)];
-                    case 2:
                         // if bucket not exists, bridge returns an error
                         _a.sent();
-                        logger_1.logger.info("bucket " + this.bucketId + " exists");
-                        return [2 /*return*/, false];
-                    case 3:
-                        err_1 = _a.sent();
-                        console.error(err_1);
-                        err_1 = __assign(__assign({}, err_1), { message: "CheckBucketExistanceError: Due to " + (err_1.message || '??') });
-                        if (err_1.message === errors_1.ERRORS.BUCKET_NOT_FOUND) {
-                            logger_1.logger.error("Bucket " + this.bucketId + " not found");
-                            return [2 /*return*/, true];
-                        }
-                        else {
-                            return [2 /*return*/, Promise.reject(err_1)];
-                        }
-                        return [3 /*break*/, 4];
-                    case 4: return [2 /*return*/];
+                        logger_1.logger.info('Bucket %s exists', this.bucketId);
+                        return [2 /*return*/, true];
                 }
             });
         });
     };
     FileObjectUpload.prototype.StageFile = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, err_2;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, api.createFrame(this.config)];
-                    case 1:
-                        if (response = _a.sent()) {
-                            this.frameId = response.id;
-                            logger_1.logger.debug("staged a file with frame " + this.frameId);
-                        }
-                        else {
-                            throw new Error('Staging file response was empty');
-                        }
-                        return [3 /*break*/, 3];
-                    case 2:
-                        err_2 = _a.sent();
-                        err_2 = __assign(__assign({}, err_2), { message: "StageFileError: Due to " + (err_2.message || '??') });
-                        return [2 /*return*/, Promise.reject(err_2)];
-                    case 3: return [2 /*return*/];
-                }
-            });
+        var _this = this;
+        return api.createFrame(this.config).then(function (frame) {
+            if (!frame || !frame.id) {
+                throw new Error('Bridge frame staging error');
+            }
+            _this.frameId = frame.id;
+            logger_1.logger.info('Staged a file with frame %s', _this.frameId);
         });
     };
     FileObjectUpload.prototype.SaveFileInNetwork = function (bucketEntry) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, err_3;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)];
-                    case 1:
-                        response = _a.sent();
-                        if (response) {
-                            logger_1.logger.info("saved file in network with id " + response.id + " inside bucket " + this.bucketId);
-                        }
-                        else {
-                            throw new Error('Save file in network response was empty');
-                        }
-                        return [2 /*return*/, response];
-                    case 2:
-                        err_3 = _a.sent();
-                        err_3 = __assign(__assign({}, err_3), { message: "SaveFileInNetworkError: Due to " + (err_3.message || '??') });
-                        return [2 /*return*/, Promise.reject(err_3)];
-                    case 3: return [2 /*return*/];
-                }
-            });
-        });
+        return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
     };
     FileObjectUpload.prototype.NegotiateContract = function (frameId, shardMeta) {
         return api.addShardToFrame(this.config, frameId, shardMeta);
     };
     FileObjectUpload.prototype.NodeRejectedShard = function (encryptedShard, shard) {
         return __awaiter(this, void 0, void 0, function () {
-            var err_4;
+            var err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -207,11 +149,10 @@ var FileObjectUpload = /** @class */ (function () {
                         return [4 /*yield*/, api.sendShardToNode(this.config, shard, encryptedShard)];
                     case 1:
                         _a.sent();
-                        logger_1.logger.debug("node " + shard.farmer.nodeID + " accepted shard " + shard.hash);
                         return [2 /*return*/, false];
                     case 2:
-                        err_4 = _a.sent();
-                        return [2 /*return*/, Promise.reject(err_4)];
+                        err_1 = _a.sent();
+                        return [2 /*return*/, Promise.reject(err_1)];
                     case 3: return [2 /*return*/];
                 }
             });
@@ -245,12 +186,12 @@ var FileObjectUpload = /** @class */ (function () {
     };
     FileObjectUpload.prototype.UploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
         return __awaiter(this, void 0, void 0, function () {
-            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_5;
+            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_2;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-                        logger_1.logger.info('Uploading shard %s', shardMeta.hash);
+                        logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
                         token = "", operation = "";
                         farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
                         _a.label = 1;
@@ -262,10 +203,10 @@ var FileObjectUpload = /** @class */ (function () {
                             token = negotiatedContract.token;
                             operation = negotiatedContract.operation;
                             farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
-                            logger_1.logger.debug("Contract for shard " + shardMeta.hash + "(index " + shardMeta.index + ", size " + shardMeta.size + ") with token " + token);
+                            logger_1.logger.debug('Contract for shard %s (index %s, size %s) with token %s', shardMeta.hash, shardMeta.index, shardMeta.size, token);
                         }
                         else {
-                            throw new Error('Negotiated contract is empty');
+                            throw new Error('Bridge negotiating contract error');
                         }
                         hash = shardMeta.hash;
                         shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: parity, token: token, farmer: farmer, operation: operation };
@@ -278,6 +219,7 @@ var FileObjectUpload = /** @class */ (function () {
                             exchangeReport.DownloadError();
                         }
                         else {
+                            logger_1.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
                             exchangeReport.DownloadOk();
                         }
                         exchangeReport.params.exchangeEnd = new Date();
@@ -286,14 +228,14 @@ var FileObjectUpload = /** @class */ (function () {
                         _a.sent();
                         return [3 /*break*/, 9];
                     case 5:
-                        err_5 = _a.sent();
+                        err_2 = _a.sent();
                         if (!(attemps > 1)) return [3 /*break*/, 7];
-                        logger_1.logger.error('Upload for shard %s failed. Retrying ...', shardMeta.hash);
+                        logger_1.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_2.message);
                         return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity)];
                     case 6:
                         _a.sent();
                         return [3 /*break*/, 8];
-                    case 7: return [2 /*return*/, Promise.reject(err_5)];
+                    case 7: return [2 /*return*/, Promise.reject(err_2)];
                     case 8: return [3 /*break*/, 9];
                     case 9:
                         logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);

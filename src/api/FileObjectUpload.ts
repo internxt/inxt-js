@@ -56,60 +56,28 @@ export class FileObjectUpload {
   }
 
   async CheckBucketExistance(): Promise<boolean> {
-    logger.info(`checking if bucket ${this.bucketId} exists`);
+    // if bucket not exists, bridge returns an error
+    await api.getBucketById(this.config, this.bucketId);
 
-    try {
-        // if bucket not exists, bridge returns an error
-        await api.getBucketById(this.config, this.bucketId);
+    logger.info('Bucket %s exists', this.bucketId);
 
-        logger.info(`bucket ${this.bucketId} exists`);
-
-        return false;
-    } catch (err) {
-        console.error(err);
-        err = { ...err, message: `CheckBucketExistanceError: Due to ${err.message || '??'}` };
-
-        if (err.message === ERRORS.BUCKET_NOT_FOUND) {
-            logger.error(`Bucket ${this.bucketId} not found`);
-            return true;
-        } else {
-            return Promise.reject(err);
-        }
-    }
+    return true;
   }
 
-  async StageFile(): Promise<api.FrameStaging | void> {
-    let response;
-
-    try {
-        if (response = await api.createFrame(this.config)) {
-            this.frameId = response.id;
-
-            logger.debug(`staged a file with frame ${this.frameId}`);
-        } else {
-            throw new Error('Staging file response was empty');
+  StageFile(): Promise<void> {
+    return api.createFrame(this.config).then((frame) => {
+        if (!frame || !frame.id) {
+            throw new Error('Bridge frame staging error');
         }
-    } catch (err) {
-        err = { ...err, message: `StageFileError: Due to ${err.message || '??'}` };
-        return Promise.reject(err);
-    }
+
+        this.frameId = frame.id;
+
+        logger.info('Staged a file with frame %s', this.frameId);
+    })
   }
 
-  async SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
-    try {
-        const response = await api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
-
-        if (response) {
-            logger.info(`saved file in network with id ${response.id} inside bucket ${this.bucketId}`);
-        } else {
-            throw new Error('Save file in network response was empty');
-        }
-
-        return response;
-    } catch (err) {
-        err = { ...err, message: `SaveFileInNetworkError: Due to ${err.message || '??'}` };
-        return Promise.reject(err);
-    }
+  SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
+    return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
   }
 
   NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
@@ -119,9 +87,6 @@ export class FileObjectUpload {
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
     try {
         await api.sendShardToNode(this.config, shard, encryptedShard);
-
-        logger.debug(`node ${shard.farmer.nodeID} accepted shard ${shard.hash}`);
-
         return false;
     } catch (err) {
         return Promise.reject(err);
@@ -152,7 +117,7 @@ export class FileObjectUpload {
   async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
     const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
 
-    logger.info('Uploading shard %s', shardMeta.hash);
+    logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
     let negotiatedContract: ContractNegotiated | void;
     let token = "", operation = "";
@@ -164,9 +129,14 @@ export class FileObjectUpload {
             operation = negotiatedContract.operation;
             farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
-            logger.debug(`Contract for shard ${shardMeta.hash}(index ${shardMeta.index}, size ${shardMeta.size}) with token ${token}`);
+            logger.debug('Contract for shard %s (index %s, size %s) with token %s', 
+              shardMeta.hash, 
+              shardMeta.index, 
+              shardMeta.size, 
+              token
+            );
         } else {
-            throw new Error('Negotiated contract is empty');
+            throw new Error('Bridge negotiating contract error');
         }
 
         const hash = shardMeta.hash;
@@ -179,15 +149,16 @@ export class FileObjectUpload {
         if (await this.NodeRejectedShard(encryptedShard, shard)) {
             exchangeReport.DownloadError();
         } else {
+            logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+
             exchangeReport.DownloadOk();
         }
 
         exchangeReport.params.exchangeEnd = new Date();
         await exchangeReport.sendReport();
-
     } catch (err) {
         if (attemps > 1) {
-            logger.error('Upload for shard %s failed. Retrying ...', shardMeta.hash);
+            logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
             await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
         } else {
             return Promise.reject(err);

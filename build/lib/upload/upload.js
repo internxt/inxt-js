@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Upload = void 0;
 var rs_wrapper_1 = require("rs-wrapper");
 var FileObjectUpload_1 = require("../../api/FileObjectUpload");
+var logger_1 = require("../utils/logger");
 var MIN_SHARD_SIZE = 2097152; // 2Mb
 /**
  * Uploads a file to the network
@@ -50,7 +51,7 @@ var MIN_SHARD_SIZE = 2097152; // 2Mb
  */
 function Upload(config, bucketId, fileMeta, progress, finish) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, Output, fileSize, fileContent;
+        var File, Output, fileSize, buffs;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -65,21 +66,20 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                 case 2:
                     Output = _a.sent();
                     fileSize = fileMeta.size;
-                    fileContent = Buffer.alloc(0);
+                    buffs = [];
                     progress(0, 0, fileSize);
-                    Output.on('data', function (shard) { return __awaiter(_this, void 0, void 0, function () {
-                        return __generator(this, function (_a) {
-                            fileContent = Buffer.concat([fileContent, shard]);
-                            return [2 /*return*/];
-                        });
-                    }); });
+                    Output.on('data', function (shard) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
+                        buffs.push(shard);
+                        return [2 /*return*/];
+                    }); }); });
                     Output.on('error', function (err) { return finish(err, null); });
                     Output.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
-                        var shardSize, nShards, parityShards, rs, totalSize, action, shardUploadRequests, paritiesUploadRequests, parities, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
+                        var fileContent, shardSize, nShards, parityShards, rs, totalSize, action, shardUploadRequests, paritiesUploadRequests, parities, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
                         var _this = this;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
+                                    fileContent = Buffer.concat(buffs);
                                     shardSize = rs_wrapper_1.utils.determineShardSize(fileSize);
                                     nShards = Math.ceil(fileSize / shardSize);
                                     parityShards = rs_wrapper_1.utils.determineParityShards(nShards);
@@ -89,16 +89,16 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                         fileContent: fileContent, nShards: nShards, shardSize: shardSize,
                                         fileObject: File, firstIndex: 0, parity: false
                                     };
-                                    console.log('Shards obtained %s, shardSize %s', nShards, shardSize);
+                                    logger_1.logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
                                     shardUploadRequests = uploadShards(action);
                                     paritiesUploadRequests = [];
                                     if (!rs) return [3 /*break*/, 2];
-                                    console.log({ shardSize: shardSize, nShards: nShards, parityShards: parityShards, fileContentSize: fileContent.length });
-                                    console.log("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+                                    // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
+                                    logger_1.logger.info("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
                                     return [4 /*yield*/, getParities(fileContent, shardSize, nShards, parityShards)];
                                 case 1:
                                     parities = _a.sent();
-                                    console.log("Parities content size", parities.length);
+                                    logger_1.logger.debug("Parities content size %s", parities.length);
                                     action.fileContent = Buffer.from(parities);
                                     action.firstIndex = shardUploadRequests.length;
                                     action.parity = true;
@@ -107,11 +107,11 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     paritiesUploadRequests = uploadShards(action);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    console.log('File too small (%s), not creating parities', fileSize);
+                                    logger_1.logger.debug('File too small (%s), not creating parities', fileSize);
                                     _a.label = 3;
                                 case 3:
                                     _a.trys.push([3, 6, , 7]);
-                                    console.log('Waiting for upload to progress');
+                                    logger_1.logger.debug('Waiting for upload to progress');
                                     currentBytesUploaded_1 = 0;
                                     return [4 /*yield*/, Promise.all(shardUploadRequests.concat(paritiesUploadRequests).map(function (request) { return __awaiter(_this, void 0, void 0, function () {
                                             var shardMeta;
@@ -127,11 +127,7 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                         }); }))];
                                 case 4:
                                     uploadResponses = _a.sent();
-                                    console.log('Upload finished');
-                                    // TODO: Check message and way of handling
-                                    if (uploadResponses.length === 0) {
-                                        throw new Error('no upload requests has been made');
-                                    }
+                                    logger_1.logger.debug('Upload finished');
                                     return [4 /*yield*/, createBucketEntry(File, fileMeta, uploadResponses, rs)];
                                 case 5:
                                     savingFileResponse = _a.sent();
@@ -141,7 +137,7 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     }
                                     progress(100, fileSize, fileSize);
                                     finish(null, savingFileResponse);
-                                    console.log('All shards uploaded, check it mf: %s', savingFileResponse.id);
+                                    logger_1.logger.info('File uploaded with id %s', savingFileResponse.id);
                                     return [3 /*break*/, 7];
                                 case 6:
                                     err_1 = _a.sent();
@@ -197,7 +193,6 @@ function uploadShards(action) {
     var shardUploadRequests = [];
     for (var i = action.firstIndex; i < (action.firstIndex + action.nShards); i++) {
         currentShard = action.fileContent.slice(from, from + action.shardSize);
-        console.log('Uploading shard index %s size %s parity %s', i, currentShard.length, action.parity);
         shardUploadRequests.push(uploadShard(action.fileObject, currentShard, i, action.parity));
         from += action.shardSize;
     }

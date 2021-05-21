@@ -24,7 +24,7 @@ export declare class FileObjectUpload {
     constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string);
     init(): Promise<FileObjectUpload>;
     CheckBucketExistance(): Promise<boolean>;
-    StageFile(): Promise<api.FrameStaging | void>;
+    StageFile(): Promise<void>;
     SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse>;
     NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated>;
     NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean>;
