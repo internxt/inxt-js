@@ -43,14 +43,13 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         const rs = fileSize >= MIN_SHARD_SIZE;
         const totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
 
-        const action: UploadShardsAction = {
+        const shardsAction: UploadShardsAction = {
             fileContent, nShards, shardSize, fileObject: File, firstIndex: 0, parity: false
         };
 
-        logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
+        let paritiesAction: UploadShardsAction | void;
 
-        const shardUploadRequests = uploadShards(action);
-        let paritiesUploadRequests: Promise<ShardMeta>[] = [];
+        logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
 
         if (rs) {
             logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
@@ -59,14 +58,22 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
             logger.debug("Parities content size %s", parities.length);
 
-            action.fileContent = Buffer.from(parities);
-            action.firstIndex = shardUploadRequests.length;
-            action.parity = true;
-            action.nShards = parityShards;
-
-            paritiesUploadRequests = uploadShards(action);
+            paritiesAction = {
+                fileContent: Buffer.from(parities),
+                nShards: parityShards, 
+                shardSize, 
+                fileObject: File, 
+                firstIndex: nShards, 
+                parity: true
+            };
         } else {
             logger.debug('File too small (%s), not creating parities', fileSize);
+        }
+
+        let uploadRequests = uploadShards(shardsAction);
+
+        if (paritiesAction) {
+            uploadRequests = uploadRequests.concat(uploadShards(paritiesAction));
         }
 
         try {
@@ -74,7 +81,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
             let currentBytesUploaded = 0;
             const uploadResponses = await Promise.all(
-                shardUploadRequests.concat(paritiesUploadRequests).map(async (request) => {
+                uploadRequests.map(async (request) => {
                     const shardMeta = await request;
 
                     currentBytesUploaded = updateProgress(totalSize, currentBytesUploaded, shardMeta.size, progress);
