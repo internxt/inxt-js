@@ -1,8 +1,8 @@
 /// <reference types="node" />
-import { EnvironmentConfig } from "..";
 import { Readable } from 'stream';
+import { EnvironmentConfig } from '..';
 import * as api from '../services/request';
-import EncryptStream from "../lib/encryptStream";
+import EncryptStream from '../lib/encryptStream';
 import { FunnelStream } from "../lib/funnelStream";
 import { ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';

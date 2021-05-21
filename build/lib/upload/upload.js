@@ -94,7 +94,7 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     paritiesUploadRequests = [];
                                     if (!rs) return [3 /*break*/, 2];
                                     // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
-                                    logger_1.logger.info("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
+                                    logger_1.logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
                                     return [4 /*yield*/, getParities(fileContent, shardSize, nShards, parityShards)];
                                 case 1:
                                     parities = _a.sent();
@@ -124,7 +124,9 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                                         return [2 /*return*/, shardMeta];
                                                 }
                                             });
-                                        }); }))];
+                                        }); })).catch(function (err) {
+                                            throw new Error('Farmer request error');
+                                        })];
                                 case 4:
                                     uploadResponses = _a.sent();
                                     logger_1.logger.debug('Upload finished');

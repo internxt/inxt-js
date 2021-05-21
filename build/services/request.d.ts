@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
-import { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 import { ExchangeReport } from '../api/reports';
 import { ShardMeta } from '../lib/shardMeta';
@@ -8,7 +8,6 @@ import { ContractNegotiated } from '../lib/contracts';
 import { Shard } from '../api/shard';
 export declare function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean): Promise<AxiosResponse<JSON>>;
 export declare function streamRequest(targetUrl: string, nodeID: string, useProxy?: boolean): Promise<Readable>;
-export declare function extractErrorMsg(err: AxiosError): Promise<any>;
 interface getBucketByIdResponse {
     user: string;
     encryptionKey: string;

@@ -72,8 +72,12 @@ export class FileObject extends EventEmitter {
   async GetFileMirrors(): Promise<void> {
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
 
-    // Sanitize address
-    this.rawShards.forEach(shard => {
+    this.rawShards.forEach((shard) => {
+      if (!shard.farmer || !shard.farmer.nodeID || !shard.farmer.port || !shard.farmer.address) {
+        shard.healthy = false;
+        return;
+      }
+      
       shard.farmer.address = shard.farmer.address.trim();
     });
 
@@ -204,6 +208,12 @@ export class FileObject extends EventEmitter {
 
     await Promise.all(this.rawShards.map(async (shard, i) => {
       try {
+        console.log('SHARD HEALTHY', shard.healthy);
+
+        if (shard.healthy === false) {
+          throw new Error('Bridge request pointer error');
+        }
+
         logger.info('Downloading shard %s', shard.index);
 
         const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
@@ -242,12 +252,8 @@ export class FileObject extends EventEmitter {
 
     console.timeEnd('download-time');
 
-    console.log('STREAMS HERE', streams);
-
     // JOIN STREAMS IN ORDER
     streams.sort((sA, sB) => sA.index - sB.index);
-
-    console.log('STREAMS SORTED', streams);
 
     // RETURN ONE STREAM UNIFIED
     return new MultiStream(streams.map(s => s.content));

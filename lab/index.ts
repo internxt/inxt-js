@@ -50,39 +50,39 @@ function down(fileId: string, progress: DownloadProgressCallback, finish: OnlyEr
   })
 } 
 
-new Promise((resolve, reject) => {
-  up(size, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
-    logger.warn(`progress ${progress}% (${uploadedBytes} from ${totalBytes})`)
-  }, (err: Error | null, res: CreateEntryFromFrameResponse | null) => {
-    if (err) {
-      logger.error(`error during upload due to ${err.message}`)
-      reject(err);
-    } else {
-      logger.info('Upload finished.');
-      resolve(null);
-    }
-  })
-}).then(() => {
-  process.exit(0);
-}).catch((err) => {
-  logger.error(err);
-  process.exit(-1); 
-})
-
-
-// down('446fad14eb8539171713368d', (progress: number, downloadedBytes: number | null, totalBytes: number | null) => {
-//   logger.warn(`progress ${progress}% (${downloadedBytes} from ${totalBytes})`)
-// }, (err: Error | null) => {
-//   if(err) {
-//     logger.error(`there was an error downloading the file due to ${err.message}`)
-//   } else {
-//     logger.info('download finished!')
-//   }
+// new Promise((resolve, reject) => {
+//   up(size, (progress: number, uploadedBytes: number | null, totalBytes: number | null) => {
+//     logger.warn(`progress ${progress}% (${uploadedBytes} from ${totalBytes})`)
+//   }, (err: Error | null, res: CreateEntryFromFrameResponse | null) => {
+//     if (err) {
+//       logger.error(`error during upload due to ${err.message}`)
+//       reject(err);
+//     } else {
+//       logger.info('Upload finished.');
+//       resolve(null);
+//     }
+//   })
+// }).then(() => {
+//   process.exit(0);
+// }).catch((err) => {
+//   logger.error(err);
+//   process.exit(-1); 
 // })
-//   .then(() => {
-//     process.exit(0);
-//   })
-//   .catch((err) => {
-//     logger.error(err);
-//     process.exit(-1);
-//   })
+
+
+down('84d6706b599541f61bb9d842', (progress: number, downloadedBytes: number | null, totalBytes: number | null) => {
+  logger.warn(`progress ${progress}% (${downloadedBytes} from ${totalBytes})`)
+}, (err: Error | null) => {
+  if(err) {
+    logger.error(`there was an error downloading the file due to ${err.message}`)
+  } else {
+    logger.info('download finished!')
+  }
+})
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    logger.error(err);
+    process.exit(-1);
+  })

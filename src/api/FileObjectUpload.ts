@@ -156,10 +156,10 @@ export class FileObjectUpload {
         exchangeReport.sendReport().catch(() => {});
     } catch (err) {
         if (attemps > 1) {
-            logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
-            await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
+          logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
+          await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
         } else {
-            return Promise.reject(err);
+          return Promise.reject(err);
         }
     }
 

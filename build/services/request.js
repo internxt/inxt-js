@@ -69,7 +69,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.extractErrorMsg = exports.streamRequest = exports.request = void 0;
+exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.streamRequest = exports.request = void 0;
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
 var stream_1 = require("stream");
@@ -175,19 +175,6 @@ function streamRequest(targetUrl, nodeID, useProxy) {
     });
 }
 exports.streamRequest = streamRequest;
-function extractErrorMsg(err) {
-    if (err.response) {
-        return Promise.reject({
-            err: err.response,
-            message: err.response.data.error ? err.response.data.error : err.response.data.result,
-            status: err.response.status
-        });
-    }
-    else {
-        throw new Error('empty error message');
-    }
-}
-exports.extractErrorMsg = extractErrorMsg;
 /**
  * Checks if a bucket exists given its id
  * @param config App config
@@ -198,16 +185,15 @@ exports.extractErrorMsg = extractErrorMsg;
  */
 function getBucketById(config, bucketId, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId;
+    var targetUrl = URL + "/buckets/" + bucketId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
         }
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'get', targetUrl, finalParams)
+    return request(config, 'get', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.getBucketById = getBucketById;
 /**
@@ -220,16 +206,15 @@ exports.getBucketById = getBucketById;
  */
 function getFileById(config, bucketId, fileId, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
+    var targetUrl = URL + "/buckets/" + bucketId + "/file-ids/" + fileId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
         }
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'get', targetUrl, finalParams)
+    return request(config, 'get', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.getFileById = getFileById;
 /**
@@ -248,7 +233,6 @@ function createFrame(config, params) {
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'post', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.createFrame = createFrame;
 /**
@@ -271,7 +255,6 @@ function createEntryFromFrame(config, bucketId, body, params) {
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'post', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.createEntryFromFrame = createEntryFromFrame;
 /**
@@ -294,7 +277,6 @@ function addShardToFrame(config, frameId, body, params) {
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'put', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.addShardToFrame = addShardToFrame;
 /**
@@ -304,7 +286,6 @@ exports.addShardToFrame = addShardToFrame;
  */
 function sendUploadExchangeReport(config, exchangeReport) {
     return exchangeReport.sendReport();
-    // .catch(extractErrorMsg);
 }
 exports.sendUploadExchangeReport = sendUploadExchangeReport;
 /**
@@ -324,6 +305,5 @@ function sendShardToNode(config, shard, content) {
     };
     return request(config, 'post', targetUrl, defParams)
         .then(function (res) { return res.data; });
-    // .catch(extractErrorMsg);
 }
 exports.sendShardToNode = sendShardToNode;

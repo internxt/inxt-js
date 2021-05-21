@@ -122,8 +122,11 @@ var FileObject = /** @class */ (function (_super) {
                         return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
                     case 1:
                         _a.rawShards = _b.sent();
-                        // Sanitize address
                         this.rawShards.forEach(function (shard) {
+                            if (!shard.farmer || !shard.farmer.nodeID || !shard.farmer.port || !shard.farmer.address) {
+                                shard.healthy = false;
+                                return;
+                            }
                             shard.farmer.address = shard.farmer.address.trim();
                         });
                         this.length = this.rawShards.reduce(function (a, b) { return { size: a.size + b.size }; }, { size: 0 }).size;
@@ -262,6 +265,10 @@ var FileObject = /** @class */ (function (_super) {
                                     switch (_a.label) {
                                         case 0:
                                             _a.trys.push([0, 2, , 3]);
+                                            console.log('SHARD HEALTHY', shard.healthy);
+                                            if (shard.healthy === false) {
+                                                throw new Error('Bridge request pointer error');
+                                            }
                                             logger_1.logger.info('Downloading shard %s', shard.index);
                                             return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
                                         case 1:
@@ -298,10 +305,8 @@ var FileObject = /** @class */ (function (_super) {
                     case 1:
                         _a.sent();
                         console.timeEnd('download-time');
-                        console.log('STREAMS HERE', streams);
                         // JOIN STREAMS IN ORDER
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });
-                        console.log('STREAMS SORTED', streams);
                         // RETURN ONE STREAM UNIFIED
                         return [2 /*return*/, new MultiStream(streams.map(function (s) { return s.content; }))];
                 }

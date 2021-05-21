@@ -70,15 +70,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileObjectUpload = void 0;
+var rs_wrapper_1 = require("rs-wrapper");
 var crypto_1 = require("crypto");
 var api = __importStar(require("../services/request"));
 var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
 var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
-var reports_1 = require("./reports");
 var logger_1 = require("../lib/utils/logger");
-var rs_wrapper_1 = require("rs-wrapper");
+var reports_1 = require("./reports");
 var FileObjectUpload = /** @class */ (function () {
     function FileObjectUpload(config, fileMeta, bucketId) {
         this.config = config;
