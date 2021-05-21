@@ -284,7 +284,7 @@ exports.createEntryFromFrame = createEntryFromFrame;
  */
 function addShardToFrame(config, frameId, body, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = PROXY + "/" + URL + "/frames/" + frameId;
+    var targetUrl = URL + "/frames/" + frameId;
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -292,7 +292,7 @@ function addShardToFrame(config, frameId, body, params) {
         data: __assign(__assign({}, body), { challenges: body.challenges_as_str })
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'put', targetUrl, finalParams)
+    return request(config, 'put', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
     // .catch(extractErrorMsg);
 }

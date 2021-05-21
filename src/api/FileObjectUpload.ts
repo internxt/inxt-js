@@ -147,15 +147,15 @@ export class FileObjectUpload {
         exchangeReport.params.farmerId = shard.farmer.nodeID;
 
         if (await this.NodeRejectedShard(encryptedShard, shard)) {
-            exchangeReport.DownloadError();
+          exchangeReport.DownloadError();
         } else {
-            logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+          logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
 
-            exchangeReport.DownloadOk();
+          exchangeReport.DownloadOk();
         }
 
         exchangeReport.params.exchangeEnd = new Date();
-        await exchangeReport.sendReport();
+        exchangeReport.sendReport().catch(() => {});
     } catch (err) {
         if (attemps > 1) {
             logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);

@@ -196,7 +196,7 @@ var FileObjectUpload = /** @class */ (function () {
                         farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 5, , 9]);
+                        _a.trys.push([1, 4, , 8]);
                         return [4 /*yield*/, this.NegotiateContract(frameId, shardMeta)];
                     case 2:
                         if (negotiatedContract = _a.sent()) {
@@ -223,21 +223,19 @@ var FileObjectUpload = /** @class */ (function () {
                             exchangeReport.DownloadOk();
                         }
                         exchangeReport.params.exchangeEnd = new Date();
-                        return [4 /*yield*/, exchangeReport.sendReport()];
+                        exchangeReport.sendReport().catch(function () { });
+                        return [3 /*break*/, 8];
                     case 4:
-                        _a.sent();
-                        return [3 /*break*/, 9];
-                    case 5:
                         err_2 = _a.sent();
-                        if (!(attemps > 1)) return [3 /*break*/, 7];
+                        if (!(attemps > 1)) return [3 /*break*/, 6];
                         logger_1.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_2.message);
                         return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity)];
-                    case 6:
+                    case 5:
                         _a.sent();
-                        return [3 /*break*/, 8];
-                    case 7: return [2 /*return*/, Promise.reject(err_2)];
-                    case 8: return [3 /*break*/, 9];
-                    case 9:
+                        return [3 /*break*/, 7];
+                    case 6: return [2 /*return*/, Promise.reject(err_2)];
+                    case 7: return [3 /*break*/, 8];
+                    case 8:
                         logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
                         return [2 /*return*/, shardMeta];
                 }

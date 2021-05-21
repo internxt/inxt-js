@@ -296,7 +296,7 @@ interface AddShardToFrameBody {
  */
 export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${PROXY}/${URL}/frames/${frameId}`;
+  const targetUrl = `${URL}/frames/${frameId}`;
   const defParams: AxiosRequestConfig = {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -306,7 +306,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'put', targetUrl, finalParams)
+  return request(config, 'put', targetUrl, finalParams, false)
     .then<ContractNegotiated>((res: AxiosResponse) => res.data)
     // .catch(extractErrorMsg);
 }
