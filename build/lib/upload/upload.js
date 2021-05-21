@@ -93,7 +93,6 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     shardUploadRequests = uploadShards(action);
                                     paritiesUploadRequests = [];
                                     if (!rs) return [3 /*break*/, 2];
-                                    // console.log({ shardSize, nShards, parityShards, fileContentSize: fileContent.length });
                                     logger_1.logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
                                     return [4 /*yield*/, getParities(fileContent, shardSize, nShards, parityShards)];
                                 case 1:
@@ -103,7 +102,6 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     action.firstIndex = shardUploadRequests.length;
                                     action.parity = true;
                                     action.nShards = parityShards;
-                                    // upload parities
                                     paritiesUploadRequests = uploadShards(action);
                                     return [3 /*break*/, 3];
                                 case 2:
@@ -133,7 +131,6 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     return [4 /*yield*/, createBucketEntry(File, fileMeta, uploadResponses, rs)];
                                 case 5:
                                     savingFileResponse = _a.sent();
-                                    // TODO: Change message and way of handling
                                     if (!savingFileResponse) {
                                         throw new Error('Can not save the file in network');
                                     }

@@ -55,6 +55,7 @@
                 "constructor": "never"
             }
         ],
+        "no-console": true,
         "no-bitwise": false,
         "curly": [true],
         "newline-before-return": true,

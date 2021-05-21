@@ -105,7 +105,7 @@ var Environment = /** @class */ (function () {
         })
             .catch(function (err) {
             logger_1.logger.error("Error encrypting filename due to " + err.message);
-            console.error(err);
+            logger_1.logger.error(err);
             finished(err, null);
         });
     };
