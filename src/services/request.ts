@@ -97,18 +97,6 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy:
   });
 }
 
-export function extractErrorMsg(err: AxiosError): Promise<any> {
-  if (err.response) {
-    return Promise.reject({
-      err: err.response,
-      message: err.response.data.error ? err.response.data.error : err.response.data.result,
-      status: err.response.status
-    });
-  } else {
-    throw new Error('empty error message');
-  }
-}
-
 interface getBucketByIdResponse {
   user: string;
   encryptionKey: string;
@@ -143,7 +131,6 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
 
   return request(config, 'get', targetUrl, finalParams, false)
     .then<getBucketByIdResponse>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
 
 interface getFileByIdResponse {
@@ -172,7 +159,6 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
 
   return request(config, 'get', targetUrl, finalParams, false)
     .then<getFileByIdResponse>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
 
 export interface FrameStaging {
@@ -207,7 +193,6 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
 
   return request(config, 'post', targetUrl, finalParams, false)
     .then<FrameStaging>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
 
 export interface CreateEntryFromFrameBody {
@@ -267,7 +252,6 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
 
   return request(config, 'post', targetUrl, finalParams, false)
     .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
 
 interface AddShardToFrameBody {
@@ -308,7 +292,6 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
 
   return request(config, 'put', targetUrl, finalParams, false)
     .then<ContractNegotiated>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
 
 /**
@@ -318,7 +301,6 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
   return exchangeReport.sendReport()
-    // .catch(extractErrorMsg);
 }
 
 interface SendShardToNodeResponse {
@@ -344,5 +326,4 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
 
   return request(config, 'post', targetUrl, defParams)
     .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
-    // .catch(extractErrorMsg);
 }
