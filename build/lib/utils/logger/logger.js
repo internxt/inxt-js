@@ -49,9 +49,9 @@ var getLoggerInstance = function (level) {
         transports: [new Winston.transports.Console()]
     });
     // console.log(process.env.STAGE)
-    // if (process.env.STAGE !== 'development') {
-    //     logger.silent = true;
-    // }
+    if (process.env.STAGE !== 'development') {
+        logger.silent = true;
+    }
     return logger;
 };
 exports.logger = getLoggerInstance(1);
