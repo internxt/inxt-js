@@ -74,7 +74,7 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                     }); }); });
                     Output.on('error', function (err) { return finish(err, null); });
                     Output.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
-                        var fileContent, shardSize, nShards, parityShards, rs, totalSize, action, shardUploadRequests, paritiesUploadRequests, parities, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
+                        var fileContent, shardSize, nShards, parityShards, rs, totalSize, shardsAction, paritiesAction, parities, uploadRequests, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
                         var _this = this;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
@@ -85,33 +85,40 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     parityShards = rs_wrapper_1.utils.determineParityShards(nShards);
                                     rs = fileSize >= MIN_SHARD_SIZE;
                                     totalSize = rs ? fileSize + (parityShards * shardSize) : fileSize;
-                                    action = {
+                                    shardsAction = {
                                         fileContent: fileContent, nShards: nShards, shardSize: shardSize,
                                         fileObject: File, firstIndex: 0, parity: false
                                     };
                                     logger_1.logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
-                                    shardUploadRequests = uploadShards(action);
-                                    paritiesUploadRequests = [];
                                     if (!rs) return [3 /*break*/, 2];
                                     logger_1.logger.debug("Applying Reed Solomon. File size %s. Creating %s parities", fileContent.length, parityShards);
                                     return [4 /*yield*/, getParities(fileContent, shardSize, nShards, parityShards)];
                                 case 1:
                                     parities = _a.sent();
                                     logger_1.logger.debug("Parities content size %s", parities.length);
-                                    action.fileContent = Buffer.from(parities);
-                                    action.firstIndex = shardUploadRequests.length;
-                                    action.parity = true;
-                                    action.nShards = parityShards;
-                                    paritiesUploadRequests = uploadShards(action);
+                                    paritiesAction = {
+                                        fileContent: Buffer.from(parities),
+                                        nShards: parityShards,
+                                        shardSize: shardSize,
+                                        fileObject: File,
+                                        firstIndex: nShards,
+                                        parity: true
+                                    };
                                     return [3 /*break*/, 3];
                                 case 2:
                                     logger_1.logger.debug('File too small (%s), not creating parities', fileSize);
                                     _a.label = 3;
                                 case 3:
-                                    _a.trys.push([3, 6, , 7]);
+                                    uploadRequests = uploadShards(shardsAction);
+                                    if (paritiesAction) {
+                                        uploadRequests = uploadRequests.concat(uploadShards(paritiesAction));
+                                    }
+                                    _a.label = 4;
+                                case 4:
+                                    _a.trys.push([4, 7, , 8]);
                                     logger_1.logger.debug('Waiting for upload to progress');
                                     currentBytesUploaded_1 = 0;
-                                    return [4 /*yield*/, Promise.all(shardUploadRequests.concat(paritiesUploadRequests).map(function (request) { return __awaiter(_this, void 0, void 0, function () {
+                                    return [4 /*yield*/, Promise.all(uploadRequests.map(function (request) { return __awaiter(_this, void 0, void 0, function () {
                                             var shardMeta;
                                             return __generator(this, function (_a) {
                                                 switch (_a.label) {
@@ -125,11 +132,11 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                         }); })).catch(function (err) {
                                             throw new Error('Farmer request error');
                                         })];
-                                case 4:
+                                case 5:
                                     uploadResponses = _a.sent();
                                     logger_1.logger.debug('Upload finished');
                                     return [4 /*yield*/, createBucketEntry(File, fileMeta, uploadResponses, rs)];
-                                case 5:
+                                case 6:
                                     savingFileResponse = _a.sent();
                                     if (!savingFileResponse) {
                                         throw new Error('Can not save the file in network');
@@ -137,12 +144,12 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                                     progress(100, fileSize, fileSize);
                                     finish(null, savingFileResponse);
                                     logger_1.logger.info('File uploaded with id %s', savingFileResponse.id);
-                                    return [3 /*break*/, 7];
-                                case 6:
+                                    return [3 /*break*/, 8];
+                                case 7:
                                     err_1 = _a.sent();
                                     finish(err_1, null);
-                                    return [3 /*break*/, 7];
-                                case 7: return [2 /*return*/];
+                                    return [3 /*break*/, 8];
+                                case 8: return [2 /*return*/];
                             }
                         });
                     }); });
