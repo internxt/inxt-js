@@ -196,7 +196,7 @@ export interface FrameStaging {
  */
 export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${PROXY}/${URL}/frames`;
+  const targetUrl = `${URL}/frames`;
   const defParams: AxiosRequestConfig = {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -205,7 +205,7 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'post', targetUrl, finalParams)
+  return request(config, 'post', targetUrl, finalParams, false)
     .then<FrameStaging>((res: AxiosResponse) => res.data)
     // .catch(extractErrorMsg);
 }
@@ -255,7 +255,7 @@ export interface CreateEntryFromFrameResponse {
  */
 export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/files`;
+  const targetUrl = `${URL}/buckets/${bucketId}/files`;
   const defParams: AxiosRequestConfig = {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -265,7 +265,7 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'post', targetUrl, finalParams)
+  return request(config, 'post', targetUrl, finalParams, false)
     .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
     // .catch(extractErrorMsg);
 }

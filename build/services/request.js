@@ -239,14 +239,14 @@ exports.getFileById = getFileById;
  */
 function createFrame(config, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = PROXY + "/" + URL + "/frames";
+    var targetUrl = URL + "/frames";
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
         }
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'post', targetUrl, finalParams)
+    return request(config, 'post', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
     // .catch(extractErrorMsg);
 }
@@ -261,7 +261,7 @@ exports.createFrame = createFrame;
  */
 function createEntryFromFrame(config, bucketId, body, params) {
     var URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-    var targetUrl = PROXY + "/" + URL + "/buckets/" + bucketId + "/files";
+    var targetUrl = URL + "/buckets/" + bucketId + "/files";
     var defParams = {
         headers: {
             'Content-Type': 'application/octet-stream',
@@ -269,7 +269,7 @@ function createEntryFromFrame(config, bucketId, body, params) {
         data: body
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'post', targetUrl, finalParams)
+    return request(config, 'post', targetUrl, finalParams, false)
         .then(function (res) { return res.data; });
     // .catch(extractErrorMsg);
 }
