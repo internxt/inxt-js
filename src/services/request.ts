@@ -132,7 +132,7 @@ interface getBucketByIdResponse {
  */
 export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}`;
+  const targetUrl = `${URL}/buckets/${bucketId}`;
   const defParams: AxiosRequestConfig = {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -141,7 +141,7 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'get', targetUrl, finalParams)
+  return request(config, 'get', targetUrl, finalParams, false)
     .then<getBucketByIdResponse>((res: AxiosResponse) => res.data)
     // .catch(extractErrorMsg);
 }
@@ -161,7 +161,7 @@ interface getFileByIdResponse {
  */
 export function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${PROXY}/${URL}/buckets/${bucketId}/file-ids/${fileId}`;
+  const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`;
   const defParams: AxiosRequestConfig = {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -170,7 +170,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'get', targetUrl, finalParams)
+  return request(config, 'get', targetUrl, finalParams, false)
     .then<getFileByIdResponse>((res: AxiosResponse) => res.data)
     // .catch(extractErrorMsg);
 }
