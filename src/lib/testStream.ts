@@ -53,6 +53,7 @@ export class TestStream extends Transform {
   takeSliceOf(chunk: Buffer, sliceSize: number): Buffer {
     const slicedBuffer = chunk.slice(this.startPosition, this.startPosition + sliceSize);
     this.startPosition += sliceSize;
+
     return slicedBuffer;
   }
 

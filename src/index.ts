@@ -142,6 +142,7 @@ export class Environment {
       .then(stream => StreamToBlob(stream, 'application/octet-stream'))
       .then((file: Blob) => {
         options.finishedCallback(null);
+
         return file;
       });
   }
@@ -213,10 +214,10 @@ export class Environment {
 
 export function rsTest(size: number) {
   const buffer = randomBytes(size);
-  console.log(buffer.length)
+  console.log(buffer.length);
   const shardSize = utils.determineShardSize(size);
   const nShards = Math.ceil(size / shardSize);
-  const parityShards = utils.determineParityShards(nShards)
+  const parityShards = utils.determineParityShards(nShards);
 
   return encode(buffer, shardSize, nShards, parityShards).then((file) => {
     file[1] = 'g'.charCodeAt(0);
@@ -240,5 +241,3 @@ export interface EnvironmentConfig {
     shardRetry: number
   };
 }
-
-

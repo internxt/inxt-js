@@ -23,6 +23,7 @@ export class MirrorMock {
     DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Readable {
         const nh = new NodeRequestHeaders(ContentType.OCTET_STREAM, nodeID);
         const nr = new NodeRequest(address, '/shards', 3000, nh, token, hash);
+
         return this._node.get(nr).content;
     }
 
@@ -44,6 +45,7 @@ export class MirrorMock {
 
         if (finalShardHash === shard.hash) {
             exchangeReportMock.DownloadOk();
+
             return outputStream;
         } else {
             exchangeReportMock.DownloadError();
@@ -64,6 +66,7 @@ export class MirrorMock {
     async UploadShard(node: NodeMock, shardStream: Readable): Promise<boolean> {
         try {
             const nr: NodeResponse = await node.send(shardStream);
+
             return nr.status && nr.statusCode === 200;
         } catch (e) {
             return false;

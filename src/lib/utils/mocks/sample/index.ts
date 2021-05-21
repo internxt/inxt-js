@@ -15,6 +15,7 @@ const spawnNode = (spawner: NodeSpawner): NodeMock => {
     const path: string = spawner.path ? spawner.path : '/shards';
     const ID: string = spawner.ID ? spawner.ID : randomBytes(32).toString('hex');
     const hostname: string = spawner.hostname ? spawner.hostname : 'www.fakenode.com';
+
     return new NodeMock(port, path, ID, hostname);
 };
 
@@ -27,6 +28,7 @@ interface MirrorSpawner {
 const spawnMirror = (spawner: MirrorSpawner): MirrorMock => {
     const node: NodeMock = spawner.node ? spawner.node : spawnNode({ });
     const bridge: BridgeMock = spawner.bridge ? spawner.bridge : spawnBridge({ });
+
     return new MirrorMock(node, bridge);
 };
 
@@ -37,6 +39,7 @@ interface BridgeSpawner {
 
 const spawnBridge = (spawner: BridgeSpawner): BridgeMock => {
     const mirrors: ShardReferenced [] = spawner.mirrors ? spawner.mirrors : [spawnShardReferenced({ })];
+
     return new BridgeMock(mirrors);
 };
 

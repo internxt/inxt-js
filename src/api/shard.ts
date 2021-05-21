@@ -31,6 +31,7 @@ export interface Shard {
 
 export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable> {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
+
   return api.streamRequest(fetchUrl, nodeID);
 }
 
@@ -53,6 +54,7 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
   if (finalShardHash === shard.hash) {
     console.log('Hash %s is OK', finalShardHash);
     exchangeReport.DownloadOk();
+
     // exchangeReport.sendReport()
     return outputStream;
   } else {

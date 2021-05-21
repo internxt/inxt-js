@@ -30,6 +30,7 @@ export class BridgeMock {
 
         const mirrorsLimited = this._limit(mirrorsIncluded.filter(m => m.fileId === fileId && m.bucketId === bucketId), limit);
         const mirrorsSkipped = this._skip(mirrorsLimited, skip);
+
         return Promise.resolve(mirrorsSkipped);
     }
 

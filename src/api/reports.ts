@@ -82,6 +82,7 @@ export class ExchangeReport {
     if (!this.validate()) {
       return Promise.reject(Error('Not valid report to send'));
     }
+
     return request(this.config, 'POST', `${this.config.bridgeUrl}/reports/exchanges`, { data: this.params }, false);
   }
 

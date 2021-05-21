@@ -26,6 +26,7 @@ export class ProxyBalancer {
 
     attach(p: Proxy): ProxyBalancer {
         this.proxies.push(p);
+
         return this;
     }
 
@@ -66,7 +67,7 @@ export interface ProxyManager {
 }
 
 const proxyBalancer = new ProxyBalancer()
-    .attach(new Proxy('https://api.internxt.com:8081'))
+    .attach(new Proxy('https://api.internxt.com:8081'));
     // .attach(new Proxy('https://proxy1.internxt.com'))
     // .attach(new Proxy('https://proxy2.internxt.com'))
     // .attach(new Proxy('https://proxy3.internxt.com'))
@@ -76,7 +77,7 @@ const proxyBalancer = new ProxyBalancer()
 const mutex = new Mutex();
 
 export const getProxy = async (): Promise<ProxyManager> => {
-    let response = { ...new Proxy(''), free: () => { null;} };
+    let response = { ...new Proxy(''), free: () => { null; } };
 
     await mutex.dispatch(async () => {
         const proxy = await proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS);

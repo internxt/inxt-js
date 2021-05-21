@@ -25,6 +25,7 @@ function computeShardSizeBits(fileSize: number): number {
       return shardSize(hops);
     }
   }
+
   return 0;
 }
 
@@ -34,6 +35,7 @@ export function computeShardSize(fileSize: number): number {
   const shardSizeBits = computeShardSizeBits(fileSizeBits);
   // return the number of bytes
   const shardBytes = Math.ceil(shardSizeBits / 8);
+
   return shardBytes;
 }
 
@@ -42,5 +44,6 @@ export function totalDataShards(fileSize: number): number {
   // Convert to bits
   const fileSizeBits = fileSize * 8;
   const totalShards = Math.ceil(fileSizeBits / computeShardSize(fileSizeBits));
+
   return totalShards;
 }

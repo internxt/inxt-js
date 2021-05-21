@@ -7,7 +7,6 @@ import { reconstruct } from 'rs-wrapper';
 import { logger } from '../utils/logger';
 import { bufferToStream } from '../utils/buffer';
 
-
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
   if (!config.encryptionKey) {
     throw Error('Encryption key required');
@@ -52,8 +51,8 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   logger.info('Starting file download');
 
   setInterval(() => {
-    console.log('still alive')
-  }, 20000)
+    console.log('still alive');
+  }, 20000);
 
   const fileEncryptedStream = await File.StartDownloadFile2();
 
@@ -71,7 +70,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
 
       logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
 
-      let rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
+      const rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo?.erasure.type === 'reedsolomon';
       let passThrough = null;
 
       let shardsStatus = File.rawShards.map(shard => shard.healthy!);
@@ -81,8 +80,6 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       // shardsStatus[0] = false;
       // fileContent = Buffer.concat([Buffer.alloc(shardSize).fill(0), fileContent.slice(shardSize)])
       // ===========
-
-      
 
       const nCorruptShards = shardsStatus.map((shardStatus) => !shardStatus).length;
 
@@ -102,7 +99,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
               return reject(err);
             }
           }
-        } 
+        }
 
         reject(new Error(`${nCorruptShards} file shard(s) is/are corrupt`));
       } else {
@@ -110,7 +107,7 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
       }
 
       return resolve(bufferToStream(fileContent).pipe(File.decipher).pipe(out));
-    }); 
+    });
   });
 }
 
@@ -133,8 +130,8 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
 function handleFileResolving(fl: FileObject, downloadCb: DownloadProgressCallback, decryptionCb?: DecryptionProgressCallback) {
   let totalBytesDownloaded = 0, totalBytesDecrypted = 0;
   let progress = 0;
-  const totalBytes = fl.rawShards.length > 0 ? 
-    fl.rawShards.reduce((a, b) =>({ size: a.size + b.size }), { size: 0 }).size : 
+  const totalBytes = fl.rawShards.length > 0 ?
+    fl.rawShards.reduce((a, b) => ({ size: a.size + b.size }), { size: 0 }).size :
     0;
 
   function getDownloadProgress() {

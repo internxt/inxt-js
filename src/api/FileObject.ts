@@ -3,7 +3,6 @@ import { Duplex, Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { eachLimit, retry } from 'async';
 
-
 import DecryptStream from "../lib/decryptstream";
 import FileMuxer from "../lib/filemuxer";
 import { GenerateFileKey } from "../lib/crypto";
@@ -24,12 +23,13 @@ function BufferToStream(buffer: Buffer): Duplex {
   const stream = new Duplex();
   stream.push(buffer);
   stream.push(null);
+
   return stream;
 }
 
 interface DownloadStream {
-  content: Readable, 
-  index: number
+  content: Readable;
+  index: number;
 }
 
 export class FileObject extends EventEmitter {
@@ -66,6 +66,7 @@ export class FileObject extends EventEmitter {
         this.fileKey = await GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'));
       }
     }
+
     return this.fileInfo;
   }
 
@@ -75,9 +76,10 @@ export class FileObject extends EventEmitter {
     this.rawShards.forEach((shard) => {
       if (!shard.farmer || !shard.farmer.nodeID || !shard.farmer.port || !shard.farmer.address) {
         shard.healthy = false;
+
         return;
       }
-      
+
       shard.farmer.address = shard.farmer.address.trim();
     });
 
@@ -96,7 +98,7 @@ export class FileObject extends EventEmitter {
     const fileMuxer = new FileMuxer({ shards: 1, length: shard.size });
 
     const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
-    
+
     shardObject.StartDownloadShard().then((reqStream: Readable) => {
       fileMuxer.addInputSource(reqStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
     });
@@ -170,6 +172,7 @@ export class FileObject extends EventEmitter {
             }
 
             const buffer = await this.TryDownloadShardWithFileMuxer(newShard[0], excluded);
+
             return resolve(buffer);
           }
         } catch (err) {
@@ -190,15 +193,15 @@ export class FileObject extends EventEmitter {
     this.decipher.on('error', (err) => this.emit(DECRYPT.ERROR, err));
     this.decipher.on(DECRYPT.PROGRESS, (msg) => this.emit(DECRYPT.PROGRESS, msg));
 
-    let shardSize = utils.determineShardSize(this.final_length);
+    const shardSize = utils.determineShardSize(this.final_length);
 
     const lastShardIndex = this.rawShards.filter(shard => !shard.parity).length - 1;
-    const lastShardSize = this.rawShards[lastShardIndex].size; 
+    const lastShardSize = this.rawShards[lastShardIndex].size;
     const sizeToFillToZeroes = shardSize - lastShardSize;
 
     logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
 
-    let streams: DownloadStream[] = [];
+    const streams: DownloadStream[] = [];
 
     setInterval(() => {
       console.log("shards number %s, but downloaded %s", this.rawShards.length, streams.length);
@@ -244,10 +247,10 @@ export class FileObject extends EventEmitter {
         streams.push({
           content: bufferToStream(Buffer.alloc(shardSize).fill(0)),
           index: shard.index
-        })
+        });
 
         shard.healthy = false;
-      } 
+      }
     }));
 
     console.timeEnd('download-time');
@@ -278,12 +281,12 @@ export class FileObject extends EventEmitter {
     fileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
 
     let shardObject;
-    let shardSize = utils.determineShardSize(this.final_length);
+    const shardSize = utils.determineShardSize(this.final_length);
 
     const lastShardIndex = this.rawShards.filter(shard => !shard.parity).length - 1;
-    const lastShardSize = this.rawShards[lastShardIndex].size; 
+    const lastShardSize = this.rawShards[lastShardIndex].size;
     const sizeToFillToZeroes = shardSize - lastShardSize;
-    let currentShard = 0;
+    const currentShard = 0;
 
     eachLimit(this.rawShards, 1, async (shard, nextItem) => {
       if (!shard) {
@@ -299,9 +302,9 @@ export class FileObject extends EventEmitter {
       // If its ok, add it to the muxer.
       try {
         const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
-        
+
         logger.info('Download with file muxer finished succesfully, buffer length %s', shardBuffer.length);
-          
+
         fileMuxer.once('drain', () => {
             // fill to zeroes last shard
             if (currentShard === lastShardIndex) {
@@ -319,14 +322,14 @@ export class FileObject extends EventEmitter {
                   // If all data pushed, just break the loop.
                   if (start >= len) {
                     // fileMuxer.push(null)
-                    break
+                    break;
                   }
                 }
-                
+
               }
             }
-            
-            console.log('draining')
+
+            console.log('draining');
             this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
 
             shard.healthy = true;
@@ -335,17 +338,16 @@ export class FileObject extends EventEmitter {
             nextItem();
           });
 
-        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5)
+        fileMuxer.addInputSource(BufferToStream(shardBuffer), shard.size, Buffer.from(shard.hash, 'hex'), null, 5);
 
       } catch (err) {
         logger.warn('Shard download failed. Reason: %s', err.message);
         shard.healthy = false;
         // currentShard++;
 
-        nextItem();  
-      } 
-      
-      
+        nextItem();
+      }
+
       // this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer: Buffer) => {
       //   logger.info('Download with file muxer finished succesfully');
 

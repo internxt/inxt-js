@@ -71,7 +71,7 @@ export class FileObjectUpload {
         this.frameId = frame.id;
 
         logger.info('Staged a file with frame %s', this.frameId);
-    })
+    });
   }
 
   SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
@@ -85,6 +85,7 @@ export class FileObjectUpload {
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
     try {
         await api.sendShardToNode(this.config, shard, encryptedShard);
+
         return false;
     } catch (err) {
         return Promise.reject(err);
@@ -127,10 +128,10 @@ export class FileObjectUpload {
             operation = negotiatedContract.operation;
             farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
-            logger.debug('Contract for shard %s (index %s, size %s) with token %s', 
-              shardMeta.hash, 
-              shardMeta.index, 
-              shardMeta.size, 
+            logger.debug('Contract for shard %s (index %s, size %s) with token %s',
+              shardMeta.hash,
+              shardMeta.index,
+              shardMeta.size,
               token
             );
         } else {
@@ -153,7 +154,7 @@ export class FileObjectUpload {
         }
 
         exchangeReport.params.exchangeEnd = new Date();
-        exchangeReport.sendReport().catch(() => {});
+        exchangeReport.sendReport().catch(() => { });
     } catch (err) {
         if (attemps > 1) {
           logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
@@ -164,6 +165,7 @@ export class FileObjectUpload {
     }
 
     logger.info('Shard %s uploaded succesfully', shardMeta.hash);
+
     return shardMeta;
   }
 

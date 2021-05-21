@@ -18,6 +18,7 @@ function parseLogLevel(level: number): string {
     if (valueIndex === -1) {
         return levelNames[levelNames.length - 1];
     }
+
     return levelNames[valueIndex];
 }
 

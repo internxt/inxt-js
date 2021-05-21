@@ -19,7 +19,7 @@ dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 const INXT_API_URL = process.env.INXT_API_URL;
 const PROXY = 'https://api.internxt.com:8081';
 
-export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy: boolean = true): Promise<AxiosResponse<JSON>> {
+export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
   let proxy: ProxyManager;
 
@@ -42,11 +42,12 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
 
   return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
     if (useProxy && proxy) { proxy.free(); }
+
     return value;
   });
 }
 
-export async function streamRequest(targetUrl: string, nodeID: string, useProxy: boolean = true): Promise<Readable> {
+export async function streamRequest(targetUrl: string, nodeID: string, useProxy = true): Promise<Readable> {
   let proxy: ProxyManager;
   let reqUrl = targetUrl;
 
@@ -130,7 +131,7 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'get', targetUrl, finalParams, false)
-    .then<getBucketByIdResponse>((res: AxiosResponse) => res.data)
+    .then<getBucketByIdResponse>((res: AxiosResponse) => res.data);
 }
 
 interface getFileByIdResponse {
@@ -158,7 +159,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'get', targetUrl, finalParams, false)
-    .then<getFileByIdResponse>((res: AxiosResponse) => res.data)
+    .then<getFileByIdResponse>((res: AxiosResponse) => res.data);
 }
 
 export interface FrameStaging {
@@ -192,7 +193,7 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'post', targetUrl, finalParams, false)
-    .then<FrameStaging>((res: AxiosResponse) => res.data)
+    .then<FrameStaging>((res: AxiosResponse) => res.data);
 }
 
 export interface CreateEntryFromFrameBody {
@@ -205,7 +206,7 @@ export interface CreateEntryFromFrameBody {
   };
   erasure?: {
     type: string
-  }
+  };
 }
 
 export interface CreateEntryFromFrameResponse {
@@ -251,7 +252,7 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'post', targetUrl, finalParams, false)
-    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
+    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data);
 }
 
 interface AddShardToFrameBody {
@@ -291,7 +292,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'put', targetUrl, finalParams, false)
-    .then<ContractNegotiated>((res: AxiosResponse) => res.data)
+    .then<ContractNegotiated>((res: AxiosResponse) => res.data);
 }
 
 /**
@@ -300,7 +301,7 @@ export function addShardToFrame(config: EnvironmentConfig, frameId: string, body
  * @param body
  */
 export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
-  return exchangeReport.sendReport()
+  return exchangeReport.sendReport();
 }
 
 interface SendShardToNodeResponse {
@@ -325,5 +326,5 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
   };
 
   return request(config, 'post', targetUrl, defParams)
-    .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data)
+    .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data);
 }

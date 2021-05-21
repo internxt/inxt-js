@@ -32,6 +32,7 @@ export class GlobalHash {
 
   digest(): Buffer {
     this.HKeys.clear();
+
     return this.hasher.digest();
   }
 }

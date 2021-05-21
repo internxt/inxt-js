@@ -26,16 +26,19 @@ export function ripemd160(input: Buffer | string): Buffer {
 export function GetDeterministicKey(key: Buffer | string, data: Buffer | string): Buffer {
   const hash = crypto.createHash('sha512');
   hash.update(key).update(data);
+
   return hash.digest();
 }
 
 export async function GenerateBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
   const seed = await mnemonicToSeed(mnemonic);
+
   return GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'));
 }
 
 export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer | string): Promise<Buffer> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
+
   return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32);
 }
 
@@ -57,6 +60,7 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
     }
 
     hasher.update(filename);
+
     return hasher.digest().slice(0, 32);
   };
 
@@ -90,6 +94,7 @@ function decryptMeta(bufferBase64: string, decryptKey: string) {
 
   try {
     const dec = Buffer.concat([decipher.update(buffer), decipher.final()]);
+
     return dec.toString('utf8');
   } catch (e) {
     return null;
@@ -100,6 +105,7 @@ export function EncryptMeta(fileMeta: string, key: Buffer, iv: Buffer): string {
   const cipher: crypto.CipherCCM = Aes256gcmEncrypter(key, iv);
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()]);
   const digest = cipher.getAuthTag();
+
   return Buffer.concat([digest, iv, cipherTextBuf]).toString('base64');
 }
 
@@ -107,6 +113,7 @@ export function EncryptMetaBuffer(fileMeta: string, encryptKey: Buffer, iv: Buff
   const cipher: crypto.CipherGCM = Aes256gcmEncrypter(encryptKey, iv);
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()]);
   const digest = cipher.getAuthTag();
+
   return Buffer.concat([digest, iv, cipherTextBuf]);
 }
 

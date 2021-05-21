@@ -21,6 +21,7 @@ export class ExchangeReportMock {
         if (!this.validate()) {
             return Promise.reject(Error('Not valid report to send'));
         }
+
         return Promise.resolve(true);
     }
 
@@ -38,6 +39,7 @@ export class ExchangeReportMock {
         const bridgePass = 'fakePass';
         const encryptionKey = randomBytes(32).toString('hex');
         const config = { bridgeUrl, bridgeUser, bridgePass, encryptionKey };
+
         return new ExchangeReport(config);
     }
 }

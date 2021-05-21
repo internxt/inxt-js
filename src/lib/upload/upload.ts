@@ -23,7 +23,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
     const File = await new FileObjectUpload(config, fileMeta, bucketId).init();
     const Output = await File.StartUploadFile();
-    
+
     const fileSize = fileMeta.size;
     const buffs: Buffer[] = [];
 
@@ -34,7 +34,7 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
     Output.on('error', (err) => finish(err, null));
 
     Output.on('end', async () => {
-        let fileContent = Buffer.concat(buffs);
+        const fileContent = Buffer.concat(buffs);
 
         const shardSize = utils.determineShardSize(fileSize);
         const nShards = Math.ceil(fileSize / shardSize);
@@ -45,11 +45,11 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
         const action: UploadShardsAction = {
             fileContent, nShards, shardSize, fileObject: File, firstIndex: 0, parity: false
-        }
+        };
 
         logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
 
-        let shardUploadRequests = uploadShards(action);
+        const shardUploadRequests = uploadShards(action);
         let paritiesUploadRequests: Promise<ShardMeta>[] = [];
 
         if (rs) {

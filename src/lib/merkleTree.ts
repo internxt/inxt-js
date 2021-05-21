@@ -18,6 +18,7 @@ function arrayBufferToString(array: Buffer[]): string[] {
 
 export function preleaf(challenge: Buffer, encrypted: Buffer): Buffer {
   const preleafContent = Buffer.concat([challenge, encrypted]);
+
   return ripemd160(sha256(preleafContent));
 }
 
@@ -25,6 +26,7 @@ function preleafArray(encrypted: Buffer, challenge: Buffer[]): Buffer[] {
   const preleafArray = challenge.map((challenge) => {
     return Buffer.concat([challenge, encrypted]);
   });
+
   return preleafArray;
 }
 
@@ -56,6 +58,7 @@ function challengeArray(): Buffer[] {
   for (let i = 0; i < SHARD_CHALLENGES; i++) {
     challengeArray.push(challenge());
   }
+
   return challengeArray;
 }
 
@@ -80,6 +83,7 @@ function getChallenges(mT: MerkleTree): string[] {
   const challenges = mT.challenges.map(challengeBuffer => {
     return challengeBuffer.toString("hex");
   });
+
   return challenges;
 }
 
@@ -87,6 +91,7 @@ function getTree(mT: MerkleTree): string[] {
   const tree = mT.leaf.map(leafBuffer => {
     return leafBuffer.toString();
   });
+
   return tree;
 }
 
