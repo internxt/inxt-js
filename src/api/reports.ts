@@ -17,6 +17,8 @@ export class ExchangeReport {
   static INXT_REPORT_FAILURE = 1100;
 
   static INXT_REPORT_SHARD_UPLOADED = 'SHARD_UPLOADED';
+  static INXT_REPORT_UPLOAD_ERROR = 'TRANSFER_FAILED';
+
   static INXT_REPORT_SHARD_DOWNLOADED = 'SHARD_DOWNLOADED';
   static INXT_REPORT_MIRROR_FAILED = 'MIRROR_FAILED';
   static INXT_REPORT_TRANSFER_FAILED = 'TRANSFER_FAILED';
@@ -95,6 +97,7 @@ export class ExchangeReport {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
     this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR;
   }
+
   UploadOk() {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_SUCCESS;
     this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_SHARD_UPLOADED;
@@ -102,6 +105,6 @@ export class ExchangeReport {
 
   UploadError() {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
-    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR;
+    this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_UPLOAD_ERROR;
   }
 }
