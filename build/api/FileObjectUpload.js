@@ -216,14 +216,16 @@ var FileObjectUpload = /** @class */ (function () {
                         return [4 /*yield*/, this.NodeRejectedShard(encryptedShard, shard)];
                     case 3:
                         if (_a.sent()) {
-                            exchangeReport.DownloadError();
+                            exchangeReport.UploadError();
                         }
                         else {
                             logger_1.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
-                            exchangeReport.DownloadOk();
+                            exchangeReport.UploadOk();
                         }
                         exchangeReport.params.exchangeEnd = new Date();
-                        exchangeReport.sendReport().catch(function () { });
+                        exchangeReport.sendReport().catch(function () {
+                            // no op
+                        });
                         return [3 /*break*/, 8];
                     case 4:
                         err_2 = _a.sent();

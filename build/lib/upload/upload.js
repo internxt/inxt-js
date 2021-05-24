@@ -68,10 +68,7 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                     fileSize = fileMeta.size;
                     buffs = [];
                     progress(0, 0, fileSize);
-                    Output.on('data', function (shard) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
-                        buffs.push(shard);
-                        return [2 /*return*/];
-                    }); }); });
+                    Output.on('data', function (shard) { buffs.push(shard); });
                     Output.on('error', function (err) { return finish(err, null); });
                     Output.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
                         var fileContent, shardSize, nShards, parityShards, rs, totalSize, shardsAction, paritiesAction, parities, uploadRequests, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;

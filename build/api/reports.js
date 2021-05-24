@@ -66,11 +66,12 @@ var ExchangeReport = /** @class */ (function () {
     };
     ExchangeReport.prototype.UploadError = function () {
         this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
-        this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_DOWNLOAD_ERROR;
+        this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_UPLOAD_ERROR;
     };
     ExchangeReport.INXT_REPORT_SUCCESS = 1000;
     ExchangeReport.INXT_REPORT_FAILURE = 1100;
     ExchangeReport.INXT_REPORT_SHARD_UPLOADED = 'SHARD_UPLOADED';
+    ExchangeReport.INXT_REPORT_UPLOAD_ERROR = 'TRANSFER_FAILED';
     ExchangeReport.INXT_REPORT_SHARD_DOWNLOADED = 'SHARD_DOWNLOADED';
     ExchangeReport.INXT_REPORT_MIRROR_FAILED = 'MIRROR_FAILED';
     ExchangeReport.INXT_REPORT_TRANSFER_FAILED = 'TRANSFER_FAILED';

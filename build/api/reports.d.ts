@@ -13,6 +13,7 @@ export declare class ExchangeReport {
     static INXT_REPORT_SUCCESS: number;
     static INXT_REPORT_FAILURE: number;
     static INXT_REPORT_SHARD_UPLOADED: string;
+    static INXT_REPORT_UPLOAD_ERROR: string;
     static INXT_REPORT_SHARD_DOWNLOADED: string;
     static INXT_REPORT_MIRROR_FAILED: string;
     static INXT_REPORT_TRANSFER_FAILED: string;
