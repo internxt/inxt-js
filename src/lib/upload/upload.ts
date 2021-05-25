@@ -110,7 +110,11 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
     });
 }
 
-function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
+export function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
+    return fileObject.SaveFileInNetwork(generateBucketEntry(fileObject, fileMeta, shardMetas, rs));
+}
+
+export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
     const bucketEntry: CreateEntryFromFrameBody = {
         frame: fileObject.frameId,
         filename: fileMeta.name,
@@ -125,7 +129,7 @@ function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, sha
         bucketEntry.erasure = { type: "reedsolomon" };
     }
 
-    return fileObject.SaveFileInNetwork(bucketEntry);
+    return bucketEntry;
 }
 
 async function getParities(file: Buffer, shardSize: number, totalShards: number, parityShards: number) {
