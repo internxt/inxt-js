@@ -95,10 +95,8 @@ export class FileObjectUpload {
   GenerateHmac(shardMetas: ShardMeta[]): string {
     const hmac = sha512HmacBuffer(this.fileEncryptionKey);
 
-    if (shardMetas && shardMetas.length > 0) {
-        for (let i = 0; i < shardMetas.length; i++) {
-            hmac.update(Buffer.from(shardMetas[i].hash, 'hex'));
-        }
+    for (const shardMeta of shardMetas) {
+      hmac.update(Buffer.from(shardMeta.hash, 'hex'));
     }
 
     return hmac.digest().toString('hex');
