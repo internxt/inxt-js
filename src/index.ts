@@ -154,19 +154,23 @@ export class Environment {
    */
   uploadFile(bucketId: string, params: UploadFileParams): void {
     if (!this.config.encryptionKey) {
-      throw new Error('Mnemonic was not provided, please, provide a mnemonic');
+      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+      return;
     }
 
     if (!bucketId) {
-      throw new Error('Bucket id was not provided');
+      params.finishedCallback(Error('Bucket id was not provided'), null);
+      return;
     }
 
     if (!params.filename) {
-      throw new Error('Filename was not provided');
+      params.finishedCallback(Error('Filename was not provided'), null);
+      return;
     }
 
     if (params.fileContent.size === 0) {
-      throw new Error('Can not upload a file with size 0');
+      params.finishedCallback(Error('Can not upload a file with size 0'), null);
+      return;
     } 
 
     const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
