@@ -147,12 +147,29 @@ export class Environment {
       });
   }
 
-  uploadFile(bucketId: string, data: UploadFileParams): void {
+  /**
+   * Uploads a file from a web browser
+   * @param bucketId Bucket id where file is going to be stored
+   * @param params Upload file params
+   */
+  uploadFile(bucketId: string, params: UploadFileParams): void {
     if (!this.config.encryptionKey) {
       throw new Error('Mnemonic was not provided, please, provide a mnemonic');
     }
 
-    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = data;
+    if (!bucketId) {
+      throw new Error('Bucket id was not provided');
+    }
+
+    if (!params.filename) {
+      throw new Error('Filename was not provided');
+    }
+
+    if (params.fileContent.size === 0) {
+      throw new Error('Can not upload a file with size 0');
+    } 
+
+    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
