@@ -49,6 +49,7 @@ var getLoggerInstance = function (level) {
         format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }), Winston.format.splat(), Winston.format.printf(function (info) { return info.timestamp + " " + info.level + ": " + info.message; })),
         transports: [new Winston.transports.Console()]
     });
+    // console.log(process.env.STAGE)
     if (process.env.STAGE !== 'development') {
         logger.silent = true;
     }
