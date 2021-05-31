@@ -88,14 +88,36 @@ var Environment = /** @class */ (function () {
             .then(function (file) {
             options.finishedCallback(null);
             return file;
+        }).catch(function (err) {
+            logger_1.logger.error('Error downloading file due to %s', err.message);
+            logger_1.logger.error(err);
+            options.finishedCallback(err);
         });
     };
-    Environment.prototype.uploadFile = function (bucketId, data) {
+    /**
+     * Uploads a file from a web browser
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Upload file params
+     */
+    Environment.prototype.uploadFile = function (bucketId, params) {
         var _this = this;
         if (!this.config.encryptionKey) {
-            throw new Error('Mnemonic was not provided, please, provide a mnemonic');
+            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+            return;
         }
-        var filename = data.filename, size = data.fileSize, fileContent = data.fileContent, progress = data.progressCallback, finished = data.finishedCallback;
+        if (!bucketId) {
+            params.finishedCallback(Error('Bucket id was not provided'), null);
+            return;
+        }
+        if (!params.filename) {
+            params.finishedCallback(Error('Filename was not provided'), null);
+            return;
+        }
+        if (params.fileContent.size === 0) {
+            params.finishedCallback(Error('Can not upload a file with size 0'), null);
+            return;
+        }
+        var filename = params.filename, size = params.fileSize, fileContent = params.fileContent, progress = params.progressCallback, finished = params.finishedCallback;
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
             logger_1.logger.debug("Filename " + filename + " encrypted is " + name);

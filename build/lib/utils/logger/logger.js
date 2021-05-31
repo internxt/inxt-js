@@ -22,7 +22,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.logger = void 0;
 var Winston = __importStar(require("winston"));
 var dotenv = __importStar(require("dotenv"));
-dotenv.config({ path: '/home/inxt/inxt-js/.env' });
+var path_1 = require("path");
+dotenv.config({ path: path_1.resolve(__dirname, '../../../../.env') });
 var loggerOptions = {
     levels: {
         warn: 0,
@@ -48,7 +49,6 @@ var getLoggerInstance = function (level) {
         format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }), Winston.format.splat(), Winston.format.printf(function (info) { return info.timestamp + " " + info.level + ": " + info.message; })),
         transports: [new Winston.transports.Console()]
     });
-    // console.log(process.env.STAGE)
     if (process.env.STAGE !== 'development') {
         logger.silent = true;
     }

@@ -74,8 +74,13 @@ export declare class Environment {
      */
     listFiles(bucketId: string, cb: ListFilesCallback): void;
     setEncryptionKey(newEncryptionKey: string): void;
-    downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Blob>;
-    uploadFile(bucketId: string, data: UploadFileParams): void;
+    downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<void | Blob>;
+    /**
+     * Uploads a file from a web browser
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Upload file params
+     */
+    uploadFile(bucketId: string, params: UploadFileParams): void;
     /**
      * Downloads a file, returns state object
      * @param bucketId Bucket id where file is

@@ -160,10 +160,9 @@ var FileObjectUpload = /** @class */ (function () {
     };
     FileObjectUpload.prototype.GenerateHmac = function (shardMetas) {
         var hmac = crypto_2.sha512HmacBuffer(this.fileEncryptionKey);
-        if (shardMetas && shardMetas.length > 0) {
-            for (var i = 0; i < shardMetas.length; i++) {
-                hmac.update(Buffer.from(shardMetas[i].hash, 'hex'));
-            }
+        for (var _i = 0, shardMetas_1 = shardMetas; _i < shardMetas_1.length; _i++) {
+            var shardMeta = shardMetas_1[_i];
+            hmac.update(Buffer.from(shardMeta.hash, 'hex'));
         }
         return hmac.digest().toString('hex');
     };

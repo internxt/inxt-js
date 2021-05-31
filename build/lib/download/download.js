@@ -37,107 +37,60 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Download = void 0;
-var FileObject_1 = require("../../api/FileObject");
-var stream_1 = require("stream");
-var events_1 = require("../events");
 var rs_wrapper_1 = require("rs-wrapper");
+var FileObject_1 = require("../../api/FileObject");
+var events_1 = require("../events");
 var logger_1 = require("../utils/logger");
 var buffer_1 = require("../utils/buffer");
+var promisify_1 = require("../utils/promisify");
 function Download(config, bucketId, fileId, options) {
     return __awaiter(this, void 0, void 0, function () {
-        var File, shards, shardSize, parities, totalSize, out, fileContent, fileEncryptedStream, buffs;
-        var _this = this;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var File, fileStream, fileChunks, shards, parities, fileContent, rs, shardsStatus, corruptShards, fileSize, _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
                     if (!config.encryptionKey) {
                         throw Error('Encryption key required');
                     }
+                    if (!bucketId) {
+                        throw Error('Bucket id required');
+                    }
+                    if (!fileId) {
+                        throw Error('File id required');
+                    }
                     File = new FileObject_1.FileObject(config, bucketId, fileId);
-                    logger_1.logger.info('Retrieving file info...');
                     return [4 /*yield*/, File.GetFileInfo()];
                 case 1:
-                    _a.sent();
-                    logger_1.logger.info('Retrieving mirrors...');
+                    _c.sent();
                     return [4 /*yield*/, File.GetFileMirrors()];
                 case 2:
-                    _a.sent();
-                    shards = File.rawShards.filter(function (s) { return !s.parity; }).length;
-                    shardSize = File.rawShards[0].size;
-                    console.log('shardSize', shardSize);
-                    parities = File.rawShards.length - shards;
-                    logger_1.logger.info('Found %s shards and %s parities', shards, parities);
-                    totalSize = File.final_length;
-                    out = new stream_1.Transform({
-                        transform: function (chunk, enc, cb) {
-                            if (chunk.length > totalSize) {
-                                cb(null, chunk.slice(0, totalSize));
-                            }
-                            else {
-                                totalSize -= chunk.length;
-                                cb(null, chunk);
-                            }
-                        }
-                    });
-                    logger_1.logger.info('File size is %s bytes', totalSize);
-                    out.on('error', function (err) { throw err; });
-                    attachFileObjectListeners(File, out);
-                    handleFileResolving(File, options.progressCallback, options.decryptionProgressCallback);
-                    fileContent = Buffer.alloc(0);
-                    logger_1.logger.info('Starting file download');
-                    setInterval(function () {
-                        console.log('still alive');
-                    }, 20000);
-                    return [4 /*yield*/, File.StartDownloadFile2()];
+                    _c.sent();
+                    handleProgress(File, options);
+                    return [4 /*yield*/, File.download()];
                 case 3:
-                    fileEncryptedStream = _a.sent();
-                    console.log('I HAVE THE STREAM UNIFIED HERE', fileEncryptedStream);
-                    buffs = [];
-                    fileEncryptedStream.on('data', function (chunk) { buffs.push(chunk); });
-                    return [2 /*return*/, new Promise(function (resolve, reject) {
-                            fileEncryptedStream.on('error', reject);
-                            fileEncryptedStream.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
-                                var rs, passThrough, shardsStatus, nCorruptShards, fileContentRecovered, err_1;
-                                var _a;
-                                return __generator(this, function (_b) {
-                                    switch (_b.label) {
-                                        case 0:
-                                            fileContent = Buffer.concat(buffs);
-                                            logger_1.logger.info('File download finished. File encrypted length is %s bytes', fileContent.length);
-                                            rs = File.fileInfo && File.fileInfo.erasure && ((_a = File.fileInfo) === null || _a === void 0 ? void 0 : _a.erasure.type) === 'reedsolomon';
-                                            passThrough = null;
-                                            shardsStatus = File.rawShards.map(function (shard) { return shard.healthy; });
-                                            shardsStatus = shardsStatus && shardsStatus.length > 0 ? shardsStatus : [false];
-                                            nCorruptShards = shardsStatus.map(function (shardStatus) { return !shardStatus; }).length;
-                                            if (!(nCorruptShards > 0)) return [3 /*break*/, 5];
-                                            if (!rs) return [3 /*break*/, 4];
-                                            logger_1.logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
-                                            _b.label = 1;
-                                        case 1:
-                                            _b.trys.push([1, 3, , 4]);
-                                            return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
-                                        case 2:
-                                            fileContentRecovered = _b.sent();
-                                            passThrough = buffer_1.bufferToStream(Buffer.from(fileContentRecovered.slice(0, totalSize)));
-                                            return [2 /*return*/, resolve(passThrough.pipe(File.decipher).pipe(out))];
-                                        case 3:
-                                            err_1 = _b.sent();
-                                            logger_1.logger.error('File download error, reason: %s', err_1.message);
-                                            if (err_1.message !== 'RESULT_ERROR_TOO_FEW_SHARDS_PRESENT') {
-                                                return [2 /*return*/, reject(err_1)];
-                                            }
-                                            return [3 /*break*/, 4];
-                                        case 4:
-                                            reject(new Error(nCorruptShards + " file shard(s) is/are corrupt"));
-                                            return [3 /*break*/, 6];
-                                        case 5:
-                                            logger_1.logger.info('Reed solomon not required for this file');
-                                            _b.label = 6;
-                                        case 6: return [2 /*return*/, resolve(buffer_1.bufferToStream(fileContent).pipe(File.decipher).pipe(out))];
-                                    }
-                                });
-                            }); });
-                        })];
+                    fileStream = _c.sent();
+                    fileChunks = [];
+                    shards = File.rawShards.filter(function (shard) { return !shard.parity; }).length;
+                    parities = File.rawShards.length - shards;
+                    fileStream.on('data', function (chunk) { fileChunks.push(chunk); });
+                    return [4 /*yield*/, promisify_1.promisifyStream(fileStream)];
+                case 4:
+                    _c.sent();
+                    fileContent = Buffer.concat(fileChunks);
+                    rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo.erasure.type === 'reedsolomon';
+                    shardsStatus = File.rawShards.map(function (shard) { return shard.healthy; });
+                    corruptShards = shardsStatus.filter(function (status) { return !status; }).length;
+                    fileSize = File.final_length;
+                    if (!(corruptShards > 0)) return [3 /*break*/, 7];
+                    if (!rs) return [3 /*break*/, 6];
+                    logger_1.logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
+                    _b = (_a = Buffer).from;
+                    return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
+                case 5:
+                    fileContent = _b.apply(_a, [_c.sent()]).slice(0, fileSize);
+                    return [2 /*return*/, buffer_1.bufferToStream(fileContent).pipe(File.decipher)];
+                case 6: throw new Error(corruptShards + ' file shard(s) is/are corrupt');
+                case 7: return [2 /*return*/, buffer_1.bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher)];
             }
         });
     });
@@ -155,8 +108,8 @@ function attachFileObjectListeners(f, notified) {
     // f.decipher.on('end', () => notified.emit(DECRYPT.END))
     f.decipher.once('error', function (err) { return notified.emit(events_1.DECRYPT.ERROR, err); });
 }
-function handleFileResolving(fl, downloadCb, decryptionCb) {
-    var _this = this;
+function handleProgress(fl, options) {
+    var _a;
     var totalBytesDownloaded = 0, totalBytesDecrypted = 0;
     var progress = 0;
     var totalBytes = fl.rawShards.length > 0 ?
@@ -168,19 +121,15 @@ function handleFileResolving(fl, downloadCb, decryptionCb) {
     function getDecryptionProgress() {
         return (totalBytesDecrypted / totalBytes) * 100;
     }
-    fl.on(events_1.DOWNLOAD.PROGRESS, function (addedBytes) { return __awaiter(_this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            totalBytesDownloaded += addedBytes;
-            progress = getDownloadProgress();
-            downloadCb(progress, totalBytesDownloaded, totalBytes);
-            return [2 /*return*/];
-        });
-    }); });
-    if (decryptionCb) {
-        fl.on(events_1.DECRYPT.PROGRESS, function (addedBytes) {
-            totalBytesDecrypted += addedBytes;
-            progress = getDecryptionProgress();
-            decryptionCb(progress, totalBytesDecrypted, totalBytes);
-        });
-    }
+    fl.on(events_1.DOWNLOAD.PROGRESS, function (addedBytes) {
+        totalBytesDownloaded += addedBytes;
+        progress = getDownloadProgress();
+        options.progressCallback(progress, totalBytesDownloaded, totalBytes);
+    });
+    var decryptionProgress = (_a = options.decryptionProgressCallback) !== null && _a !== void 0 ? _a : (function () { return null; });
+    fl.on(events_1.DECRYPT.PROGRESS, function (addedBytes) {
+        totalBytesDecrypted += addedBytes;
+        progress = getDecryptionProgress();
+        decryptionProgress(progress, totalBytesDecrypted, totalBytes);
+    });
 }

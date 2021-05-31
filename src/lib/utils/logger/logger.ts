@@ -1,6 +1,7 @@
 import * as Winston from 'winston';
 import * as dotenv from 'dotenv';
-dotenv.config({ path: '/home/inxt/inxt-js/.env' });
+import { resolve } from 'path';
+dotenv.config({ path: resolve(__dirname, '../../../../.env') });
 
 const loggerOptions = {
     levels: {

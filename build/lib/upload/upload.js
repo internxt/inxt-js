@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Upload = void 0;
+exports.generateBucketEntry = exports.createBucketEntry = exports.Upload = void 0;
 var rs_wrapper_1 = require("rs-wrapper");
 var FileObjectUpload_1 = require("../../api/FileObjectUpload");
 var logger_1 = require("../utils/logger");
@@ -68,7 +68,10 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
                     fileSize = fileMeta.size;
                     buffs = [];
                     progress(0, 0, fileSize);
-                    Output.on('data', function (shard) { buffs.push(shard); });
+                    Output.on('data', function (shard) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
+                        buffs.push(shard);
+                        return [2 /*return*/];
+                    }); }); });
                     Output.on('error', function (err) { return finish(err, null); });
                     Output.on('end', function () { return __awaiter(_this, void 0, void 0, function () {
                         var fileContent, shardSize, nShards, parityShards, rs, totalSize, shardsAction, paritiesAction, parities, uploadRequests, currentBytesUploaded_1, uploadResponses, savingFileResponse, err_1;
@@ -157,6 +160,10 @@ function Upload(config, bucketId, fileMeta, progress, finish) {
 }
 exports.Upload = Upload;
 function createBucketEntry(fileObject, fileMeta, shardMetas, rs) {
+    return fileObject.SaveFileInNetwork(generateBucketEntry(fileObject, fileMeta, shardMetas, rs));
+}
+exports.createBucketEntry = createBucketEntry;
+function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
     var bucketEntry = {
         frame: fileObject.frameId,
         filename: fileMeta.name,
@@ -169,8 +176,9 @@ function createBucketEntry(fileObject, fileMeta, shardMetas, rs) {
     if (rs) {
         bucketEntry.erasure = { type: "reedsolomon" };
     }
-    return fileObject.SaveFileInNetwork(bucketEntry);
+    return bucketEntry;
 }
+exports.generateBucketEntry = generateBucketEntry;
 function getParities(file, shardSize, totalShards, parityShards) {
     return __awaiter(this, void 0, void 0, function () {
         var fileEncoded;

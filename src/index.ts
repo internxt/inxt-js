@@ -137,13 +137,18 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Blob> {
+  downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<void | Blob> {
     return Download(this.config, bucketId, fileId, options)
       .then(stream => StreamToBlob(stream, 'application/octet-stream'))
       .then((file: Blob) => {
         options.finishedCallback(null);
 
         return file;
+      }).catch((err) => {
+        logger.error('Error downloading file due to %s', err.message);
+        logger.error(err);
+
+        options.finishedCallback(err);
       });
   }
 

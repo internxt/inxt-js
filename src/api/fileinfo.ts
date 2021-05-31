@@ -43,6 +43,10 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
     .then((res: AxiosResponse) => res.data);
 }
 
+export function ReplacePointer(config: EnvironmentConfig, bucketId: string, fileId: string, pointerIndex: number, excludeNodes: string[] = []): Promise<Shard[]> {
+  return GetFileMirror(config, bucketId, fileId, 1, pointerIndex, excludeNodes);
+}
+
 export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
   const shards: Shard[] = [];
 
