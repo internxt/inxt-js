@@ -63,7 +63,7 @@ var hashstream_1 = require("../lib/hashstream");
 var crypto_1 = require("../lib/crypto");
 function DownloadShardRequest(config, address, port, hash, token, nodeID) {
     var fetchUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
-    return api.streamRequest(fetchUrl, nodeID);
+    return api.streamRequest(fetchUrl, nodeID, true, 15);
 }
 exports.DownloadShardRequest = DownloadShardRequest;
 function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
