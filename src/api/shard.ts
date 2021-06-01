@@ -32,7 +32,7 @@ export interface Shard {
 export function DownloadShardRequest(config: EnvironmentConfig, address: string, port: number, hash: string, token: string, nodeID: string): Promise<Readable> {
   const fetchUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
 
-  return api.streamRequest(fetchUrl, nodeID);
+  return api.streamRequest(fetchUrl, nodeID, true, 15);
 }
 
 export async function DownloadShard(config: EnvironmentConfig, shard: Shard, bucketId: string, fileId: string, excludedNodes: string[] = []): Promise<Transform | never> {

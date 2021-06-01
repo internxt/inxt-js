@@ -47,7 +47,7 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   });
 }
 
-export async function streamRequest(targetUrl: string, nodeID: string, useProxy = true): Promise<Readable> {
+export async function streamRequest(targetUrl: string, nodeID: string, useProxy = true, timeoutSeconds?: number): Promise<Readable> {
   let proxy: ProxyManager;
   let reqUrl = targetUrl;
 
@@ -70,8 +70,7 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
       headers: {
         'content-type': 'application/octet-stream',
         'x-storj-node-id': nodeID
-      },
-      timeout: 3000
+      }
     });
   }
 
@@ -79,6 +78,12 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
     read() {
       if (!downloader) {
         downloader = _createDownloadStream();
+
+        if (timeoutSeconds) {
+          downloader.setTimeout(timeoutSeconds * 1000, () => {
+            downloader?.destroy(Error(`Request timeouted after ${timeoutSeconds} seconds`));
+          })
+        }
 
         if (useProxy && proxy) { proxy.free(); }
 
