@@ -67,12 +67,13 @@ export interface ProxyManager {
 }
 
 const proxyBalancer = new ProxyBalancer()
-    .attach(new Proxy('https://api.internxt.com:8081'));
-    // .attach(new Proxy('https://proxy1.internxt.com'))
-    // .attach(new Proxy('https://proxy2.internxt.com'))
-    // .attach(new Proxy('https://proxy3.internxt.com'))
-    // .attach(new Proxy('https://proxy4.internxt.com'))
-    // .attach(new Proxy('https://proxy5.internxt.com'));
+    .attach(new Proxy('https://proxy01.api.internxt.com'))
+    .attach(new Proxy('https://proxy02.api.internxt.com'))
+    .attach(new Proxy('https://proxy03.api.internxt.com'))
+    .attach(new Proxy('https://proxy04.api.internxt.com'))
+    .attach(new Proxy('https://proxy05.api.internxt.com'))
+    .attach(new Proxy('https://proxy06.api.internxt.com'))
+    .attach(new Proxy('https://proxy07.api.internxt.com'));
 
 const mutex = new Mutex();
 
