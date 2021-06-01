@@ -1,6 +1,7 @@
-// import * as fs from 'fs'
-import StreamToBlob from 'stream-to-blob';
 import BlobToStream from 'blob-to-stream';
+import { Readable } from 'stream';
+import { encode, reconstruct, utils } from 'rs-wrapper';
+import { randomBytes } from 'crypto';
 
 import { Upload } from './lib/upload';
 import { Download } from './lib/download';
@@ -10,13 +11,16 @@ import { logger } from './lib/utils/logger';
 import { FileMeta } from "./api/FileObjectUpload";
 import { CreateEntryFromFrameResponse } from './services/request';
 
-import { encode, reconstruct, utils } from 'rs-wrapper';
-import { randomBytes } from 'crypto';
+import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
+import { ActionState, ActionTypes } from './api/ActionState';
+
+import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
 export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
 
+export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 
 export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
@@ -32,7 +36,7 @@ export interface ResolveFileOptions {
 export interface DownloadFileOptions {
   progressCallback: DownloadProgressCallback;
   decryptionProgressCallback?: DecryptionProgressCallback;
-  finishedCallback: OnlyErrorCallback;
+  finishedCallback: DownloadFinishedCallback;
 }
 
 type GetInfoCallback = (err: Error | null, result: any)  => void;
@@ -137,19 +141,22 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<void | Blob> {
-    return Download(this.config, bucketId, fileId, options)
-      .then(stream => StreamToBlob(stream, 'application/octet-stream'))
-      .then((file: Blob) => {
-        options.finishedCallback(null);
+  downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState {
+    const downloadState = new ActionState(ActionTypes.DOWNLOAD);
 
-        return file;
-      }).catch((err) => {
-        logger.error('Error downloading file due to %s', err.message);
-        logger.error(err);
+    if (!this.config.encryptionKey) {
+      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+      return downloadState;
+    }
 
-        options.finishedCallback(err);
-      });
+    if (!bucketId) {
+      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+      return downloadState;
+    }
+
+    Download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), downloadState);
+
+    return downloadState;
   }
 
   /**
@@ -229,11 +236,11 @@ export class Environment {
   // }
 
   /**
-   * Cancels the upload
+   * Cancels the download
    * @param state Download file state at the moment
    */
-  resolveFileCancel(state: any): void {
-    throw new Error('Not implemented yet');
+  resolveFileCancel(state: ActionState): void {
+    state.stop();
   }
 
 }
