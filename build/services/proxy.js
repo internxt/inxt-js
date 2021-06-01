@@ -58,7 +58,7 @@ exports.getProxy = exports.Proxy = exports.ProxyBalancer = void 0;
 var crypto_1 = require("crypto");
 var mutex_1 = require("../lib/utils/mutex");
 var wait = function (ms) { return new Promise(function (res) { return setTimeout(res, ms); }); };
-var MAX_CONCURRENT_BROWSER_CONNECTIONS = 10000;
+var MAX_CONCURRENT_BROWSER_CONNECTIONS = 6;
 var ProxyBalancer = /** @class */ (function () {
     function ProxyBalancer() {
         this.proxies = [];

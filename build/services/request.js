@@ -117,7 +117,7 @@ function request(config, method, targetUrl, params, useProxy) {
     });
 }
 exports.request = request;
-function streamRequest(targetUrl, nodeID, useProxy) {
+function streamRequest(targetUrl, nodeID, useProxy, timeoutSeconds) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
         function _createDownloadStream() {
@@ -129,8 +129,7 @@ function streamRequest(targetUrl, nodeID, useProxy) {
                 headers: {
                     'content-type': 'application/octet-stream',
                     'x-storj-node-id': nodeID
-                },
-                timeout: 3000
+                }
             });
         }
         var proxy, reqUrl, uriParts, downloader;
@@ -153,6 +152,11 @@ function streamRequest(targetUrl, nodeID, useProxy) {
                                 var _this = this;
                                 if (!downloader) {
                                     downloader = _createDownloadStream();
+                                    if (timeoutSeconds) {
+                                        downloader.setTimeout(timeoutSeconds * 1000, function () {
+                                            downloader === null || downloader === void 0 ? void 0 : downloader.destroy(Error("Request timeouted after " + timeoutSeconds + " seconds"));
+                                        });
+                                    }
                                     if (useProxy && proxy) {
                                         proxy.free();
                                     }
