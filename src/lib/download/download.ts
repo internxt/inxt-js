@@ -1,4 +1,4 @@
-import { Readable, Transform } from 'stream';
+import { Transform } from 'stream';
 import { reconstruct } from 'rs-wrapper';
 
 import { DownloadFileOptions, EnvironmentConfig } from '../..';
@@ -7,13 +7,17 @@ import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events';
 import { logger } from '../utils/logger';
 import { bufferToStream } from '../utils/buffer';
 import { promisifyStream } from '../utils/promisify';
+import { ActionState } from '../../api/ActionState';
+import { DOWNLOAD_CANCELLED } from '../../api/constants';
 
-export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable> {
+export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<void> {
   if (!config.encryptionKey) { throw Error('Encryption key required'); }
   if (!bucketId) { throw Error('Bucket id required'); }
   if (!fileId) { throw Error('File id required'); }
 
   const File = new FileObject(config, bucketId, fileId);
+
+  state.on(DOWNLOAD_CANCELLED, () => File.emit(DOWNLOAD_CANCELLED));
 
   await File.GetFileInfo();
   await File.GetFileMirrors();
@@ -41,12 +45,12 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
 
       fileContent = Buffer.from(await reconstruct(fileContent, shards, parities, shardsStatus)).slice(0, fileSize);
 
-      return bufferToStream(fileContent).pipe(File.decipher);
+      return options.finishedCallback(null, bufferToStream(fileContent).pipe(File.decipher));
     }
 
-    throw new Error(corruptShards + ' file shard(s) is/are corrupt');
+    return options.finishedCallback(Error(corruptShards + ' file shard(s) is/are corrupt'), null);
   } else {
-    return bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher);
+    return options.finishedCallback(null, bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher));
   }
 }
 
