@@ -16,7 +16,7 @@ import { DECRYPT, DOWNLOAD, FILEMUXER } from '../lib/events';
 import { utils } from 'rs-wrapper';
 import { logger } from '../lib/utils/logger';
 import { bufferToStream } from '../lib/utils/buffer';
-import { DEFAULT_INXT_MIRRORS } from './constants';
+import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED } from './constants';
 
 const MultiStream = require('multistream');
 
@@ -207,6 +207,10 @@ export class FileObject extends EventEmitter {
   }
 
   async download(): Promise<Readable> {
+    this.on(DOWNLOAD_CANCELLED, () => {
+      throw new Error(DOWNLOAD_CANCELLED);
+    });
+
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo');
     }
