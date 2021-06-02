@@ -247,13 +247,7 @@ export class FileObject extends EventEmitter {
     const streams: DownloadStream[] = [];
 
     this.on(DOWNLOAD_CANCELLED, () => {
-      this.stopped = true;
-      
-      if (fileStream) {
-        fileStream.destroy();
-
-        streams.forEach(stream => stream.content.destroy());
-      }
+      this.handleDownloadCancel(streams.map(stream => stream.content).concat([fileStream]));
     });
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
@@ -322,5 +316,11 @@ export class FileObject extends EventEmitter {
     fileStream = new MultiStream(streams.map(s => s.content));
 
     return fileStream;
+  }
+
+  private handleDownloadCancel(streams: Readable[]): void {
+    this.stopped = true;
+      
+    streams.forEach(stream => stream.destroy());
   }
 }
