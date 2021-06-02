@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 
 import { DOWNLOAD_CANCELLED, UPLOAD_CANCELLED } from './constants';
 
