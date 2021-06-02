@@ -219,7 +219,7 @@ var FileObject = /** @class */ (function (_super) {
                                 downloadError = err;
                                 _this.emit(events_2.FILEMUXER.ERROR, err);
                                 exchangeReport.DownloadError();
-                                // exchangeReport.sendReport().catch(() => null);
+                                exchangeReport.sendReport().catch(function () { return null; });
                                 oneFileMuxer.emit('drain');
                             });
                             oneFileMuxer.on('data', function (data) { buffs.push(data); });
@@ -288,11 +288,7 @@ var FileObject = /** @class */ (function (_super) {
                         }
                         streams = [];
                         this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                            _this.stopped = true;
-                            if (fileStream) {
-                                fileStream.destroy();
-                                streams.forEach(function (stream) { return stream.content.destroy(); });
-                            }
+                            _this.handleDownloadCancel(streams.map(function (stream) { return stream.content; }).concat([fileStream]));
                         });
                         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
                         this.decipher.on('error', function (err) { return _this.emit(events_2.DECRYPT.ERROR, err); });
@@ -359,6 +355,10 @@ var FileObject = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    FileObject.prototype.handleDownloadCancel = function (streams) {
+        this.stopped = true;
+        streams.forEach(function (stream) { return stream.destroy(); });
     };
     return FileObject;
 }(events_1.EventEmitter));

@@ -26,4 +26,5 @@ export declare class FileObject extends EventEmitter {
     StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
     download(): Promise<Readable>;
+    private handleDownloadCancel;
 }
