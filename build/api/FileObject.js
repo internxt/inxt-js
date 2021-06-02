@@ -194,20 +194,20 @@ var FileObject = /** @class */ (function (_super) {
                             oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
                             shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
                             buffs = [];
-                            this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                                buffs = [];
-                                oneFileMuxer.emit(constants_1.DOWNLOAD_CANCELLED);
-                            });
+                            // this.on(DOWNLOAD_CANCELLED, () => {
+                            //   buffs = [];
+                            //   oneFileMuxer.emit(DOWNLOAD_CANCELLED);
+                            // });
                             oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
                             oneFileMuxer.on('error', function (err) {
-                                if (err.message === constants_1.DOWNLOAD_CANCELLED_ERROR) {
-                                    return;
-                                }
+                                // if (err.message === DOWNLOAD_CANCELLED_ERROR) {
+                                //   return;
+                                // }
                                 downloadHasError = true;
                                 downloadError = err;
                                 _this.emit(events_2.FILEMUXER.ERROR, err);
                                 exchangeReport.DownloadError();
-                                exchangeReport.sendReport().catch(function () { return null; });
+                                // exchangeReport.sendReport().catch(() => null);
                                 oneFileMuxer.emit('drain');
                             });
                             oneFileMuxer.on('data', function (data) { buffs.push(data); });
@@ -262,7 +262,7 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.download = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams;
+            var shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams, fileStream;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -279,10 +279,6 @@ var FileObject = /** @class */ (function (_super) {
                         sizeToFillToZeroes = shardSize - lastShardSize;
                         logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
                         streams = [];
-                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                            _this.stopped = true;
-                            streams.forEach(function (stream) { return stream.content.destroy(); });
-                        });
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, content, err_2;
                                 return __generator(this, function (_a) {
@@ -334,8 +330,15 @@ var FileObject = /** @class */ (function (_super) {
                         _a.sent();
                         // Order streams by shard index
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });
+                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                            _this.stopped = true;
+                            if (fileStream) {
+                                fileStream.destroy();
+                            }
+                        });
                         // Unify them
-                        return [2 /*return*/, new MultiStream(streams.map(function (s) { return s.content; }))];
+                        fileStream = new MultiStream(streams.map(function (s) { return s.content; }));
+                        return [2 /*return*/, fileStream];
                 }
             });
         });
