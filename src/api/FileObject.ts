@@ -43,6 +43,8 @@ export class FileObject extends EventEmitter {
 
   decipher: DecryptStream;
 
+  private stopped = false;
+
   constructor(config: EnvironmentConfig, bucketId: string, fileId: string) {
     super();
     this.config = config;
@@ -207,10 +209,6 @@ export class FileObject extends EventEmitter {
   }
 
   async download(): Promise<Readable> {
-    this.on(DOWNLOAD_CANCELLED, () => {
-      throw new Error(DOWNLOAD_CANCELLED);
-    });
-
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo');
     }
@@ -230,7 +228,15 @@ export class FileObject extends EventEmitter {
 
     const streams: DownloadStream[] = [];
 
+    this.on(DOWNLOAD_CANCELLED, () => {
+      streams.forEach(stream => stream.content.destroy());
+    });
+
     await Promise.all(this.rawShards.map(async (shard, i) => {
+      if (this.stopped) {
+        return;
+      }
+
       try {
         if (shard.healthy === false) {
           throw new Error('Bridge request pointer error');

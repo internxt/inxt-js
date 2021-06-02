@@ -8,49 +8,57 @@ import { logger } from '../utils/logger';
 import { bufferToStream } from '../utils/buffer';
 import { promisifyStream } from '../utils/promisify';
 import { ActionState } from '../../api/ActionState';
-import { DOWNLOAD_CANCELLED } from '../../api/constants';
+import { DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from '../../api/constants';
 
 export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<void> {
   if (!config.encryptionKey) { throw Error('Encryption key required'); }
   if (!bucketId) { throw Error('Bucket id required'); }
   if (!fileId) { throw Error('File id required'); }
 
-  const File = new FileObject(config, bucketId, fileId);
+  try {
+    const File = new FileObject(config, bucketId, fileId);
 
-  state.on(DOWNLOAD_CANCELLED, () => File.emit(DOWNLOAD_CANCELLED));
+    state.on(DOWNLOAD_CANCELLED, () => {
+      File.emit(DOWNLOAD_CANCELLED);
 
-  await File.GetFileInfo();
-  await File.GetFileMirrors();
+      options.finishedCallback(Error(DOWNLOAD_CANCELLED_ERROR), null);
+    });
 
-  handleProgress(File, options);
+    await File.GetFileInfo();
+    await File.GetFileMirrors();
 
-  const fileStream = await File.download();
+    handleProgress(File, options);
 
-  const fileChunks: Buffer[] = [];
-  const shards = File.rawShards.filter(shard => !shard.parity).length;
-  const parities = File.rawShards.length - shards;
+    const fileStream = await File.download();
 
-  fileStream.on('data', (chunk: Buffer) => { fileChunks.push(chunk); });
-  await promisifyStream(fileStream);
+    const fileChunks: Buffer[] = [];
+    const shards = File.rawShards.filter(shard => !shard.parity).length;
+    const parities = File.rawShards.length - shards;
 
-  let fileContent = Buffer.concat(fileChunks);
-  const rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo.erasure.type === 'reedsolomon';
-  const shardsStatus = File.rawShards.map(shard => shard.healthy!);
-  const corruptShards = shardsStatus.filter(status => !status).length;
-  const fileSize = File.final_length;
+    fileStream.on('data', (chunk: Buffer) => { fileChunks.push(chunk); });
+    await promisifyStream(fileStream);
 
-  if (corruptShards > 0) {
-    if (rs) {
-      logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
+    let fileContent = Buffer.concat(fileChunks);
+    const rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo.erasure.type === 'reedsolomon';
+    const shardsStatus = File.rawShards.map(shard => shard.healthy!);
+    const corruptShards = shardsStatus.filter(status => !status).length;
+    const fileSize = File.final_length;
 
-      fileContent = Buffer.from(await reconstruct(fileContent, shards, parities, shardsStatus)).slice(0, fileSize);
+    if (corruptShards > 0) {
+      if (rs) {
+        logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
 
-      return options.finishedCallback(null, bufferToStream(fileContent).pipe(File.decipher));
+        fileContent = Buffer.from(await reconstruct(fileContent, shards, parities, shardsStatus)).slice(0, fileSize);
+
+        return options.finishedCallback(null, bufferToStream(fileContent).pipe(File.decipher));
+      }
+
+      return options.finishedCallback(Error(corruptShards + ' file shard(s) is/are corrupt'), null);
+    } else {
+      return options.finishedCallback(null, bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher));
     }
-
-    return options.finishedCallback(Error(corruptShards + ' file shard(s) is/are corrupt'), null);
-  } else {
-    return options.finishedCallback(null, bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher));
+  } catch (err) {
+    options.finishedCallback(err, null);
   }
 }
 
