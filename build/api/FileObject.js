@@ -93,6 +93,9 @@ var FileObject = /** @class */ (function (_super) {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
+                        if (this.stopped) {
+                            return [2 /*return*/];
+                        }
                         logger_1.logger.info('Retrieving file info...');
                         if (!!this.fileInfo) return [3 /*break*/, 3];
                         _a = this;
@@ -117,6 +120,9 @@ var FileObject = /** @class */ (function (_super) {
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
+                        if (this.stopped) {
+                            return [2 /*return*/];
+                        }
                         logger_1.logger.info('Retrieving file mirrors...');
                         _a = this;
                         return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
