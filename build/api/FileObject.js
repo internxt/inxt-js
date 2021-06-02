@@ -194,10 +194,15 @@ var FileObject = /** @class */ (function (_super) {
                             oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
                             shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
                             buffs = [];
-                            // this.on(DOWNLOAD_CANCELLED, () => {
-                            //   buffs = [];
-                            //   oneFileMuxer.emit(DOWNLOAD_CANCELLED);
-                            // });
+                            this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                                buffs = [];
+                                console.log('Trying to destroy shard downloader');
+                                if (downloaderStream) {
+                                    console.log('Destroying shard downloader');
+                                    downloaderStream.destroy();
+                                }
+                                nextTry(null, Buffer.alloc(0));
+                            });
                             oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
                             oneFileMuxer.on('error', function (err) {
                                 // if (err.message === DOWNLOAD_CANCELLED_ERROR) {
@@ -262,7 +267,7 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.download = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams, fileStream;
+            var fileStream, shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -270,6 +275,14 @@ var FileObject = /** @class */ (function (_super) {
                         if (!this.fileInfo) {
                             throw new Error('Undefined fileInfo');
                         }
+                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                            _this.stopped = true;
+                            console.log('Trying to destroy stream');
+                            if (fileStream) {
+                                console.log('Destroying stream');
+                                fileStream.destroy();
+                            }
+                        });
                         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
                         this.decipher.on('error', function (err) { return _this.emit(events_2.DECRYPT.ERROR, err); });
                         this.decipher.on(events_2.DECRYPT.PROGRESS, function (msg) { return _this.emit(events_2.DECRYPT.PROGRESS, msg); });
@@ -330,12 +343,6 @@ var FileObject = /** @class */ (function (_super) {
                         _a.sent();
                         // Order streams by shard index
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });
-                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                            _this.stopped = true;
-                            if (fileStream) {
-                                fileStream.destroy();
-                            }
-                        });
                         // Unify them
                         fileStream = new MultiStream(streams.map(function (s) { return s.content; }));
                         return [2 /*return*/, fileStream];
