@@ -16,7 +16,7 @@ import { DECRYPT, DOWNLOAD, FILEMUXER } from '../lib/events';
 import { utils } from 'rs-wrapper';
 import { logger } from '../lib/utils/logger';
 import { bufferToStream } from '../lib/utils/buffer';
-import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED } from './constants';
+import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from './constants';
 
 const MultiStream = require('multistream');
 
@@ -52,6 +52,9 @@ export class FileObject extends EventEmitter {
     this.fileId = fileId;
     this.fileKey = Buffer.alloc(0);
     this.decipher = new DecryptStream(randomBytes(32), randomBytes(16));
+
+    // DOWNLOAD_CANCELLED attach one listener per concurrent download
+    this.setMaxListeners(100);
   }
 
   async GetFileInfo(): Promise<FileInfo | undefined> {
@@ -75,6 +78,7 @@ export class FileObject extends EventEmitter {
     if (this.stopped) {
       return;
     }
+    
     logger.info('Retrieving file mirrors...');
     
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
@@ -152,12 +156,29 @@ export class FileObject extends EventEmitter {
 
         let downloadHasError = false;
         let downloadError: Error | null = null;
+        let downloadCancelled = false;
 
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size });
         const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
 
+        let buffs: Buffer[] = [];
+        let downloaderStream: Readable;
+
+        this.once(DOWNLOAD_CANCELLED, () => {
+          buffs = [];
+          downloadCancelled = true;
+
+          if (downloaderStream) {
+            downloaderStream.destroy();
+          }          
+        });
+
         oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
         oneFileMuxer.on('error', (err) => {
+          if (err.message === DOWNLOAD_CANCELLED_ERROR) {
+            return;
+          }
+
           downloadHasError = true;
           downloadError = err;
           this.emit(FILEMUXER.ERROR, err);
@@ -165,16 +186,18 @@ export class FileObject extends EventEmitter {
           exchangeReport.DownloadError();
           exchangeReport.sendReport().catch(() => null);
 
-          logger.info('Emitting drain for shard %s', shard.index);
-
           oneFileMuxer.emit('drain');
         });
 
-        const buffs: Buffer[] = [];
         oneFileMuxer.on('data', (data: Buffer) => { buffs.push(data); });
 
         oneFileMuxer.once('drain', () => {
           logger.info('Drain received for shard %s', shard.index);
+
+          if (downloadCancelled) {
+            nextTry(null, Buffer.alloc(0));
+            return;
+          }
 
           if (downloadHasError) {
             nextTry(downloadError);
@@ -186,7 +209,7 @@ export class FileObject extends EventEmitter {
           }
         });
 
-        const downloaderStream = await shardObject.StartDownloadShard();
+        downloaderStream = await shardObject.StartDownloadShard();
         oneFileMuxer.addInputSource(downloaderStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
 
       }, async (err: Error | null | undefined, result: any) => {
