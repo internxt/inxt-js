@@ -8,3 +8,4 @@ export const UPLOAD_CANCELLED = 'UPLOAD CANCELLED';
 export const ENCRYPTION_KEY_NOT_PROVIDED = 'Encryption key was not provided';
 export const BUCKET_ID_NOT_PROVIDED = 'Bucket id was not provided';
 export const FILE_ID_NOT_PROVIDED = 'File id was not provided';
+export const DOWNLOAD_CANCELLED_ERROR = 'Process killed by user';
