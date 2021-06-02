@@ -32,6 +32,8 @@ var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var assert_1 = __importDefault(require("assert"));
 var crypto_2 = require("./crypto");
+var logger_1 = require("./utils/logger");
+var constants_1 = require("../api/constants");
 var FileMuxerError = /** @class */ (function (_super) {
     __extends(FileMuxerError, _super);
     function FileMuxerError() {
@@ -136,8 +138,18 @@ var FileMuxer = /** @class */ (function (_super) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
+        var cancelCurrentDownload = false;
+        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+            cancelCurrentDownload = true;
+        });
         var input = new stream_1.PassThrough();
         readable.on('data', function (data) {
+            if (cancelCurrentDownload) {
+                logger_1.logger.info('Stopping download for shard hash %s', hash.toString('hex'));
+                readable.destroy(Error(constants_1.DOWNLOAD_CANCELLED_ERROR));
+                input.destroy();
+                return;
+            }
             input.pause();
             input.push(data);
         });

@@ -193,17 +193,23 @@ var FileObject = /** @class */ (function (_super) {
                             downloadError = null;
                             oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
                             shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+                            buffs = [];
+                            this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                                buffs = [];
+                                oneFileMuxer.emit(constants_1.DOWNLOAD_CANCELLED);
+                            });
                             oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
                             oneFileMuxer.on('error', function (err) {
+                                if (err.message === constants_1.DOWNLOAD_CANCELLED_ERROR) {
+                                    return;
+                                }
                                 downloadHasError = true;
                                 downloadError = err;
                                 _this.emit(events_2.FILEMUXER.ERROR, err);
                                 exchangeReport.DownloadError();
                                 exchangeReport.sendReport().catch(function () { return null; });
-                                logger_1.logger.info('Emitting drain for shard %s', shard.index);
                                 oneFileMuxer.emit('drain');
                             });
-                            buffs = [];
                             oneFileMuxer.on('data', function (data) { buffs.push(data); });
                             oneFileMuxer.once('drain', function () {
                                 logger_1.logger.info('Drain received for shard %s', shard.index);
@@ -274,6 +280,7 @@ var FileObject = /** @class */ (function (_super) {
                         logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
                         streams = [];
                         this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                            _this.stopped = true;
                             streams.forEach(function (stream) { return stream.content.destroy(); });
                         });
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
