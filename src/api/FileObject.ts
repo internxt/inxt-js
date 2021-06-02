@@ -55,6 +55,10 @@ export class FileObject extends EventEmitter {
   }
 
   async GetFileInfo(): Promise<FileInfo | undefined> {
+    if (this.stopped) {
+      return; 
+    }
+
     logger.info('Retrieving file info...');
     
     if (!this.fileInfo) {
@@ -68,6 +72,9 @@ export class FileObject extends EventEmitter {
   }
 
   async GetFileMirrors(): Promise<void> {
+    if (this.stopped) {
+      return;
+    }
     logger.info('Retrieving file mirrors...');
     
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
