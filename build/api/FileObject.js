@@ -358,7 +358,11 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.handleDownloadCancel = function (streams) {
         this.stopped = true;
-        streams.forEach(function (stream) { return stream.destroy(); });
+        streams.forEach(function (stream) {
+            if (stream) {
+                stream.destroy();
+            }
+        });
     };
     return FileObject;
 }(events_1.EventEmitter));

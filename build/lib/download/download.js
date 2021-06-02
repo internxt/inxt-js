@@ -64,13 +64,13 @@ function Download(config, bucketId, fileId, options, state) {
                     _c.trys.push([1, 10, , 11]);
                     File_1 = new FileObject_1.FileObject(config, bucketId, fileId);
                     handleStateChanges(File_1, state, options);
-                    handleProgress(File_1, options);
                     return [4 /*yield*/, File_1.GetFileInfo()];
                 case 2:
                     _c.sent();
                     return [4 /*yield*/, File_1.GetFileMirrors()];
                 case 3:
                     _c.sent();
+                    handleProgress(File_1, options);
                     return [4 /*yield*/, File_1.download()];
                 case 4:
                     fileStream = _c.sent();
@@ -126,6 +126,9 @@ function handleProgress(fl, options) {
     var totalBytes = fl.rawShards.length > 0 ?
         fl.rawShards.reduce(function (a, b) { return ({ size: a.size + b.size }); }, { size: 0 }).size :
         0;
+    if (totalBytes === 0) {
+        throw new Error('Total file size can not be 0');
+    }
     function getDownloadProgress() {
         return (totalBytesDownloaded / totalBytes) * 100;
     }
