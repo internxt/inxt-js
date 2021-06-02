@@ -1,7 +1,11 @@
 /// <reference types="node" />
+import { Readable } from 'stream';
 import { CreateEntryFromFrameResponse } from './services/request';
+import { ActionState } from './api/ActionState';
+import { WebDownloadFileOptions } from './api/adapters/Web';
 export declare type OnlyErrorCallback = (err: Error | null) => void;
 export declare type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
+export declare type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export declare type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 export declare type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
 export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
@@ -13,7 +17,7 @@ export interface ResolveFileOptions {
 export interface DownloadFileOptions {
     progressCallback: DownloadProgressCallback;
     decryptionProgressCallback?: DecryptionProgressCallback;
-    finishedCallback: OnlyErrorCallback;
+    finishedCallback: DownloadFinishedCallback;
 }
 declare type GetInfoCallback = (err: Error | null, result: any) => void;
 declare type GetBucketsCallback = (err: Error | null, result: any) => void;
@@ -74,7 +78,7 @@ export declare class Environment {
      */
     listFiles(bucketId: string, cb: ListFilesCallback): void;
     setEncryptionKey(newEncryptionKey: string): void;
-    downloadFile(bucketId: string, fileId: string, options: DownloadFileOptions): Promise<void | Blob>;
+    downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState;
     /**
      * Uploads a file from a web browser
      * @param bucketId Bucket id where file is going to be stored
@@ -89,10 +93,10 @@ export declare class Environment {
      * @param options Options for resolve file case
      */
     /**
-     * Cancels the upload
+     * Cancels the download
      * @param state Download file state at the moment
      */
-    resolveFileCancel(state: any): void;
+    resolveFileCancel(state: ActionState): void;
 }
 export declare function rsTest(size: number): Promise<Uint8Array | Buffer>;
 export interface EnvironmentConfig {

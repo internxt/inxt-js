@@ -77,6 +77,7 @@ var FileObject = /** @class */ (function (_super) {
         _this.length = -1;
         _this.final_length = -1;
         _this.totalSizeWithECs = 0;
+        _this.stopped = false;
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
@@ -272,18 +273,26 @@ var FileObject = /** @class */ (function (_super) {
                         sizeToFillToZeroes = shardSize - lastShardSize;
                         logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
                         streams = [];
+                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                            streams.forEach(function (stream) { return stream.content.destroy(); });
+                        });
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, content, err_2;
                                 return __generator(this, function (_a) {
                                     switch (_a.label) {
                                         case 0:
-                                            _a.trys.push([0, 2, , 3]);
+                                            if (this.stopped) {
+                                                return [2 /*return*/];
+                                            }
+                                            _a.label = 1;
+                                        case 1:
+                                            _a.trys.push([1, 3, , 4]);
                                             if (shard.healthy === false) {
                                                 throw new Error('Bridge request pointer error');
                                             }
                                             logger_1.logger.info('Downloading shard %s', shard.index);
                                             return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
-                                        case 1:
+                                        case 2:
                                             shardBuffer = _a.sent();
                                             content = shardBuffer;
                                             logger_1.logger.info('Shard %s downloaded OK', shard.index);
@@ -298,8 +307,8 @@ var FileObject = /** @class */ (function (_super) {
                                                 index: shard.index
                                             });
                                             shard.healthy = true;
-                                            return [3 /*break*/, 3];
-                                        case 2:
+                                            return [3 /*break*/, 4];
+                                        case 3:
                                             err_2 = _a.sent();
                                             logger_1.logger.error('Error downloading shard %s reason %s', shard.index, err_2.message);
                                             console.error(err_2);
@@ -309,8 +318,8 @@ var FileObject = /** @class */ (function (_super) {
                                                 index: shard.index
                                             });
                                             shard.healthy = false;
-                                            return [3 /*break*/, 3];
-                                        case 3: return [2 /*return*/];
+                                            return [3 /*break*/, 4];
+                                        case 4: return [2 /*return*/];
                                     }
                                 });
                             }); }))];

@@ -4,15 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.rsTest = exports.Environment = void 0;
-// import * as fs from 'fs'
-var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
+var rs_wrapper_1 = require("rs-wrapper");
+var crypto_1 = require("crypto");
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
-var crypto_1 = require("./lib/crypto");
+var crypto_2 = require("./lib/crypto");
 var logger_1 = require("./lib/utils/logger");
-var rs_wrapper_1 = require("rs-wrapper");
-var crypto_2 = require("crypto");
+var constants_1 = require("./api/constants");
+var ActionState_1 = require("./api/ActionState");
+var Web_1 = require("./api/adapters/Web");
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -83,16 +84,17 @@ var Environment = /** @class */ (function () {
         this.config.encryptionKey = newEncryptionKey;
     };
     Environment.prototype.downloadFile = function (bucketId, fileId, options) {
-        return download_1.Download(this.config, bucketId, fileId, options)
-            .then(function (stream) { return stream_to_blob_1.default(stream, 'application/octet-stream'); })
-            .then(function (file) {
-            options.finishedCallback(null);
-            return file;
-        }).catch(function (err) {
-            logger_1.logger.error('Error downloading file due to %s', err.message);
-            logger_1.logger.error(err);
-            options.finishedCallback(err);
-        });
+        var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.DOWNLOAD);
+        if (!this.config.encryptionKey) {
+            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
+            return downloadState;
+        }
+        if (!bucketId) {
+            options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
+            return downloadState;
+        }
+        download_1.Download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), downloadState);
+        return downloadState;
     };
     /**
      * Uploads a file from a web browser
@@ -118,7 +120,7 @@ var Environment = /** @class */ (function () {
             return;
         }
         var filename = params.filename, size = params.fileSize, fileContent = params.fileContent, progress = params.progressCallback, finished = params.finishedCallback;
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
+        crypto_2.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
             logger_1.logger.debug("Filename " + filename + " encrypted is " + name);
             var content = blob_to_stream_1.default(fileContent);
@@ -159,17 +161,17 @@ var Environment = /** @class */ (function () {
     //   return
     // }
     /**
-     * Cancels the upload
+     * Cancels the download
      * @param state Download file state at the moment
      */
     Environment.prototype.resolveFileCancel = function (state) {
-        throw new Error('Not implemented yet');
+        state.stop();
     };
     return Environment;
 }());
 exports.Environment = Environment;
 function rsTest(size) {
-    var buffer = crypto_2.randomBytes(size);
+    var buffer = crypto_1.randomBytes(size);
     console.log(buffer.length);
     var shardSize = rs_wrapper_1.utils.determineShardSize(size);
     var nShards = Math.ceil(size / shardSize);

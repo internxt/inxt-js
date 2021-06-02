@@ -1,4 +1,3 @@
-/// <reference types="node" />
-import { Readable } from 'stream';
 import { DownloadFileOptions, EnvironmentConfig } from '../..';
-export declare function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions): Promise<Readable>;
+import { ActionState } from '../../api/ActionState';
+export declare function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<void>;

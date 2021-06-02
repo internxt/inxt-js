@@ -19,6 +19,7 @@ export declare class FileObject extends EventEmitter {
     fileKey: Buffer;
     totalSizeWithECs: number;
     decipher: DecryptStream;
+    private stopped;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     GetFileInfo(): Promise<FileInfo | undefined>;
     GetFileMirrors(): Promise<void>;
