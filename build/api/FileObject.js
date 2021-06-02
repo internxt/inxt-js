@@ -83,6 +83,8 @@ var FileObject = /** @class */ (function (_super) {
         _this.fileId = fileId;
         _this.fileKey = Buffer.alloc(0);
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        // DOWNLOAD_CANCELLED attach one listener per concurrent download
+        _this.setMaxListeners(100);
         return _this;
     }
     FileObject.prototype.GetFileInfo = function () {
@@ -181,7 +183,7 @@ var FileObject = /** @class */ (function (_super) {
         return new Promise(function (resolve, reject) {
             var _a;
             async_1.retry({ times: ((_a = _this.config.config) === null || _a === void 0 ? void 0 : _a.shardRetry) || 3, interval: 1000 }, function (nextTry) { return __awaiter(_this, void 0, void 0, function () {
-                var downloadHasError, downloadError, oneFileMuxer, shardObject, buffs, downloaderStream;
+                var downloadHasError, downloadError, downloadCancelled, oneFileMuxer, shardObject, buffs, downloaderStream;
                 var _this = this;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
@@ -191,23 +193,22 @@ var FileObject = /** @class */ (function (_super) {
                             exchangeReport.params.dataHash = shard.hash;
                             downloadHasError = false;
                             downloadError = null;
+                            downloadCancelled = false;
                             oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
                             shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
                             buffs = [];
-                            this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                            this.once(constants_1.DOWNLOAD_CANCELLED, function () {
                                 buffs = [];
-                                console.log('Trying to destroy shard downloader');
+                                downloadCancelled = true;
                                 if (downloaderStream) {
-                                    console.log('Destroying shard downloader');
                                     downloaderStream.destroy();
                                 }
-                                nextTry(null, Buffer.alloc(0));
                             });
                             oneFileMuxer.on(events_2.FILEMUXER.PROGRESS, function (msg) { return _this.emit(events_2.FILEMUXER.PROGRESS, msg); });
                             oneFileMuxer.on('error', function (err) {
-                                // if (err.message === DOWNLOAD_CANCELLED_ERROR) {
-                                //   return;
-                                // }
+                                if (err.message === constants_1.DOWNLOAD_CANCELLED_ERROR) {
+                                    return;
+                                }
                                 downloadHasError = true;
                                 downloadError = err;
                                 _this.emit(events_2.FILEMUXER.ERROR, err);
@@ -218,6 +219,10 @@ var FileObject = /** @class */ (function (_super) {
                             oneFileMuxer.on('data', function (data) { buffs.push(data); });
                             oneFileMuxer.once('drain', function () {
                                 logger_1.logger.info('Drain received for shard %s', shard.index);
+                                if (downloadCancelled) {
+                                    nextTry(null, Buffer.alloc(0));
+                                    return;
+                                }
                                 if (downloadHasError) {
                                     nextTry(downloadError);
                                 }
@@ -267,7 +272,7 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.download = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var fileStream, shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes, streams;
+            var fileStream, streams, shardSize, lastShardIndex, lastShardSize, sizeToFillToZeroes;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -275,12 +280,12 @@ var FileObject = /** @class */ (function (_super) {
                         if (!this.fileInfo) {
                             throw new Error('Undefined fileInfo');
                         }
+                        streams = [];
                         this.on(constants_1.DOWNLOAD_CANCELLED, function () {
                             _this.stopped = true;
-                            console.log('Trying to destroy stream');
                             if (fileStream) {
-                                console.log('Destroying stream');
                                 fileStream.destroy();
+                                streams.forEach(function (stream) { return stream.content.destroy(); });
                             }
                         });
                         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
@@ -291,7 +296,6 @@ var FileObject = /** @class */ (function (_super) {
                         lastShardSize = this.rawShards[lastShardIndex].size;
                         sizeToFillToZeroes = shardSize - lastShardSize;
                         logger_1.logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
-                        streams = [];
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, content, err_2;
                                 return __generator(this, function (_a) {

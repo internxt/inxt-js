@@ -138,7 +138,7 @@ var FileMuxer = /** @class */ (function (_super) {
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
         var input = new stream_1.PassThrough();
-        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
+        this.once(constants_1.DOWNLOAD_CANCELLED, function () {
             readable.destroy(Error(constants_1.DOWNLOAD_CANCELLED_ERROR));
             input.destroy();
         });
@@ -164,9 +164,6 @@ var FileMuxer = /** @class */ (function (_super) {
             _this.emit('drain', input);
         });
         readable.on('error', function (err) {
-            if (err.message === constants_1.DOWNLOAD_CANCELLED_ERROR) {
-                return;
-            }
             _this.emit('error', err);
         });
         this.added++;

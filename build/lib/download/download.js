@@ -63,17 +63,14 @@ function Download(config, bucketId, fileId, options, state) {
                 case 1:
                     _c.trys.push([1, 10, , 11]);
                     File_1 = new FileObject_1.FileObject(config, bucketId, fileId);
-                    state.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                        File_1.emit(constants_1.DOWNLOAD_CANCELLED);
-                        options.finishedCallback(Error(constants_1.DOWNLOAD_CANCELLED_ERROR), null);
-                    });
+                    handleStateChanges(File_1, state, options);
+                    handleProgress(File_1, options);
                     return [4 /*yield*/, File_1.GetFileInfo()];
                 case 2:
                     _c.sent();
                     return [4 /*yield*/, File_1.GetFileMirrors()];
                 case 3:
                     _c.sent();
-                    handleProgress(File_1, options);
                     return [4 /*yield*/, File_1.download()];
                 case 4:
                     fileStream = _c.sent();
@@ -145,5 +142,14 @@ function handleProgress(fl, options) {
         totalBytesDecrypted += addedBytes;
         progress = getDecryptionProgress();
         decryptionProgress(progress, totalBytesDecrypted, totalBytes);
+    });
+}
+function handleStateChanges(file, state, options) {
+    state.on(constants_1.DOWNLOAD_CANCELLED, function () {
+        file.emit(constants_1.DOWNLOAD_CANCELLED);
+        options.finishedCallback(Error(constants_1.DOWNLOAD_CANCELLED_ERROR), null);
+        // prevent more calls to any callback
+        options.progressCallback = function () { };
+        options.finishedCallback = function () { };
     });
 }
