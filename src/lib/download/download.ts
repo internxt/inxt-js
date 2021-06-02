@@ -18,16 +18,11 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
   try {
     const File = new FileObject(config, bucketId, fileId);
 
-    state.on(DOWNLOAD_CANCELLED, () => {
-      File.emit(DOWNLOAD_CANCELLED);
-
-      options.finishedCallback(Error(DOWNLOAD_CANCELLED_ERROR), null);
-    });
+    handleStateChanges(File, state, options);
+    handleProgress(File, options);
 
     await File.GetFileInfo();
     await File.GetFileMirrors();
-
-    handleProgress(File, options);
 
     const fileStream = await File.download();
 
@@ -105,5 +100,17 @@ function handleProgress(fl: FileObject, options: DownloadFileOptions) {
     totalBytesDecrypted += addedBytes;
     progress = getDecryptionProgress();
     decryptionProgress(progress, totalBytesDecrypted, totalBytes);
+  });
+}
+
+function handleStateChanges(file: FileObject, state: ActionState, options: DownloadFileOptions) {
+  state.on(DOWNLOAD_CANCELLED, () => {
+    file.emit(DOWNLOAD_CANCELLED);
+
+    options.finishedCallback(Error(DOWNLOAD_CANCELLED_ERROR), null);
+
+    // prevent more calls to any callback
+    options.progressCallback = () => {};
+    options.finishedCallback = () => {};
   });
 }
