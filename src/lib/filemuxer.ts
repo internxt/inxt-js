@@ -5,6 +5,7 @@ import { ripemd160 } from './crypto';
 import { FILEMUXER } from './events';
 import { bufferToStream } from './utils/buffer';
 import { logger } from './utils/logger';
+import { DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from '../api/constants';
 
 export class FileMuxerError extends Error {
   content: any;
@@ -149,6 +150,11 @@ class FileMuxer extends Readable {
     assert(this.added < this.shards, 'Inputs exceed defined number of shards');
 
     const input = new PassThrough();
+    
+    this.once(DOWNLOAD_CANCELLED, () => {
+      readable.destroy(Error(DOWNLOAD_CANCELLED_ERROR));
+      input.destroy();
+    })
 
     readable.on('data', (data: Buffer) => {
       input.pause();
