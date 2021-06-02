@@ -8,6 +8,7 @@ import { Upload } from "../../src/lib/upload"
 import { logger } from '../../src/lib/utils/logger'
 import { ShardFailedIntegrityCheckError, ShardSuccesfulIntegrityCheck } from '../../src/lib/filemuxer'
 import { DECRYPT, DOWNLOAD, FILEMUXER } from '../../src/lib/events'
+import { ActionState, ActionTypes } from '../../src/api/ActionState'
 
 export class LabEnvironment extends Environment {
     /**
@@ -33,16 +34,28 @@ export class LabEnvironment extends Environment {
      * @param fileId Id of the file to be downloaded
      * @param options Available options for download
      */
-    async download(bucketId: string, fileId: string, options: DownloadFileOptions) : Promise<Readable> {
+    download(bucketId: string, fileId: string, options: DownloadFileOptions): ActionState {
         if(!this.config.encryptionKey) {
             throw new Error('Mnemonic was not provided')
         }
 
-        const output = await Download(this.config, bucketId, fileId, options)
+        const downloadState = new ActionState(ActionTypes.DOWNLOAD);
 
-        new DownloadLogsManager(output).init()
+        const finishCbWrapper = (err: Error | null, fileStream: Readable) => {
+            if (!err && fileStream) {
+                new DownloadLogsManager(fileStream).init();
+            }
 
-        return output
+            options.finishedCallback(err, fileStream);
+        }
+
+        Download(this.config, bucketId, fileId, {
+            progressCallback: options.progressCallback,
+            decryptionProgressCallback: options.decryptionProgressCallback,
+            finishedCallback: finishCbWrapper
+        }, downloadState);
+
+        return downloadState;
     }
 }
 
@@ -62,10 +75,6 @@ class DownloadLogsManager {
             logger.error('Download failed due to %s', err.message)
             console.error(err)
         })
-
-        this.output.on('end', () => {
-            logger.info('Download complete.')
-        })
     }
 
     private addFileMuxerListeners() {
@@ -80,7 +89,7 @@ class DownloadLogsManager {
 
     private addDownloadListeners() {        
         this.output.on(DOWNLOAD.PROGRESS, () => {
-            logger.info('Download progress fired!')
+            // logger.info('Download progress fired!')
         })
 
         this.output.on(DOWNLOAD.END, () => {
@@ -90,7 +99,7 @@ class DownloadLogsManager {
 
     private addDecryptListeners() {
         this.output.on(DECRYPT.PROGRESS, () => {
-            logger.info('Decrypting progress fired!')
+            // logger.info('Decrypting progress fired!')
         })
 
         this.output.on(DECRYPT.END, () => {
