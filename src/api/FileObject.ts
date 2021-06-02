@@ -318,9 +318,13 @@ export class FileObject extends EventEmitter {
     return fileStream;
   }
 
-  private handleDownloadCancel(streams: Readable[]): void {
+  private handleDownloadCancel(streams: Readable[] | null[]): void {
     this.stopped = true;
       
-    streams.forEach(stream => stream.destroy());
+    streams.forEach((stream: Readable | null) => {
+      if (stream) {
+        stream.destroy();
+      }
+    });
   }
 }
