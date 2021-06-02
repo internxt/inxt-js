@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { Duplex, Readable } from 'stream';
+import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit, retry } from 'async';
 
