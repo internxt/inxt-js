@@ -220,6 +220,19 @@ export class FileObject extends EventEmitter {
       throw new Error('Undefined fileInfo');
     }
 
+    let fileStream: Readable;
+    const streams: DownloadStream[] = [];
+
+    this.on(DOWNLOAD_CANCELLED, () => {
+      this.stopped = true;
+      
+      if (fileStream) {
+        fileStream.destroy();
+
+        streams.forEach(stream => stream.content.destroy());
+      }
+    });
+
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
 
     this.decipher.on('error', (err) => this.emit(DECRYPT.ERROR, err));
@@ -232,12 +245,6 @@ export class FileObject extends EventEmitter {
     const sizeToFillToZeroes = shardSize - lastShardSize;
 
     logger.info('%s bytes to be added with zeroes for the last shard', sizeToFillToZeroes);
-
-    const streams: DownloadStream[] = [];
-
-    this.on(DOWNLOAD_CANCELLED, () => {
-      streams.forEach(stream => stream.content.destroy());
-    });
 
     await Promise.all(this.rawShards.map(async (shard, i) => {
       if (this.stopped) {
@@ -286,9 +293,11 @@ export class FileObject extends EventEmitter {
     }));
 
     // Order streams by shard index
-    streams.sort((sA, sB) => sA.index - sB.index);
+    streams.sort((sA, sB) => sA.index - sB.index);  
 
     // Unify them
-    return new MultiStream(streams.map(s => s.content));
+    fileStream = new MultiStream(streams.map(s => s.content));
+
+    return fileStream;
   }
 }
