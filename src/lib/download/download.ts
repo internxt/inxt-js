@@ -19,10 +19,11 @@ export async function Download(config: EnvironmentConfig, bucketId: string, file
     const File = new FileObject(config, bucketId, fileId);
 
     handleStateChanges(File, state, options);
-    handleProgress(File, options);
 
     await File.GetFileInfo();
     await File.GetFileMirrors();
+
+    handleProgress(File, options);
 
     const fileStream = await File.download();
 
@@ -79,6 +80,10 @@ function handleProgress(fl: FileObject, options: DownloadFileOptions) {
   const totalBytes = fl.rawShards.length > 0 ?
     fl.rawShards.reduce((a, b) => ({ size: a.size + b.size }), { size: 0 }).size :
     0;
+
+  if (totalBytes === 0) {
+    throw new Error('Total file size can not be 0');
+  }
 
   function getDownloadProgress() {
     return (totalBytesDownloaded / totalBytes) * 100;
