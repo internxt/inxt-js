@@ -1,13 +1,8 @@
-import { utils } from "rs-wrapper";
-
 import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
 import { ShardMeta } from '../shardMeta';
 import { CreateEntryFromFrameBody } from '../../services/request';
 import { logger } from "../utils/logger";
-import { promisifyStream } from "../utils/promisify";
-
-const MIN_SHARD_SIZE = 2097152; // 2Mb
 
 /**
  * Uploads a file to the network
@@ -24,42 +19,16 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
 
     const file = new FileObjectUpload(config, fileMeta, bucketId);
 
-    await file.init();
-    await file.checkBucketExistence();
-    await file.stage();
-    const out = file.encrypt();
-
-    // TODO: Is this useful?
-    progress(0, 0, file.getSize());
-
-    let shardIndex = 0;
-    const uploadRequests: Promise<ShardMeta>[] = [];
-
-    out.on('data', (shard: Buffer) => {
-        uploadRequests.push(file.UploadShard(shard, shard.length, file.frameId, shardIndex++, 3, false));
-    });
-
     try {
-        await promisifyStream(out);
+        await file.init();
+        await file.checkBucketExistence();
+        await file.stage();
+        file.encrypt();
 
-        const fileSize = file.getSize();
+        // TODO: Is this useful?
+        progress(0, 0, file.getSize());
 
-        logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / utils.determineShardSize(fileSize)), utils.determineShardSize(fileSize));
-        logger.debug('Waiting for upload to progress');
-
-        let currentBytesUploaded = 0;
-        const uploadResponses = await Promise.all(
-            uploadRequests.map(async (request) => {
-                const shardMeta = await request;
-
-                currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, progress);
-
-                return shardMeta;
-            })
-        ).catch((err) => {
-            // TODO: Give more error granularity
-            throw new Error('Farmer request error');
-        });
+        const uploadResponses = await file.upload(progress);
 
         logger.debug('Upload finished');
 
@@ -69,20 +38,23 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
             throw new Error('Can not save the file in network');
         }
 
-        progress(100, fileSize, fileSize);
+        progress(100, file.getSize(), file.getSize());
+        // TODO: Return just the fileId
         finish(null, savingFileResponse);
 
         logger.info('File uploaded with id %s', savingFileResponse.id);
-
     } catch (err) {
         finish(err, null);
     }
 }
 
+
+// TODO: Move to FileObjectUpload
 export function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
     return fileObject.SaveFileInNetwork(generateBucketEntry(fileObject, fileMeta, shardMetas, rs));
 }
 
+// TODO: Move to FileObjectUpload
 export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
     const bucketEntry: CreateEntryFromFrameBody = {
         frame: fileObject.frameId,
@@ -99,12 +71,4 @@ export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: File
     }
 
     return bucketEntry;
-}
-
-function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
-    const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-    const progressCounter = Math.ceil((newCurrentBytes / totalBytes) * 100);
-    progress(progressCounter, newCurrentBytes, totalBytes);
-
-    return newCurrentBytes;
 }

@@ -2,7 +2,7 @@ import { utils } from 'rs-wrapper';
 import { Readable } from 'stream';
 import { randomBytes } from 'crypto';
 
-import { EnvironmentConfig } from '..';
+import { EnvironmentConfig, UploadProgressCallback } from '..';
 import * as api from '../services/request';
 
 import EncryptStream from '../lib/encryptStream';
@@ -14,6 +14,7 @@ import { logger } from "../lib/utils/logger";
 
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
+import { promisifyStream } from '../lib/utils/promisify';
 
 export interface FileMeta {
     size: number;
@@ -30,6 +31,7 @@ export class FileObjectUpload {
   index: Buffer;
 
   cipher: EncryptStream;
+  uploadStream: EncryptStream;
   funnel: FunnelStream;
   fileEncryptionKey: Buffer;
 
@@ -41,6 +43,7 @@ export class FileObjectUpload {
     this.frameId = '';
     this.funnel = new FunnelStream(utils.determineShardSize(fileMeta.size));
     this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
+    this.uploadStream = new EncryptStream(randomBytes(32), randomBytes(16));
     this.fileEncryptionKey = randomBytes(32);
   }
 
@@ -109,7 +112,45 @@ export class FileObjectUpload {
   encrypt(): EncryptStream {
     logger.info('Starting file upload');
 
-    return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
+    this.uploadStream = this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
+
+    return this.uploadStream;
+  }
+
+  async upload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    let shardIndex = 0;
+    
+    const uploads: Promise<ShardMeta>[] = [];
+
+    this.uploadStream.on('data', (shard: Buffer) => {
+      logger.info('Pushing shard (index %s', shardIndex);
+      uploads.push(this.UploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
+    });
+
+    await promisifyStream(this.uploadStream);
+
+    const fileSize = this.getSize();
+
+    logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / utils.determineShardSize(fileSize)), utils.determineShardSize(fileSize));
+    logger.debug('Waiting for upload to progress');
+
+    let currentBytesUploaded = 0;
+    const uploadResponses = await Promise.all(
+      uploads.map(async (request) => {
+        const shardMeta = await request;
+
+        currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
+
+        return shardMeta;
+      })
+    ).catch((err) => {
+      // TODO: Give more error granularity
+      throw new Error('Farmer request error');
+    });
+
+    logger.debug('Upload finished');
+
+    return uploadResponses;
   }
 
   async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
@@ -170,4 +211,12 @@ export class FileObjectUpload {
     return shardMeta;
   }
 
+}
+
+function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
+  const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
+  const progressCounter = Math.ceil((newCurrentBytes / totalBytes) * 100);
+  progress(progressCounter, newCurrentBytes, totalBytes);
+
+  return newCurrentBytes;
 }
