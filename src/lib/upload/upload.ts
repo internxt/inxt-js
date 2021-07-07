@@ -5,6 +5,7 @@ import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
 import { ShardMeta } from '../shardMeta';
 import { CreateEntryFromFrameBody } from '../../services/request';
 import { logger } from "../utils/logger";
+import { promisifyStream } from "../utils/promisify";
 
 const MIN_SHARD_SIZE = 2097152; // 2Mb
 
@@ -21,60 +22,61 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         throw new Error('Encryption key is null');
     }
 
-    const File = await new FileObjectUpload(config, fileMeta, bucketId).init();
-    const Output = await File.StartUploadFile();
+    const file = new FileObjectUpload(config, fileMeta, bucketId);
 
-    const fileSize = fileMeta.size;
-    const buffs: Buffer[] = [];
+    await file.init();
+    await file.checkBucketExistence();
+    await file.stage();
+    const out = file.encrypt();
 
-    progress(0, 0, fileSize);
+    // TODO: Is this useful?
+    progress(0, 0, file.getSize());
 
-    Output.on('data', async (shard: Buffer) => { buffs.push(shard); });
+    let shardIndex = 0;
+    const uploadRequests: Promise<ShardMeta>[] = [];
 
-    Output.on('error', (err) => finish(err, null));
-
-    out.on('error', (err) => finish(err, null));
-
-    out.on('end', async () => {
-        const shardSize = utils.determineShardSize(fileSize);
-        const nShards = Math.ceil(fileSize / shardSize);
-
-        const totalSize = fileSize;
-
-        logger.debug('Shards obtained %s, shardSize %s', nShards, shardSize);
-
-        try {
-            logger.debug('Waiting for upload to progress');
-
-            let currentBytesUploaded = 0;
-            const uploadResponses = await Promise.all(
-                uploadRequests.map(async (request) => {
-                    const shardMeta = await request;
-
-                    currentBytesUploaded = updateProgress(totalSize, currentBytesUploaded, shardMeta.size, progress);
-
-                    return shardMeta;
-                })
-            ).catch((err) => {
-                throw new Error('Farmer request error');
-            });
-
-            logger.debug('Upload finished');
-
-            const savingFileResponse = await createBucketEntry(file, fileMeta, uploadResponses, false);
-
-            if (!savingFileResponse) {
-                throw new Error('Can not save the file in network');
-            }
-
-            progress(100, fileSize, fileSize);
-            finish(null, savingFileResponse);
-
-            logger.info('File uploaded with id %s', savingFileResponse.id);
-        } catch (err) {
-            finish(err, null);
-        }
+    out.on('data', (shard: Buffer) => {
+        uploadRequests.push(file.UploadShard(shard, shard.length, file.frameId, shardIndex++, 3, false));
     });
+
+    try {
+        await promisifyStream(out);
+
+        const fileSize = file.getSize();
+
+        logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / utils.determineShardSize(fileSize)), utils.determineShardSize(fileSize));
+        logger.debug('Waiting for upload to progress');
+
+        let currentBytesUploaded = 0;
+        const uploadResponses = await Promise.all(
+            uploadRequests.map(async (request) => {
+                const shardMeta = await request;
+
+                currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, progress);
+
+                return shardMeta;
+            })
+        ).catch((err) => {
+            // TODO: Give more error granularity
+            throw new Error('Farmer request error');
+        });
+
+        logger.debug('Upload finished');
+
+        const savingFileResponse = await createBucketEntry(file, fileMeta, uploadResponses, false);
+
+        if (!savingFileResponse) {
+            throw new Error('Can not save the file in network');
+        }
+
+        progress(100, fileSize, fileSize);
+        finish(null, savingFileResponse);
+
+        logger.info('File uploaded with id %s', savingFileResponse.id);
+
+    } catch (err) {
+        finish(err, null);
+    }
 }
 
 export function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
@@ -105,33 +107,4 @@ function updateProgress(totalBytes: number, currentBytesUploaded: number, newByt
     progress(progressCounter, newCurrentBytes, totalBytes);
 
     return newCurrentBytes;
-}
-
-interface UploadShardsAction {
-    fileObject: FileObjectUpload;
-    fileContent: Buffer;
-    shardSize: number;
-    nShards: number;
-    firstIndex: number;
-    parity: boolean;
-}
-
-function uploadShards(action: UploadShardsAction): Promise<ShardMeta>[] {
-    let from = 0;
-    let currentShard = null;
-    const shardUploadRequests: Promise<ShardMeta>[] = [];
-
-    for (let i = action.firstIndex; i < (action.firstIndex + action.nShards); i++) {
-        currentShard = action.fileContent.slice(from, from + action.shardSize);
-
-        shardUploadRequests.push(uploadShard(action.fileObject, currentShard, i, action.parity));
-
-        from += action.shardSize;
-    }
-
-    return shardUploadRequests;
-}
-
-function uploadShard(fileObject: FileObjectUpload, shard: Buffer, index: number, isParity: boolean): Promise<ShardMeta> {
-    return fileObject.UploadShard(shard, shard.length, fileObject.frameId, index, 3, isParity);
 }

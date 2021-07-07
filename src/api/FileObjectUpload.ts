@@ -44,6 +44,10 @@ export class FileObjectUpload {
     this.fileEncryptionKey = randomBytes(32);
   }
 
+  getSize(): number {
+    return this.fileMeta.size;
+  }
+
   async init(): Promise<FileObjectUpload> {
     this.index = randomBytes(32);
     this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
@@ -53,7 +57,7 @@ export class FileObjectUpload {
     return this;
   }
 
-  async CheckBucketExistance(): Promise<boolean> {
+  async checkBucketExistence(): Promise<boolean> {
     // if bucket not exists, bridge returns an error
     await api.getBucketById(this.config, this.bucketId);
 
@@ -62,15 +66,15 @@ export class FileObjectUpload {
     return true;
   }
 
-  StageFile(): Promise<void> {
+  stage(): Promise<void> {
     return api.createFrame(this.config).then((frame) => {
-        if (!frame || !frame.id) {
-            throw new Error('Bridge frame staging error');
-        }
+      if (!frame || !frame.id) {
+        throw new Error('Bridge frame staging error');
+      }
 
-        this.frameId = frame.id;
+      this.frameId = frame.id;
 
-        logger.info('Staged a file with frame %s', this.frameId);
+      logger.info('Staged a file with frame %s', this.frameId);
     });
   }
 
@@ -102,11 +106,8 @@ export class FileObjectUpload {
     return hmac.digest().toString('hex');
   }
 
-  async StartUploadFile(): Promise<EncryptStream> {
+  encrypt(): EncryptStream {
     logger.info('Starting file upload');
-
-    await this.CheckBucketExistance();
-    await this.StageFile();
 
     return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
   }
