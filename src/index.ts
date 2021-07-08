@@ -15,6 +15,7 @@ import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/const
 import { ActionState, ActionTypes } from './api/ActionState';
 
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
+import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -57,6 +58,14 @@ interface UploadFileParams {
   filename: string;
   fileSize: number;
   fileContent: Blob;
+  progressCallback: UploadProgressCallback;
+  finishedCallback: UploadFinishCallback;
+}
+
+interface StoreFileParams {
+  filename: string;
+  fileSize: number;
+  fileContent: Readable;
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
 }
@@ -202,6 +211,63 @@ export class Environment {
 
         finished(err, null);
       });
+  }
+
+  storeFile(bucketId: string, params: StoreFileParams): void {
+    if (!this.config.encryptionKey) {
+      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+      return;
+    }
+
+    if (!bucketId) {
+      params.finishedCallback(Error('Bucket id was not provided'), null);
+      return;
+    }
+
+    if (!params.filename) {
+      params.finishedCallback(Error('Filename was not provided'), null);
+      return;
+    }
+
+    if (params.fileSize === 0) {
+      params.finishedCallback(Error('Can not upload a file with size 0'), null);
+      return;
+    } 
+
+    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
+
+    EncryptFilename(this.config.encryptionKey, bucketId, filename)
+      .then((name: string) => {
+        logger.debug(`Filename ${filename} encrypted is ${name}`);
+
+        const fileToUpload: FileMeta = { content: fileContent, name, size };
+
+        Upload(this.config, bucketId, fileToUpload, progress, finished);
+      })
+      .catch((err: Error) => {
+        logger.error(`Error encrypting filename due to ${err.message}`);
+        logger.error(err);
+
+        finished(err, null);
+      });
+  }
+
+  resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState {
+    const downloadState = new ActionState(ActionTypes.DOWNLOAD);
+
+    if (!this.config.encryptionKey) {
+      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+      return downloadState;
+    }
+
+    if (!bucketId) {
+      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+      return downloadState;
+    }
+
+    Download(this.config, bucketId, fileId, DesktopDownloadOptionsAdapter(options), downloadState);
+
+    return downloadState;
   }
 
   /**
