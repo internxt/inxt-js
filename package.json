@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/async": "^3.2.3",
     "@types/chai": "^4.2.11",
+    "@types/commander": "^2.12.2",
     "@types/jest": "^26.0.4",
     "@types/node": "^15.0.2",
     "@types/node-fetch": "^2.5.7",
@@ -37,7 +38,7 @@
     "bip39": "^3.0.2",
     "blob-to-stream": "^1.0.3",
     "buffer-to-stream": "^1.0.0",
-    "commander": "^5.1.0",
+    "commander": "^8.0.0",
     "memory-blob-store": "^5.0.1",
     "multistream": "^4.1.0",
     "mux-demux": "^3.7.9",
