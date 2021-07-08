@@ -1,10 +1,11 @@
 import { Command } from "commander";
-import { Environment } from '../index';
-import { config } from 'dotenv';
-import { createReadStream, createWriteStream, fstat, statSync } from "fs";
-import path from "path/posix";
-import { logger } from "../lib/utils/logger";
 import { Readable } from "stream";
+import { config } from 'dotenv';
+import { createReadStream, createWriteStream, statSync } from "fs";
+import { basename } from "path";
+
+import { Environment } from '../index';
+import { logger } from "../lib/utils/logger";
 
 config();
 
@@ -27,12 +28,15 @@ const network = new Environment({
     bridgeUrl: process.env.BRIDGE_URL
 });
 
-if (opts.upload && opts.path) {
+if (opts.upload && opts.path) { uploadFile(); }
+if (opts.download && opts.path && opts.fileId) { downloadFile(); }
+
+function uploadFile() {
     new Promise((resolve, reject) => {
         network.storeFile(process.env.BUCKET_ID, {
             fileContent: createReadStream(opts.path),
             fileSize: statSync(opts.path).size,
-            filename: path.basename(opts.path),
+            filename: basename(opts.path),
             progressCallback: (progress: number) => {
                 logger.info('Progress: %s', (progress * 100).toFixed(2));
             },
@@ -53,7 +57,7 @@ if (opts.upload && opts.path) {
     });
 }
 
-if (opts.download && opts.path && opts.fileId) {
+function downloadFile() {
     new Promise((resolve: (r: Readable) => void, reject) => {
         network.resolveFile(process.env.BUCKET_ID, opts.fileId, {
             progressCallback: (progress: number) => {
