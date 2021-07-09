@@ -1,7 +1,7 @@
 import * as Winston from 'winston';
-import * as dotenv from 'dotenv';
-import { resolve } from 'path';
-dotenv.config({ path: resolve(__dirname, '../../../../.env') });
+import { config } from 'dotenv';
+
+config();
 
 const loggerOptions = {
     levels: {
@@ -37,8 +37,6 @@ const getLoggerInstance = (level: number): Winston.Logger => {
         ),
         transports: [new Winston.transports.Console()]
     });
-
-    // console.log(process.env.STAGE)
 
     if (process.env.STAGE !== 'development') {
         logger.silent = true;
