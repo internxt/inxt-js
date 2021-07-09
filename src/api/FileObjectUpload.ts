@@ -30,6 +30,8 @@ export class FileObjectUpload {
   frameId: string;
   index: Buffer;
 
+  encrypted: boolean = false;
+
   cipher: EncryptStream;
   uploadStream: EncryptStream;
   funnel: FunnelStream;
@@ -110,14 +112,17 @@ export class FileObjectUpload {
   }
 
   encrypt(): EncryptStream {
-    logger.info('Starting file upload');
-
     this.uploadStream = this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
+    this.encrypted = true;
 
     return this.uploadStream;
   }
 
   async upload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    if (!this.encrypted) {
+      throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
+    }
+
     let shardIndex = 0;
     
     const uploads: Promise<ShardMeta>[] = [];
