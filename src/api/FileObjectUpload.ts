@@ -143,7 +143,11 @@ export class FileObjectUpload {
         return shardMeta;
       })
     ).catch((err) => {
-      throw new Error('Farmer request error: ' + err.message);
+      const wrappedError = new Error('Farmer request error: ' + err.message);
+      wrappedError.stack = err.stack;
+      wrappedError.name = err.name;
+
+      throw wrappedError;
     });
 
     return uploadResponses;
@@ -196,7 +200,11 @@ export class FileObjectUpload {
         logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
         await this.uploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
       } else {
-        return Promise.reject(Error('Upload shard error: ' + err.message));
+        const wrappedError = Error('Upload shard error: ' + err.message);
+        wrappedError.stack = err.stack;
+        wrappedError.name = err.name;
+
+        return Promise.reject(wrappedError);
       }
     }
 
