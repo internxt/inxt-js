@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import { encode, reconstruct, utils } from 'rs-wrapper';
 import { randomBytes } from 'crypto';
 
-import { Upload } from './lib/upload';
+import { upload } from './lib/upload';
 import { Download } from './lib/download';
 import { EncryptFilename } from './lib/crypto';
 import { logger } from './lib/utils/logger';
@@ -242,7 +242,7 @@ export class Environment {
 
         const fileToUpload: FileMeta = { content: fileContent, name, size };
 
-        Upload(this.config, bucketId, fileToUpload, progress, finished);
+        upload(this.config, bucketId, fileToUpload, progress, finished);
       })
       .catch((err: Error) => {
         logger.error(`Error encrypting filename due to ${err.message}`);

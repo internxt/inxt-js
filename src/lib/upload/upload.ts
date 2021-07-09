@@ -12,11 +12,7 @@ import { logger } from "../utils/logger";
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export async function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void> {
-    if (!config.encryptionKey) {
-        throw new Error('Encryption key is null');
-    }
-
+export async function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void> {
     const file = new FileObjectUpload(config, fileMeta, bucketId);
 
     try {
