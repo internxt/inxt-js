@@ -151,7 +151,7 @@ export class Environment {
   }
 
   downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState {
-    const downloadState = new ActionState(ActionTypes.DOWNLOAD);
+    const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
       options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
@@ -225,7 +225,7 @@ export class Environment {
    * @param params Store file params
    */
   storeFile(bucketId: string, params: StoreFileParams): ActionState {
-    const uploadState = new ActionState(ActionTypes.UPLOAD);
+    const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
@@ -267,7 +267,7 @@ export class Environment {
   }
 
   resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState {
-    const downloadState = new ActionState(ActionTypes.DOWNLOAD);
+    const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
       options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
