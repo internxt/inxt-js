@@ -103,10 +103,12 @@ export class FileObjectUpload {
       });
   }
 
-  async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
-    await api.sendShardToNode(this.config, shard, encryptedShard);
-
-    return false;
+  NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
+    return api.sendShardToNode(this.config, shard, encryptedShard)
+      .then(() => false)
+      .catch((err) => {
+        throw wrap('Farmer request error', err);
+      });
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {
