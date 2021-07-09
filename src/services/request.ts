@@ -82,7 +82,7 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
         if (timeoutSeconds) {
           downloader.setTimeout(timeoutSeconds * 1000, () => {
             downloader?.destroy(Error(`Request timeouted after ${timeoutSeconds} seconds`));
-          })
+          });
         }
 
         if (useProxy && proxy) { proxy.free(); }
@@ -103,7 +103,7 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
   });
 }
 
-interface getBucketByIdResponse {
+interface GetBucketByIdResponse {
   user: string;
   encryptionKey: string;
   publicPermissions: string[];
@@ -124,7 +124,7 @@ interface getBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void> {
+export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<GetBucketByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
   const targetUrl = `${URL}/buckets/${bucketId}`;
   const defParams: AxiosRequestConfig = {
@@ -136,10 +136,10 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'get', targetUrl, finalParams, false)
-    .then<getBucketByIdResponse>((res: AxiosResponse) => res.data);
+    .then<GetBucketByIdResponse>((res: AxiosResponse) => res.data);
 }
 
-interface getFileByIdResponse {
+interface GetFileByIdResponse {
   /* file-id */
   id: string;
 }
@@ -152,7 +152,7 @@ interface getFileByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void> {
+export function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<GetFileByIdResponse | void> {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
   const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`;
   const defParams: AxiosRequestConfig = {
@@ -164,7 +164,7 @@ export function getFileById(config: EnvironmentConfig, bucketId: string, fileId:
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'get', targetUrl, finalParams, false)
-    .then<getFileByIdResponse>((res: AxiosResponse) => res.data);
+    .then<GetFileByIdResponse>((res: AxiosResponse) => res.data);
 }
 
 export interface FrameStaging {

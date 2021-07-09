@@ -59,11 +59,11 @@ export class FileObject extends EventEmitter {
 
   async GetFileInfo(): Promise<FileInfo | undefined> {
     if (this.stopped) {
-      return; 
+      return;
     }
 
     logger.info('Retrieving file info...');
-    
+
     if (!this.fileInfo) {
       this.fileInfo = await GetFileInfo(this.config, this.bucketId, this.fileId);
       if (this.config.encryptionKey) {
@@ -78,9 +78,9 @@ export class FileObject extends EventEmitter {
     if (this.stopped) {
       return;
     }
-    
+
     logger.info('Retrieving file mirrors...');
-    
+
     this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
 
     await eachLimit(this.rawShards, 1, (shard: Shard, nextShard) => {
@@ -100,7 +100,7 @@ export class FileObject extends EventEmitter {
           });
         }, (result: Shard | null, next: any) => {
           const validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address;
-          
+
           return next(null, validPointer || attempts >= DEFAULT_INXT_MIRRORS);
         }).then((result: any) => {
           logger.info('Pointer replaced for shard %s', shard.index);
@@ -110,7 +110,7 @@ export class FileObject extends EventEmitter {
           this.rawShards[shard.index] = result;
         }).catch(() => {
           logger.error('Pointer not found for shard %s, marking it as unhealthy', shard.index);
-          
+
           shard.healthy = false;
         }).finally(() => {
           nextShard(null);
@@ -170,7 +170,7 @@ export class FileObject extends EventEmitter {
 
           if (downloaderStream) {
             downloaderStream.destroy();
-          }          
+          }
         });
 
         oneFileMuxer.on(FILEMUXER.PROGRESS, (msg) => this.emit(FILEMUXER.PROGRESS, msg));
@@ -196,6 +196,7 @@ export class FileObject extends EventEmitter {
 
           if (downloadCancelled) {
             nextTry(null, Buffer.alloc(0));
+
             return;
           }
 
@@ -310,7 +311,7 @@ export class FileObject extends EventEmitter {
     }));
 
     // Order streams by shard index
-    streams.sort((sA, sB) => sA.index - sB.index);  
+    streams.sort((sA, sB) => sA.index - sB.index);
 
     // Unify them
     fileStream = new MultiStream(streams.map(s => s.content));
@@ -320,7 +321,7 @@ export class FileObject extends EventEmitter {
 
   private handleDownloadCancel(streams: Readable[] | null[]): void {
     this.stopped = true;
-      
+
     streams.forEach((stream: Readable | null) => {
       if (stream) {
         stream.destroy();

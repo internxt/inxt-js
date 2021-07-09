@@ -17,6 +17,7 @@ const getShardHash = (encryptedShardData: Buffer) => ripemd160(sha256(encryptedS
 
 export function getShardMeta(encryptedShardData: Buffer, fileSize: number, index: number, parity: boolean, exclude?: any): ShardMeta {
   const mT: MerkleTree = merkleTree(encryptedShardData);
+
   return {
     hash: getShardHash(encryptedShardData).toString("hex"),
     size: fileSize,

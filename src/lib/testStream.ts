@@ -23,23 +23,17 @@ export class TestStream extends Transform {
     for (let i = 0; i < chunk.length; i += 100) {
 
         if (this.push(this.takeSliceOf(chunk, 100)) === false) {
-            // buffer full
-            this.pause();
-            wait = true;
-            this.once('drain', () => {
-                // buffer ready to continue
-                // retry last push
-                this.startPosition -= 100;
-                wait = false;
-            });
+          // buffer full
+          this.pause();
+          wait = true;
+          this.once('drain', () => {
+              // buffer ready to continue
+              // retry last push
+              this.startPosition -= 100;
+              wait = false;
+          });
 
-            console.log(`stopped in ${this.startPosition} bytes`);
-            console.log('waiting until buffer emits drain');
-
-            while (wait) { }
-
-            console.log('continuing');
-
+          while (wait) { }
         }
     }
 

@@ -1,12 +1,12 @@
 function computeShardSizeBits(fileSize: number): number {
   // Check if fileSize == 0
-  if (fileSize == 0) { return 0; }
+  if (fileSize === 0) { return 0; }
 
   const MIN_SHARD_SIZE = 2097152; // 2Mb
   const MAX_SHARD_SIZE = 4294967296; // 4 Gb
   const SHARD_MULTIPLES_BACK = 4;
 
-  const shardSize = function(hops: number): number {
+  const shardSize = (hops: number): number => {
     return MIN_SHARD_SIZE * Math.pow(2, hops);
   };
 

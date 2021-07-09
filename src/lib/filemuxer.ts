@@ -150,11 +150,11 @@ class FileMuxer extends Readable {
     assert(this.added < this.shards, 'Inputs exceed defined number of shards');
 
     const input = new PassThrough();
-    
+
     this.once(DOWNLOAD_CANCELLED, () => {
       readable.destroy(Error(DOWNLOAD_CANCELLED_ERROR));
       input.destroy();
-    })
+    });
 
     readable.on('data', (data: Buffer) => {
       input.pause();

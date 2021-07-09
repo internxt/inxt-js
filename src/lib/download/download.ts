@@ -115,7 +115,7 @@ function handleStateChanges(file: FileObject, state: ActionState, options: Downl
     options.finishedCallback(Error(DOWNLOAD_CANCELLED_ERROR), null);
 
     // prevent more calls to any callback
-    options.progressCallback = () => {};
-    options.finishedCallback = () => {};
+    options.progressCallback = () => { };
+    options.finishedCallback = () => { };
   });
 }

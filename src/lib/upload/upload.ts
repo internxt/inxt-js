@@ -44,7 +44,6 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
     }
 }
 
-
 // TODO: Move to FileObjectUpload
 export function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean) {
     return fileObject.SaveFileInNetwork(generateBucketEntry(fileObject, fileMeta, shardMetas, rs));

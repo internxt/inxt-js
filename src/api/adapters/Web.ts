@@ -45,15 +45,15 @@ export const DownloadOptionsAdapter = (options: WebDownloadFileOptions): Downloa
         }).catch((blobParsingErr) => {
             options.finishedCallback(blobParsingErr, null);
         });
-    }
+    };
 
     return {
         progressCallback: options.progressCallback,
         decryptionProgressCallback: options.decryptionProgressCallback,
         finishedCallback: downloadFinishedCallback
-    }
-}
+    };
+};
 
 export const UploadOptionsAdapter = (options: WebUploadFileOptions): void => {
     // TODO
-}
+};

@@ -31,7 +31,7 @@ export class FileObjectUpload {
   frameId: string;
   index: Buffer;
 
-  encrypted: boolean = false;
+  encrypted = false;
 
   cipher: EncryptStream;
   uploadStream: EncryptStream;
@@ -85,7 +85,7 @@ export class FileObjectUpload {
 
       logger.info('Staged a file with frame %s', this.frameId);
     }).catch((err) => {
-      throw wrap('Bridge frame creation error', err);;
+      throw wrap('Bridge frame creation error', err);
     });
   }
 
@@ -132,7 +132,7 @@ export class FileObjectUpload {
     }
 
     let shardIndex = 0;
-    
+
     const uploads: Promise<ShardMeta>[] = [];
 
     this.uploadStream.on('data', (shard: Buffer) => {
@@ -167,7 +167,7 @@ export class FileObjectUpload {
     logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
     try {
-      let negotiatedContract: ContractNegotiated | void = await this.negotiateContract(frameId, shardMeta);
+      const negotiatedContract: ContractNegotiated | void = await this.negotiateContract(frameId, shardMeta);
 
       if (!negotiatedContract) {
         throw new Error('Unable to receive storage offer');
@@ -200,7 +200,7 @@ export class FileObjectUpload {
       }
 
       exchangeReport.params.exchangeEnd = new Date();
-      exchangeReport.sendReport().catch(() => { 
+      exchangeReport.sendReport().catch(() => {
         // no op
       });
     } catch (err) {

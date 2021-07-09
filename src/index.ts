@@ -155,11 +155,13 @@ export class Environment {
 
     if (!this.config.encryptionKey) {
       options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+
       return downloadState;
     }
 
     if (!bucketId) {
       options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+
       return downloadState;
     }
 
@@ -176,23 +178,27 @@ export class Environment {
   uploadFile(bucketId: string, params: UploadFileParams): void {
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
       return;
     }
 
     if (!bucketId) {
       params.finishedCallback(Error('Bucket id was not provided'), null);
+
       return;
     }
 
     if (!params.filename) {
       params.finishedCallback(Error('Filename was not provided'), null);
+
       return;
     }
 
     if (params.fileContent.size === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
+
       return;
-    } 
+    }
 
     const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
 
@@ -223,23 +229,27 @@ export class Environment {
 
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
       return uploadState;
     }
 
     if (!bucketId) {
       params.finishedCallback(Error('Bucket id was not provided'), null);
+
       return uploadState;
     }
 
     if (!params.filename) {
       params.finishedCallback(Error('Filename was not provided'), null);
+
       return uploadState;
     }
 
     if (params.fileSize === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
+
       return uploadState;
-    } 
+    }
 
     EncryptFilename(this.config.encryptionKey, bucketId, params.filename)
       .then((name: string) => {
@@ -261,11 +271,13 @@ export class Environment {
 
     if (!this.config.encryptionKey) {
       options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+
       return downloadState;
     }
 
     if (!bucketId) {
       options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+
       return downloadState;
     }
 

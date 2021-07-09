@@ -25,7 +25,7 @@ function parseLogLevel(level: number): string {
 
 const getLoggerInstance = (level: number): Winston.Logger => {
     const levelName = parseLogLevel(level);
-    const logger = Winston.createLogger({
+    const _logger = Winston.createLogger({
         level: levelName,
         exitOnError: true,
         handleExceptions: true,
@@ -39,10 +39,10 @@ const getLoggerInstance = (level: number): Winston.Logger => {
     });
 
     if (process.env.STAGE !== 'development') {
-        logger.silent = true;
+        _logger.silent = true;
     }
 
-    return logger;
+    return _logger;
 };
 
 export const logger: Winston.Logger = getLoggerInstance(1);

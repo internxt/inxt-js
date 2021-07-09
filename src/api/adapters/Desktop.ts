@@ -40,15 +40,15 @@ export const DownloadOptionsAdapter = (options: DesktopDownloadFileOptions): Dow
         }
 
         options.finishedCallback(err, fileStream);
-    }
+    };
 
     return {
         progressCallback: options.progressCallback,
         decryptionProgressCallback: options.decryptionProgressCallback,
         finishedCallback: downloadFinishedCallback
-    }
-}
+    };
+};
 
 export const UploadOptionsAdapter = (options: DesktopUploadFileOptions): void => {
     // TODO
-}
+};
