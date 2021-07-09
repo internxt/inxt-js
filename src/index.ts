@@ -19,7 +19,7 @@ import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOp
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
-export type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
+export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;

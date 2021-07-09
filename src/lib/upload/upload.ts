@@ -39,8 +39,8 @@ export async function Upload(config: EnvironmentConfig, bucketId: string, fileMe
         }
 
         progress(100, file.getSize(), file.getSize());
-        // TODO: Return just the fileId
-        finish(null, savingFileResponse);
+
+        finish(null, savingFileResponse.id);
 
         logger.info('File uploaded with id %s', savingFileResponse.id);
     } catch (err) {
