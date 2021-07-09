@@ -196,7 +196,7 @@ export class FileObjectUpload {
         logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
         await this.uploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
       } else {
-        return Promise.reject(err);
+        return Promise.reject(Error('Upload shard error: ' + err.message));
       }
     }
 
