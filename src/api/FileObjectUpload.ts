@@ -221,7 +221,8 @@ export class FileObjectUpload {
 
 function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
   const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-  const progressCounter = Math.ceil((newCurrentBytes / totalBytes) * 100);
+  const progressCounter = newCurrentBytes / totalBytes;
+
   progress(progressCounter, newCurrentBytes, totalBytes);
 
   return newCurrentBytes;
