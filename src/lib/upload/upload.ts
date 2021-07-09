@@ -21,9 +21,6 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
         await file.stage();
         file.encrypt();
 
-        // TODO: Is this useful?
-        progress(0, 0, file.getSize());
-
         const uploadResponses = await file.upload(progress);
 
         logger.debug('Upload finished');
