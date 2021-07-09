@@ -15,6 +15,7 @@ import { logger } from "../lib/utils/logger";
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
 import { promisifyStream } from '../lib/utils/promisify';
+import { wrap } from '../lib/utils/error';
 
 export interface FileMeta {
   size: number;
@@ -64,31 +65,42 @@ export class FileObjectUpload {
 
   async checkBucketExistence(): Promise<boolean> {
     // if bucket not exists, bridge returns an error
-    await api.getBucketById(this.config, this.bucketId);
+    return api.getBucketById(this.config, this.bucketId).then((res) => {
+      logger.info('Bucket %s exists', this.bucketId);
 
-    logger.info('Bucket %s exists', this.bucketId);
-
-    return true;
+      return res ? true : false;
+    })
+    .catch((err) => {
+      throw wrap('Bucket existence check error', err);
+    });
   }
 
   stage(): Promise<void> {
     return api.createFrame(this.config).then((frame) => {
       if (!frame || !frame.id) {
-        throw new Error('Bridge frame staging error');
+        throw new Error('Frame response is empty');
       }
 
       this.frameId = frame.id;
 
       logger.info('Staged a file with frame %s', this.frameId);
+    }).catch((err) => {
+      throw wrap('Bridge frame creation error', err);;
     });
   }
 
   SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
-    return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
+    return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
+      .catch((err) => {
+        throw wrap('Bucket entry creation error', err);
+      });
   }
 
   negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
-    return api.addShardToFrame(this.config, frameId, shardMeta);
+    return api.addShardToFrame(this.config, frameId, shardMeta)
+      .catch((err) => {
+        throw wrap('Contract negotiation error', err);
+      });
   }
 
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
@@ -143,11 +155,7 @@ export class FileObjectUpload {
         return shardMeta;
       })
     ).catch((err) => {
-      const wrappedError = new Error('Farmer request error: ' + err.message);
-      wrappedError.stack = err.stack;
-      wrappedError.name = err.name;
-
-      throw wrappedError;
+      throw wrap('Farmer request error', err);
     });
 
     return uploadResponses;
@@ -200,11 +208,7 @@ export class FileObjectUpload {
         logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
         await this.uploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
       } else {
-        const wrappedError = Error('Upload shard error: ' + err.message);
-        wrappedError.stack = err.stack;
-        wrappedError.name = err.name;
-
-        return Promise.reject(wrappedError);
+        return Promise.reject(wrap('Upload shard error', err));
       }
     }
 
