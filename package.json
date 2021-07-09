@@ -8,6 +8,7 @@
     "build:js": "npm run build && browserify -s 'inxt' ./build/index.js -o dist/inxt.es6.js",
     "test": "ts-mocha tests/**/*.ts",
     "lint": "tslint './src/**/*.ts'",
+    "lint:fix": "npm run lint -- --fix",
     "dev": "tsc lab/index.ts && node lab/index.js && rm lab/index.js",
     "cli": "ts-node --files src/cli/index.ts"
   },
