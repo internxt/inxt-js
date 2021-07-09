@@ -17,9 +17,9 @@ import { Shard } from "./shard";
 import { promisifyStream } from '../lib/utils/promisify';
 
 export interface FileMeta {
-    size: number;
-    name: string;
-    content: Readable;
+  size: number;
+  name: string;
+  content: Readable;
 }
 
 export class FileObjectUpload {
