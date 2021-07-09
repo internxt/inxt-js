@@ -203,7 +203,7 @@ export class Environment {
         const content = BlobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
 
-        Upload(this.config, bucketId, fileToUpload, progress, finished);
+        upload(this.config, bucketId, fileToUpload, progress, finished);
       })
       .catch((err: Error) => {
         logger.error(`Error encrypting filename due to ${err.message}`);
@@ -213,43 +213,42 @@ export class Environment {
       });
   }
 
-  storeFile(bucketId: string, params: StoreFileParams): void {
+  storeFile(bucketId: string, params: StoreFileParams): ActionState {
+    const uploadState = new ActionState(ActionTypes.UPLOAD);
+
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-      return;
+      return uploadState;
     }
 
     if (!bucketId) {
       params.finishedCallback(Error('Bucket id was not provided'), null);
-      return;
+      return uploadState;
     }
 
     if (!params.filename) {
       params.finishedCallback(Error('Filename was not provided'), null);
-      return;
+      return uploadState;
     }
 
     if (params.fileSize === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
-      return;
+      return uploadState;
     } 
 
-    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
-
-    EncryptFilename(this.config.encryptionKey, bucketId, filename)
+    EncryptFilename(this.config.encryptionKey, bucketId, params.filename)
       .then((name: string) => {
-        logger.debug(`Filename ${filename} encrypted is ${name}`);
+        logger.debug('Filename %s encrypted is %s', params.filename, name);
 
-        const fileToUpload: FileMeta = { content: fileContent, name, size };
+        const fileToUpload: FileMeta = { content: params.fileContent, name, size: params.fileSize };
 
-        upload(this.config, bucketId, fileToUpload, progress, finished);
+        upload(this.config, bucketId, fileToUpload, params.progressCallback, params.finishedCallback);
       })
       .catch((err: Error) => {
-        logger.error(`Error encrypting filename due to ${err.message}`);
-        logger.error(err);
-
-        finished(err, null);
+        params.finishedCallback(err, null);
       });
+
+    return uploadState;
   }
 
   resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState {
