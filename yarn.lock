@@ -65,9 +65,10 @@
     "@types/yargs" "^15.0.0"
     chalk "^4.0.0"
 
-"@subspace/reed-solomon-erasure.wasm@JAlbertoGonzalez/reed-solomon-erasure.wasm":
+"@subspace/reed-solomon-erasure.wasm@^0.2.5":
   version "0.2.5"
-  resolved "https://codeload.github.com/JAlbertoGonzalez/reed-solomon-erasure.wasm/tar.gz/f62cb3703e394e4bd6496737cec205355704a50c"
+  resolved "https://registry.yarnpkg.com/@subspace/reed-solomon-erasure.wasm/-/reed-solomon-erasure.wasm-0.2.5.tgz#6e4651445ac5c16925d687eb3cb3e890afd76de4"
+  integrity sha512-dMAvEY2Z1Txquat0Ur2424sqz18YRD4OwXihiLxCLTKl5zJvH1/LuuUPOYl5kqu+M41j0TTzscvhXHuK+GiOoQ==
   dependencies:
     "@types/node" "^12.7.5"
 
