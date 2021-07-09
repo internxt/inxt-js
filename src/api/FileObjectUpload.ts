@@ -26,11 +26,11 @@ export interface FileMeta {
 export class FileObjectUpload {
   private config: EnvironmentConfig;
   private fileMeta: FileMeta;
+  private id = '';
 
   bucketId: string;
   frameId: string;
   index: Buffer;
-
   encrypted = false;
 
   cipher: EncryptStream;
@@ -52,6 +52,10 @@ export class FileObjectUpload {
 
   getSize(): number {
     return this.fileMeta.size;
+  }
+
+  getId(): string {
+    return this.id;
   }
 
   async init(): Promise<FileObjectUpload> {
@@ -219,6 +223,18 @@ export class FileObjectUpload {
     return shardMeta;
   }
 
+  createBucketEntry(shardMetas: ShardMeta[]): Promise<void> {
+    return this.SaveFileInNetwork(generateBucketEntry(this, this.fileMeta, shardMetas, false))
+      .then((bucketEntry) => {
+        if (!bucketEntry) {
+          throw new Error('Can not save the file in the network');
+        }
+        this.id = bucketEntry.id;
+      })
+      .catch((err) => {
+        throw wrap('Bucket entry creation error', err);
+      });
+  }
 }
 
 function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
@@ -228,4 +244,19 @@ function updateProgress(totalBytes: number, currentBytesUploaded: number, newByt
   progress(progressCounter, newCurrentBytes, totalBytes);
 
   return newCurrentBytes;
+}
+
+export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): api.CreateEntryFromFrameBody {
+  const bucketEntry: api.CreateEntryFromFrameBody = {
+    frame: fileObject.frameId,
+    filename: fileMeta.name,
+    index: fileObject.index.toString('hex'),
+    hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
+  };
+
+  if (rs) {
+    bucketEntry.erasure = { type: "reedsolomon" };
+  }
+
+  return bucketEntry;
 }
