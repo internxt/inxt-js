@@ -179,7 +179,7 @@ export class FileObjectUpload {
       const operation = negotiatedContract.operation;
       const farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
-      logger.debug('Contract for shard %s (index %s, size %s) with token %s',
+      logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
         shardMeta.hash,
         shardMeta.index,
         shardMeta.size,
