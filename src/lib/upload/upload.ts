@@ -23,7 +23,7 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
 
         const uploadResponses = await file.upload(progress);
 
-        logger.debug('Upload finished');
+        logger.debug('Upload finished. Creating bucket entry...');
 
         const savingFileResponse = await createBucketEntry(file, fileMeta, uploadResponses, false);
 
@@ -34,8 +34,6 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
         progress(1, file.getSize(), file.getSize());
 
         finish(null, savingFileResponse.id);
-
-        logger.info('File uploaded with id %s', savingFileResponse.id);
     } catch (err) {
         finish(err, null);
     }
