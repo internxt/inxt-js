@@ -144,8 +144,7 @@ export class FileObjectUpload {
         return shardMeta;
       })
     ).catch((err) => {
-      // TODO: Give more error granularity
-      throw new Error('Farmer request error');
+      throw new Error('Farmer request error: ' + err.message);
     });
 
     logger.debug('Upload finished');
