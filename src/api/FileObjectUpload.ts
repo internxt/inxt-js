@@ -132,7 +132,6 @@ export class FileObjectUpload {
     const fileSize = this.getSize();
 
     logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / utils.determineShardSize(fileSize)), utils.determineShardSize(fileSize));
-    logger.debug('Waiting for upload to progress');
 
     let currentBytesUploaded = 0;
     const uploadResponses = await Promise.all(
@@ -146,8 +145,6 @@ export class FileObjectUpload {
     ).catch((err) => {
       throw new Error('Farmer request error: ' + err.message);
     });
-
-    logger.debug('Upload finished');
 
     return uploadResponses;
   }
