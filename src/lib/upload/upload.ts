@@ -31,7 +31,7 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
             throw new Error('Can not save the file in network');
         }
 
-        progress(100, file.getSize(), file.getSize());
+        progress(1, file.getSize(), file.getSize());
 
         finish(null, savingFileResponse.id);
 
