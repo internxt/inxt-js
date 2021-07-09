@@ -71,7 +71,7 @@ interface StoreFileParams {
 }
 
 export class Environment {
-  protected config: EnvironmentConfig;
+  config: EnvironmentConfig;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
