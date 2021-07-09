@@ -9,7 +9,7 @@
     "test": "ts-mocha tests/**/*.ts",
     "lint": "tslint './src/**/*.ts'",
     "dev": "tsc lab/index.ts && node lab/index.js && rm lab/index.js",
-    "cli": "ts-node src/cli/index.ts"
+    "cli": "ts-node --files src/cli/index.ts"
   },
   "keywords": [],
   "author": "",
