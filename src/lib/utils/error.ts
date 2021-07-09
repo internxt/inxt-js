@@ -1,10 +1,8 @@
-class WrappedError extends Error {
-    header: string;
+export class WrappedError extends Error {
+    header = '';
 
-    constructor(header: string) {
-        super();
-
-        this.header = header;
+    constructor(message: string) {
+        super(message);
     }
 }
 
