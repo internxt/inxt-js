@@ -158,9 +158,6 @@ export class FileObjectUpload {
 
     logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
-    let token = "", operation = "";
-    let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
-
     try {
       let negotiatedContract: ContractNegotiated | void = await this.negotiateContract(frameId, shardMeta);
 
@@ -168,9 +165,9 @@ export class FileObjectUpload {
         throw new Error('Unable to receive storage offer');
       }
 
-      token = negotiatedContract.token;
-      operation = negotiatedContract.operation;
-      farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
+      const token = negotiatedContract.token;
+      const operation = negotiatedContract.operation;
+      const farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
       logger.debug('Contract for shard %s (index %s, size %s) with token %s',
         shardMeta.hash,
