@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit, retry } from 'async';
+import MultiStream from 'multistream';
 
 import DecryptStream from "../lib/decryptstream";
 import FileMuxer from "../lib/filemuxer";
@@ -18,7 +19,6 @@ import { logger } from '../lib/utils/logger';
 import { bufferToStream } from '../lib/utils/buffer';
 import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from './constants';
 
-const MultiStream = require('multistream');
 
 interface DownloadStream {
   content: Readable;
