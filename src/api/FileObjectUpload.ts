@@ -87,18 +87,14 @@ export class FileObjectUpload {
     return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
   }
 
-  NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
+  negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
     return api.addShardToFrame(this.config, frameId, shardMeta);
   }
 
   async NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
-    try {
-        await api.sendShardToNode(this.config, shard, encryptedShard);
+    await api.sendShardToNode(this.config, shard, encryptedShard);
 
-        return false;
-    } catch (err) {
-        return Promise.reject(err);
-    }
+    return false;
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {
@@ -128,8 +124,7 @@ export class FileObjectUpload {
     const uploads: Promise<ShardMeta>[] = [];
 
     this.uploadStream.on('data', (shard: Buffer) => {
-      logger.info('Pushing shard (index %s', shardIndex);
-      uploads.push(this.UploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
+      uploads.push(this.uploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
     });
 
     await promisifyStream(this.uploadStream);
@@ -158,57 +153,58 @@ export class FileObjectUpload {
     return uploadResponses;
   }
 
-  async UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
+  async uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
     const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
 
     logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
-    let negotiatedContract: ContractNegotiated | void;
     let token = "", operation = "";
     let farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
 
     try {
-        if (negotiatedContract = await this.NegotiateContract(frameId, shardMeta)) {
-            token = negotiatedContract.token;
-            operation = negotiatedContract.operation;
-            farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
+      let negotiatedContract: ContractNegotiated | void = await this.negotiateContract(frameId, shardMeta);
 
-            logger.debug('Contract for shard %s (index %s, size %s) with token %s',
-              shardMeta.hash,
-              shardMeta.index,
-              shardMeta.size,
-              token
-            );
-        } else {
-            throw new Error('Bridge negotiating contract error');
-        }
+      if (!negotiatedContract) {
+        throw new Error('Unable to receive storage offer');
+      }
 
-        const hash = shardMeta.hash;
-        const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation };
+      token = negotiatedContract.token;
+      operation = negotiatedContract.operation;
+      farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
-        const exchangeReport = new ExchangeReport(this.config);
-        exchangeReport.params.dataHash = hash;
-        exchangeReport.params.farmerId = shard.farmer.nodeID;
+      logger.debug('Contract for shard %s (index %s, size %s) with token %s',
+        shardMeta.hash,
+        shardMeta.index,
+        shardMeta.size,
+        token
+      );
 
-        if (await this.NodeRejectedShard(encryptedShard, shard)) {
-          exchangeReport.UploadError();
-        } else {
-          logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+      const hash = shardMeta.hash;
+      const shard: Shard = { index, replaceCount: 0, hash, size: shardSize, parity, token, farmer, operation };
 
-          exchangeReport.UploadOk();
-        }
+      const exchangeReport = new ExchangeReport(this.config);
+      exchangeReport.params.dataHash = hash;
+      exchangeReport.params.farmerId = shard.farmer.nodeID;
 
-        exchangeReport.params.exchangeEnd = new Date();
-        exchangeReport.sendReport().catch(() => { 
-          // no op
-        });
+      if (await this.NodeRejectedShard(encryptedShard, shard)) {
+        exchangeReport.UploadError();
+      } else {
+        logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+
+        exchangeReport.UploadOk();
+      }
+
+      exchangeReport.params.exchangeEnd = new Date();
+      exchangeReport.sendReport().catch(() => { 
+        // no op
+      });
     } catch (err) {
-        if (attemps > 1) {
-          logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
-          await this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
-        } else {
-          return Promise.reject(err);
-        }
+      if (attemps > 1) {
+        logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
+        await this.uploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity);
+      } else {
+        return Promise.reject(err);
+      }
     }
 
     logger.info('Shard %s uploaded succesfully', shardMeta.hash);
