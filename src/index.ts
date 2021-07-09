@@ -213,6 +213,11 @@ export class Environment {
       });
   }
 
+  /**
+   * Uploads a file from file system
+   * @param bucketId Bucket id where file is going to be stored
+   * @param params Store file params
+   */
   storeFile(bucketId: string, params: StoreFileParams): ActionState {
     const uploadState = new ActionState(ActionTypes.UPLOAD);
 
