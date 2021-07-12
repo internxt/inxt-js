@@ -19,6 +19,10 @@ dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 const INXT_API_URL = process.env.INXT_API_URL;
 const PROXY = 'https://api.internxt.com:8081';
 
+enum Methods {
+  Get = 'GET',
+  Post = 'POST'
+}
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
   let proxy: ProxyManager;
@@ -45,6 +49,48 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
 
     return value;
   });
+}
+
+// TODO: Should be of a concrete type?
+type CancelFunction = Function;
+
+export class INXTRequest {
+  private req: Promise<any> | undefined;
+  private cancel: CancelFunction;
+
+  private method: Methods;
+  private config: EnvironmentConfig;
+  private targetUrl: string;
+  private params: AxiosRequestConfig;
+  private useProxy: boolean;
+
+  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean) {
+    this.method = method;
+    this.config = config;
+    this.targetUrl = targetUrl;
+    this.params = params;
+    this.useProxy = useProxy ?? false;
+
+    this.cancel = () => null;
+  }
+
+  start<K>(): Promise<K> {
+    // TODO: Abstract from axios
+    const source = axios.CancelToken.source();
+    const cancelToken = source.token;
+
+    this.req = request(this.config, this.method, this.targetUrl, { ...this.params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
+
+    return this.req;
+  }
+
+  abort() {
+    this.cancel();
+  }
+
+  isCancelled(err: Error): boolean {
+    return axios.isCancel(err);
+  }
 }
 
 export async function streamRequest(targetUrl: string, nodeID: string, useProxy = true, timeoutSeconds?: number): Promise<Readable> {
