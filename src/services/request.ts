@@ -2,7 +2,7 @@ import * as url from 'url';
 import * as https from 'https';
 import { Readable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { EnvironmentConfig } from '..';
 import { sha256 } from '../lib/crypto';
@@ -376,5 +376,5 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
     data: content
   };
 
-  return new INXTRequest(config, Methods.Post, targetUrl, defParams);
+  return new INXTRequest(config, Methods.Post, targetUrl, defParams, true);
 }
