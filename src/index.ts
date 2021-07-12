@@ -1,7 +1,6 @@
 import BlobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { encode, reconstruct, utils } from 'rs-wrapper';
-import { randomBytes } from 'crypto';
+import { createReadStream, statSync } from 'fs';
 
 import { upload } from './lib/upload';
 import { Download } from './lib/download';
@@ -9,14 +8,10 @@ import { EncryptFilename } from './lib/crypto';
 import { logger } from './lib/utils/logger';
 
 import { FileMeta } from "./api/FileObjectUpload";
-import { CreateEntryFromFrameResponse } from './services/request';
-
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
-
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
-import { createReadStream, statSync } from 'fs';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -333,24 +328,6 @@ export class Environment {
     state.stop();
   }
 
-}
-
-export function rsTest(size: number) {
-  const buffer = randomBytes(size);
-  console.log(buffer.length);
-  const shardSize = utils.determineShardSize(size);
-  const nShards = Math.ceil(size / shardSize);
-  const parityShards = utils.determineParityShards(nShards);
-
-  return encode(buffer, shardSize, nShards, parityShards).then((file) => {
-    file[1] = 'g'.charCodeAt(0);
-    const totalShards = nShards + parityShards;
-
-    const arr: boolean[] = new Array(totalShards).fill(true);
-    arr[0] = false;
-
-    return reconstruct(file, nShards, parityShards, arr);
-  });
 }
 
 export interface EnvironmentConfig {
