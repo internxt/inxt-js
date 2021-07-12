@@ -1,17 +1,18 @@
 import BlobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
 import { createReadStream, statSync } from 'fs';
+import * as Winston from 'winston';
 
 import { upload } from './lib/upload';
 import { Download } from './lib/download';
 import { EncryptFilename } from './lib/crypto';
-import { logger } from './lib/utils/logger';
 
 import { FileMeta } from "./api/FileObjectUpload";
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
+import { Logger } from './lib/utils/logger';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -23,6 +24,11 @@ export type DownloadProgressCallback = (progress: number, downloadedBytes: numbe
 export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
 
 export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void;
+
+export interface UploadFileOptions {
+  progressCallback: UploadProgressCallback;
+  finishedCallback: UploadFinishCallback;
+}
 
 export interface ResolveFileOptions {
   progressCallback: DownloadProgressCallback;
@@ -60,17 +66,17 @@ interface UploadFileParams {
   finishedCallback: UploadFinishCallback;
 }
 
-interface StoreFileParams {
-  progressCallback: UploadProgressCallback;
-  finishedCallback: UploadFinishCallback;
+interface StoreFileParams extends UploadFileOptions {
   debug?: DebugCallback;
 }
 
 export class Environment {
   config: EnvironmentConfig;
+  logger: Winston.Logger;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
+    this.logger = Logger.getInstance(1);
   }
 
   /**
@@ -202,16 +208,16 @@ export class Environment {
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
-        logger.debug(`Filename ${filename} encrypted is ${name}`);
+        this.logger.debug(`Filename ${filename} encrypted is ${name}`);
 
         const content = BlobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
 
-        upload(this.config, bucketId, fileToUpload, progress, finished, uploadState);
+        upload(this.config, bucketId, fileToUpload, params, this.logger, uploadState);
       })
       .catch((err: Error) => {
-        logger.error(`Error encrypting filename due to ${err.message}`);
-        logger.error(err);
+        this.logger.error(`Error encrypting filename due to ${err.message}`);
+        this.logger.error(err);
 
         finished(err, null);
       });
@@ -248,11 +254,14 @@ export class Environment {
     EncryptFilename(this.config.encryptionKey, bucketId, filepath)
       .then((name: string) => {
         // TODO: Get file from file path provided instead of expecting a Readable
-        logger.debug('Filename %s encrypted is %s', filepath, name);
+        if (params.debug) {
+          this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
+        }
+        this.logger.debug('Filename %s encrypted is %s', filepath, name);
 
-        const fileToUpload: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
+        const fileMeta: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
 
-        upload(this.config, bucketId, fileToUpload, params.progressCallback, params.finishedCallback, uploadState);
+        upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
       })
       .catch((err: Error) => {
         params.finishedCallback(err, null);

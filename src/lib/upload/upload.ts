@@ -1,8 +1,9 @@
-import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
+import * as Winston from 'winston';
+
+import { EnvironmentConfig, UploadFileOptions } from "../..";
 import { ActionState } from "../../api/ActionState";
 import { UPLOAD_CANCELLED } from "../../api/constants";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
-import { logger } from "../utils/logger";
 
 /**
  * Uploads a file to the network
@@ -12,30 +13,31 @@ import { logger } from "../utils/logger";
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export async function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback, actionState: ActionState): Promise<void> {
-    const file = new FileObjectUpload(config, fileMeta, bucketId);
-
-    actionState.on(UPLOAD_CANCELLED, () => { file.emit(UPLOAD_CANCELLED); });
+export async function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, params: UploadFileOptions, logger: Winston.Logger, actionState: ActionState): Promise<void> {
+    let file: FileObjectUpload;
 
     try {
+        file = new FileObjectUpload(config, fileMeta, bucketId, logger);
+        actionState.on(UPLOAD_CANCELLED, () => { file.emit(UPLOAD_CANCELLED); });
+
         await file.init();
         await file.checkBucketExistence();
         await file.stage();
         file.encrypt();
 
-        const uploadResponses = await file.upload(progress);
+        const uploadResponses = await file.upload(params.progressCallback);
 
         logger.debug('Upload finished. Creating bucket entry...');
 
         await file.createBucketEntry(uploadResponses);
 
-        progress(1, file.getSize(), file.getSize());
+        params.progressCallback(1, file.getSize(), file.getSize());
 
-        finish(null, file.getId());
+        params.finishedCallback(null, file.getId());
     } catch (err) {
-        if (file.isAborted()) {
-            return finish(new Error('Process killed by user'), null);
+        if (file! && file!.isAborted()) {
+            return params.finishedCallback(new Error('Process killed by user'), null);
         }
-        finish(err, null);
+        params.finishedCallback(err, null);
     }
 }

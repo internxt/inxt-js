@@ -23,7 +23,28 @@ function parseLogLevel(level: number): string {
     return levelNames[valueIndex];
 }
 
-const getLoggerInstance = (level: number): Winston.Logger => {
+export class Logger {
+    private static Instance: Winston.Logger;
+    private static Debugger: Winston.Logger;
+
+    static getInstance(logLevel = 1) {
+        if (!Logger.Instance) {
+            Logger.Instance = getLoggerInstance(logLevel);
+        }
+
+        return Logger.Instance;
+    }
+
+    static getDebugger(logLevel = 1, debugCallback: (msg: string) => void) {
+        if (!Logger.Debugger) {
+            Logger.Debugger = getDebuggerInstance(logLevel, debugCallback);
+        }
+
+        return Logger.Debugger;
+    }
+}
+
+const getLoggerInstance = (level: number, debug?: { enabled: boolean, debugCallback: (msg: string) => void }): Winston.Logger => {
     const levelName = parseLogLevel(level);
     const _logger = Winston.createLogger({
         level: levelName,
@@ -33,7 +54,13 @@ const getLoggerInstance = (level: number): Winston.Logger => {
             Winston.format.colorize({ all: true }),
             Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }),
             Winston.format.splat(),
-            Winston.format.printf((info: Winston.Logform.TransformableInfo) => `${info.timestamp} ${info.level}: ${info.message}`)
+            Winston.format.printf((info: Winston.Logform.TransformableInfo) => {
+                if (debug && debug.enabled) {
+                    debug.debugCallback(info.message);
+                }
+
+                return `${info.timestamp} ${info.level}: ${info.message}`;
+            })
         ),
         transports: [new Winston.transports.Console()]
     });
@@ -46,3 +73,7 @@ const getLoggerInstance = (level: number): Winston.Logger => {
 };
 
 export const logger: Winston.Logger = getLoggerInstance(1);
+
+export const getDebuggerInstance = (level: number, debugCallback: (msg: string) => void): Winston.Logger => {
+    return getLoggerInstance(1, { enabled: true, debugCallback });
+};

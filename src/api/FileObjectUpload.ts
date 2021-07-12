@@ -1,6 +1,7 @@
 import { utils } from 'rs-wrapper';
 import { EventEmitter, Readable } from 'stream';
 import { randomBytes } from 'crypto';
+import * as Winston from 'winston';
 
 import { EnvironmentConfig, UploadProgressCallback } from '..';
 import * as api from '../services/request';
@@ -10,7 +11,6 @@ import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
 import { FunnelStream } from "../lib/funnelStream";
 import { getShardMeta, ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';
-import { logger } from "../lib/utils/logger";
 
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
@@ -30,6 +30,7 @@ export class FileObjectUpload extends EventEmitter {
   private requests: api.INXTRequest[] = [];
   private id = '';
   private aborted = false;
+  private logger: Winston.Logger;
 
   bucketId: string;
   frameId: string;
@@ -41,7 +42,7 @@ export class FileObjectUpload extends EventEmitter {
   funnel: FunnelStream;
   fileEncryptionKey: Buffer;
 
-  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string) {
+  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger) {
     super();
 
     this.config = config;
@@ -53,6 +54,8 @@ export class FileObjectUpload extends EventEmitter {
     this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
     this.uploadStream = new EncryptStream(randomBytes(32), randomBytes(16));
     this.fileEncryptionKey = randomBytes(32);
+
+    this.logger = logger;
 
     this.once(UPLOAD_CANCELLED, this.abort.bind(this));
   }
@@ -87,7 +90,7 @@ export class FileObjectUpload extends EventEmitter {
 
     // if bucket not exists, bridge returns an error
     return api.getBucketById(this.config, this.bucketId).then((res) => {
-      logger.info('Bucket %s exists', this.bucketId);
+      this.logger.info('Bucket %s exists', this.bucketId);
 
       return res ? true : false;
     })
@@ -106,7 +109,7 @@ export class FileObjectUpload extends EventEmitter {
 
       this.frameId = frame.id;
 
-      logger.info('Staged a file with frame %s', this.frameId);
+      this.logger.info('Staged a file with frame %s', this.frameId);
     }).catch((err) => {
       throw wrap('Bridge frame creation error', err);
     });
@@ -180,7 +183,10 @@ export class FileObjectUpload extends EventEmitter {
 
     const fileSize = this.getSize();
 
-    logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / utils.determineShardSize(fileSize)), utils.determineShardSize(fileSize));
+    this.logger.debug('Shards obtained %s, shardSize %s',
+      Math.ceil(fileSize / utils.determineShardSize(fileSize)),
+      utils.determineShardSize(fileSize)
+    );
 
     let currentBytesUploaded = 0;
     const uploadResponses = await Promise.all(
@@ -201,7 +207,7 @@ export class FileObjectUpload extends EventEmitter {
   async uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
     const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
 
-    logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
+    this.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
     try {
       const negotiatedContract: ContractNegotiated | void = await this.negotiateContract(frameId, shardMeta);
@@ -214,7 +220,7 @@ export class FileObjectUpload extends EventEmitter {
       const operation = negotiatedContract.operation;
       const farmer = { ...negotiatedContract.farmer, lastSeen: new Date() };
 
-      logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
+      this.logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
         shardMeta.hash,
         shardMeta.index,
         shardMeta.size,
@@ -231,7 +237,7 @@ export class FileObjectUpload extends EventEmitter {
       if (await this.NodeRejectedShard(encryptedShard, shard)) {
         exchangeReport.UploadError();
       } else {
-        logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+        this.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
 
         exchangeReport.UploadOk();
       }
@@ -241,15 +247,14 @@ export class FileObjectUpload extends EventEmitter {
         // no op
       });
     } catch (err) {
-      if (attemps > 1) {
-        logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
+        this.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
         await this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity);
       } else {
         return Promise.reject(wrap('Upload shard error', err));
       }
     }
 
-    logger.info('Shard %s uploaded succesfully', shardMeta.hash);
+    this.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
 
     return shardMeta;
   }
@@ -268,7 +273,7 @@ export class FileObjectUpload extends EventEmitter {
   }
 
   abort(): void {
-    logger.info('Aborting file upload');
+    this.logger.info('Aborting file upload');
 
     this.aborted = true;
     this.requests.forEach((r) => r.abort());
