@@ -1,10 +1,7 @@
 import { config } from 'dotenv';
-import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
+import { createWriteStream, existsSync } from 'fs';
 import { Command } from 'commander';
 import { Readable } from 'stream';
-
-import { basename } from 'path';
-
 import { Environment } from '../index';
 import { logger } from '../lib/utils/logger';
 
@@ -36,7 +33,7 @@ const network = new Environment({
     bridgeUrl: process.env.BRIDGE_URL ?? opts.url
 });
 
-if (opts.upload) { 
+if (opts.upload) {
     if (!opts.path) {
         logger.error('File path not provided');
 
@@ -50,9 +47,7 @@ if (opts.upload) {
     }
 
     uploadFile();
-}
-
-if (opts.download) { 
+} else if (opts.download) {
     if (!opts.path) {
         logger.error('File path not provided');
 
@@ -66,6 +61,8 @@ if (opts.download) {
     }
 
     downloadFile();
+} else {
+    logger.warn('Missing args');
 }
 
 function uploadFile() {
@@ -78,29 +75,33 @@ function uploadFile() {
     );
 
     new Promise((resolve, reject) => {
-        network.storeFile(process.env.BUCKET_ID, {
-            fileContent: createReadStream(opts.path),
-            fileSize: statSync(opts.path).size,
-            filename: basename(opts.path),
+        const state = network.storeFile(process.env.BUCKET_ID, opts.path, {
             progressCallback: (progress: number) => {
-                logger.info('Progress: %s', (progress * 100).toFixed(2));
+                logger.info('Progress: %s %', (progress * 100).toFixed(2));
             },
-            finishedCallback: (err: Error | null, res) => {
+            finishedCallback: (err: Error | null, fileId: string | null) => {
                 if (err) {
                     reject(err);
-                } else if (!res) {
-                    reject(Error('Response create entry is null'))
+                } else if (!fileId) {
+                    reject(Error('Response create entry is null'));
                 } else {
-                    resolve(res.id);
+                    resolve(fileId);
                 }
+            },
+            debug: (msg: string) => { 
+                // no op
             }
+        });
+
+        process.on('SIGINT', () => {
+            network.storeFileCancel(state);
         });
     }).then((fileId) => {
         logger.info('File upload finished. File id: %s', fileId);
 
         process.exit(0);
     }).catch((err) => {
-        logger.error('Error uploading file %s', err.message);
+        logger.error('Error uploading file: %s', err.message);
 
         process.exit(1);
     });
@@ -112,7 +113,7 @@ function downloadFile() {
     new Promise((resolve: (r: Readable) => void, reject) => {
         network.resolveFile(process.env.BUCKET_ID ?? '', opts.fileId, {
             progressCallback: (progress: number) => {
-                logger.info('Progress: %s', (progress * 100).toFixed(2));
+                logger.info('Progress: %s %', (progress * 100).toFixed(2));
             },
             finishedCallback: (err: Error | null, res: Readable | null) => {
                 if (err) {
@@ -141,8 +142,5 @@ function downloadFile() {
     }).catch((err) => {
         logger.error('Error uploading file %s', err.message);
         process.exit(1);
-    })
+    });
 }
-
-logger.warn('Missing args');
-
