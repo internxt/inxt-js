@@ -355,7 +355,7 @@ export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeRepo
   return exchangeReport.sendReport();
 }
 
-interface SendShardToNodeResponse {
+export interface SendShardToNodeResponse {
   result: string;
 }
 
@@ -365,7 +365,7 @@ interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): Promise<SendShardToNodeResponse | void> {
+export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): INXTRequest {
   const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
   const defParams: AxiosRequestConfig = {
@@ -376,6 +376,5 @@ export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content
     data: content
   };
 
-  return request(config, 'post', targetUrl, defParams)
-    .then<SendShardToNodeResponse>((res: AxiosResponse) => res.data);
+  return new INXTRequest(config, Methods.Post, targetUrl, defParams);
 }
