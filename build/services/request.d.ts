@@ -6,9 +6,26 @@ import { ExchangeReport } from '../api/reports';
 import { ShardMeta } from '../lib/shardMeta';
 import { ContractNegotiated } from '../lib/contracts';
 import { Shard } from '../api/shard';
+declare enum Methods {
+    Get = "GET",
+    Post = "POST"
+}
 export declare function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean): Promise<AxiosResponse<JSON>>;
+export declare class INXTRequest {
+    private req;
+    private cancel;
+    private method;
+    private config;
+    private targetUrl;
+    private params;
+    private useProxy;
+    constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean);
+    start<K>(): Promise<K>;
+    abort(): void;
+    isCancelled(err: Error): boolean;
+}
 export declare function streamRequest(targetUrl: string, nodeID: string, useProxy?: boolean, timeoutSeconds?: number): Promise<Readable>;
-interface getBucketByIdResponse {
+interface GetBucketByIdResponse {
     user: string;
     encryptionKey: string;
     publicPermissions: string[];
@@ -28,8 +45,8 @@ interface getBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export declare function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<getBucketByIdResponse | void>;
-interface getFileByIdResponse {
+export declare function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<GetBucketByIdResponse | void>;
+interface GetFileByIdResponse {
     id: string;
 }
 /**
@@ -40,7 +57,7 @@ interface getFileByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export declare function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<getFileByIdResponse | void>;
+export declare function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<GetFileByIdResponse | void>;
 export interface FrameStaging {
     id: string;
     user: string;
@@ -110,7 +127,7 @@ export declare function addShardToFrame(config: EnvironmentConfig, frameId: stri
  * @param body
  */
 export declare function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-interface SendShardToNodeResponse {
+export interface SendShardToNodeResponse {
     result: string;
 }
 /**
@@ -119,5 +136,5 @@ interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export declare function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): Promise<SendShardToNodeResponse | void>;
+export declare function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): INXTRequest;
 export {};

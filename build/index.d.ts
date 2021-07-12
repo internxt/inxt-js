@@ -1,14 +1,19 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
-import { CreateEntryFromFrameResponse } from './services/request';
+import * as Winston from 'winston';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
+import { DesktopDownloadFileOptions } from './api/adapters/Desktop';
 export declare type OnlyErrorCallback = (err: Error | null) => void;
-export declare type UploadFinishCallback = (err: Error | null, response: CreateEntryFromFrameResponse | null) => void;
+export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 export declare type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export declare type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 export declare type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
 export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
+export interface UploadFileOptions {
+    progressCallback: UploadProgressCallback;
+    finishedCallback: UploadFinishCallback;
+}
 export interface ResolveFileOptions {
     progressCallback: DownloadProgressCallback;
     finishedCallback: OnlyErrorCallback;
@@ -26,6 +31,7 @@ declare type CreateBucketCallback = (err: Error | null, result: any) => void;
 declare type DeleteBucketCallback = (err: Error | null, result: any) => void;
 declare type ListFilesCallback = (err: Error | null, result: any) => void;
 declare type DeleteFileCallback = (err: Error | null, result: any) => void;
+declare type DebugCallback = (message: string) => void;
 interface UploadFileParams {
     filename: string;
     fileSize: number;
@@ -33,8 +39,12 @@ interface UploadFileParams {
     progressCallback: UploadProgressCallback;
     finishedCallback: UploadFinishCallback;
 }
+interface StoreFileParams extends UploadFileOptions {
+    debug?: DebugCallback;
+}
 export declare class Environment {
-    protected config: EnvironmentConfig;
+    config: EnvironmentConfig;
+    logger: Winston.Logger;
     constructor(config: EnvironmentConfig);
     /**
      * Gets general API info
@@ -86,6 +96,18 @@ export declare class Environment {
      */
     uploadFile(bucketId: string, params: UploadFileParams): void;
     /**
+     * Uploads a file from file system
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Store file params
+     */
+    storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
+    /**
+     * Cancels a file upload
+     * @param {ActionState} state Upload state
+     */
+    storeFileCancel(state: ActionState): void;
+    resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState;
+    /**
      * Downloads a file, returns state object
      * @param bucketId Bucket id where file is
      * @param fileId Id of the file to be downloaded
@@ -98,7 +120,6 @@ export declare class Environment {
      */
     resolveFileCancel(state: ActionState): void;
 }
-export declare function rsTest(size: number): Promise<Uint8Array | Buffer>;
 export interface EnvironmentConfig {
     bridgeUrl?: string;
     bridgeUser: string;

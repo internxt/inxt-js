@@ -40,10 +40,7 @@ var TestStream = /** @class */ (function (_super) {
                     _this.startPosition -= 100;
                     wait = false;
                 });
-                console.log("stopped in " + this.startPosition + " bytes");
-                console.log('waiting until buffer emits drain');
                 while (wait) { }
-                console.log('continuing');
             }
         }
     };

@@ -18,8 +18,8 @@ var events_1 = require("events");
 var constants_1 = require("./constants");
 var ActionTypes;
 (function (ActionTypes) {
-    ActionTypes["DOWNLOAD"] = "DOWNLOAD";
-    ActionTypes["UPLOAD"] = "UPLOAD";
+    ActionTypes["Download"] = "DOWNLOAD";
+    ActionTypes["Upload"] = "UPLOAD";
 })(ActionTypes = exports.ActionTypes || (exports.ActionTypes = {}));
 var ActionState = /** @class */ (function (_super) {
     __extends(ActionState, _super);
@@ -29,10 +29,10 @@ var ActionState = /** @class */ (function (_super) {
         return _this;
     }
     ActionState.prototype.stop = function () {
-        if (this.type === ActionTypes.DOWNLOAD) {
+        if (this.type === ActionTypes.Download) {
             this.emit(constants_1.DOWNLOAD_CANCELLED);
         }
-        if (this.type === ActionTypes.UPLOAD) {
+        if (this.type === ActionTypes.Upload) {
             this.emit(constants_1.UPLOAD_CANCELLED);
         }
     };

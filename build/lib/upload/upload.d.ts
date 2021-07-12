@@ -1,7 +1,7 @@
-import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
-import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
-import { ShardMeta } from '../shardMeta';
-import { CreateEntryFromFrameBody } from '../../services/request';
+import * as Winston from 'winston';
+import { EnvironmentConfig, UploadFileOptions } from "../..";
+import { ActionState } from "../../api/ActionState";
+import { FileMeta } from "../../api/FileObjectUpload";
 /**
  * Uploads a file to the network
  * @param config Environment config
@@ -10,6 +10,4 @@ import { CreateEntryFromFrameBody } from '../../services/request';
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export declare function Upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void>;
-export declare function createBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): Promise<void | import("../../services/request").CreateEntryFromFrameResponse>;
-export declare function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody;
+export declare function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, params: UploadFileOptions, logger: Winston.Logger, actionState: ActionState): Promise<void>;

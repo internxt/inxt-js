@@ -19,11 +19,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logger = void 0;
+exports.getDebuggerInstance = exports.logger = exports.Logger = void 0;
 var Winston = __importStar(require("winston"));
-var dotenv = __importStar(require("dotenv"));
-var path_1 = require("path");
-dotenv.config({ path: path_1.resolve(__dirname, '../../../../.env') });
+var dotenv_1 = require("dotenv");
+dotenv_1.config();
 var loggerOptions = {
     levels: {
         warn: 0,
@@ -40,19 +39,46 @@ function parseLogLevel(level) {
     }
     return levelNames[valueIndex];
 }
-var getLoggerInstance = function (level) {
+var Logger = /** @class */ (function () {
+    function Logger() {
+    }
+    Logger.getInstance = function (logLevel) {
+        if (logLevel === void 0) { logLevel = 1; }
+        if (!Logger.Instance) {
+            Logger.Instance = getLoggerInstance(logLevel);
+        }
+        return Logger.Instance;
+    };
+    Logger.getDebugger = function (logLevel, debugCallback) {
+        if (logLevel === void 0) { logLevel = 1; }
+        if (!Logger.Debugger) {
+            Logger.Debugger = exports.getDebuggerInstance(logLevel, debugCallback);
+        }
+        return Logger.Debugger;
+    };
+    return Logger;
+}());
+exports.Logger = Logger;
+var getLoggerInstance = function (level, debug) {
     var levelName = parseLogLevel(level);
-    var logger = Winston.createLogger({
+    var _logger = Winston.createLogger({
         level: levelName,
         exitOnError: true,
         handleExceptions: true,
-        format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }), Winston.format.splat(), Winston.format.printf(function (info) { return info.timestamp + " " + info.level + ": " + info.message; })),
+        format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }), Winston.format.splat(), Winston.format.printf(function (info) {
+            if (debug && debug.enabled) {
+                debug.debugCallback(info.message);
+            }
+            return info.timestamp + " " + info.level + ": " + info.message;
+        })),
         transports: [new Winston.transports.Console()]
     });
-    // console.log(process.env.STAGE)
     if (process.env.STAGE !== 'development') {
-        logger.silent = true;
+        _logger.silent = true;
     }
-    return logger;
+    return _logger;
 };
 exports.logger = getLoggerInstance(1);
+exports.getDebuggerInstance = function (level, debugCallback) {
+    return getLoggerInstance(1, { enabled: true, debugCallback: debugCallback });
+};

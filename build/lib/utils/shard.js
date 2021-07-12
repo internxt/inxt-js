@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.totalDataShards = exports.computeShardSize = void 0;
 function computeShardSizeBits(fileSize) {
     // Check if fileSize == 0
-    if (fileSize == 0) {
+    if (fileSize === 0) {
         return 0;
     }
     var MIN_SHARD_SIZE = 2097152; // 2Mb

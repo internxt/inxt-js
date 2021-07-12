@@ -69,18 +69,50 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.streamRequest = exports.request = void 0;
+exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToFrame = exports.createEntryFromFrame = exports.createFrame = exports.getFileById = exports.getBucketById = exports.streamRequest = exports.INXTRequest = exports.request = void 0;
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
 var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
-var dotenv = __importStar(require("dotenv"));
 var proxy_1 = require("./proxy");
-var logger_1 = require("../lib/utils/logger");
-dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 var INXT_API_URL = process.env.INXT_API_URL;
-var PROXY = 'https://api.internxt.com:8081';
+var Methods;
+(function (Methods) {
+    Methods["Get"] = "GET";
+    Methods["Post"] = "POST";
+})(Methods || (Methods = {}));
+// abstract class Client<K> {
+//   abstract request(config: EnvironmentConfig, method: Methods, url: string, params: any, useProxy: boolean): Promise<K>;
+// }
+// class AxiosClient implements Client<AxiosResponse> {
+//   async request(config: EnvironmentConfig, method: Methods, targetUrl: string, params: any, useProxy: boolean) {
+//     let reqUrl = targetUrl;
+//     let proxy: ProxyManager;
+//     if (useProxy) {
+//       proxy = await getProxy();
+//       reqUrl = `${proxy.url}/${url}`;
+//     }
+//     const DefaultOptions: AxiosRequestConfig = {
+//       method,
+//       auth: {
+//         username: config.bridgeUser,
+//         password: sha256(Buffer.from(config.bridgePass)).toString('hex')
+//       },
+//       url: reqUrl,
+//       maxContentLength: Infinity
+//     };
+//     const options = { ...DefaultOptions, ...params };
+//     return axios.request<JSON>(options).then((value) => {
+//       if (useProxy && proxy) { proxy.free(); }
+//       return value;
+//     });
+//   }
+// }
+// function createClient<K>(type: string): Client<K> {
+//   let c = new AxiosClient();
+//   return c;
+// }
 function request(config, method, targetUrl, params, useProxy) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -117,6 +149,31 @@ function request(config, method, targetUrl, params, useProxy) {
     });
 }
 exports.request = request;
+var INXTRequest = /** @class */ (function () {
+    function INXTRequest(config, method, targetUrl, params, useProxy) {
+        this.method = method;
+        this.config = config;
+        this.targetUrl = targetUrl;
+        this.params = params;
+        this.useProxy = useProxy !== null && useProxy !== void 0 ? useProxy : false;
+        this.cancel = function () { return null; };
+    }
+    INXTRequest.prototype.start = function () {
+        // TODO: Abstract from axios
+        var source = axios_1.default.CancelToken.source();
+        var cancelToken = source.token;
+        this.req = request(this.config, this.method, this.targetUrl, __assign(__assign({}, this.params), { cancelToken: cancelToken }), this.useProxy).then(function (res) { return res.data; });
+        return this.req;
+    };
+    INXTRequest.prototype.abort = function () {
+        this.cancel();
+    };
+    INXTRequest.prototype.isCancelled = function (err) {
+        return axios_1.default.isCancel(err);
+    };
+    return INXTRequest;
+}());
+exports.INXTRequest = INXTRequest;
 function streamRequest(targetUrl, nodeID, useProxy, timeoutSeconds) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -144,7 +201,7 @@ function streamRequest(targetUrl, nodeID, useProxy, timeoutSeconds) {
                     reqUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
                 case 2:
-                    logger_1.logger.info('Stream req (using proxy %s) to %s', useProxy, reqUrl);
+                    console.log('Stream req (using proxy %s) to %s', useProxy, reqUrl);
                     uriParts = url.parse(reqUrl);
                     downloader = null;
                     return [2 /*return*/, new stream_1.Readable({
@@ -304,10 +361,10 @@ function sendShardToNode(config, shard, content) {
         headers: {
             'Content-Type': 'application/octet-stream',
             'x-storj-node-id': shard.farmer.nodeID,
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         },
         data: content
     };
-    return request(config, 'post', targetUrl, defParams)
-        .then(function (res) { return res.data; });
+    return new INXTRequest(config, Methods.Post, targetUrl, defParams, true);
 }
 exports.sendShardToNode = sendShardToNode;

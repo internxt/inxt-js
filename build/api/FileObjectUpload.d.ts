@@ -1,6 +1,7 @@
 /// <reference types="node" />
-import { Readable } from 'stream';
-import { EnvironmentConfig } from '..';
+import { EventEmitter, Readable } from 'stream';
+import * as Winston from 'winston';
+import { EnvironmentConfig, UploadProgressCallback } from '..';
 import * as api from '../services/request';
 import EncryptStream from '../lib/encryptStream';
 import { FunnelStream } from "../lib/funnelStream";
@@ -12,23 +13,37 @@ export interface FileMeta {
     name: string;
     content: Readable;
 }
-export declare class FileObjectUpload {
+export declare class FileObjectUpload extends EventEmitter {
     private config;
     private fileMeta;
+    private requests;
+    private id;
+    private aborted;
+    private logger;
     bucketId: string;
     frameId: string;
     index: Buffer;
+    encrypted: boolean;
     cipher: EncryptStream;
+    uploadStream: EncryptStream;
     funnel: FunnelStream;
     fileEncryptionKey: Buffer;
-    constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string);
+    constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger);
+    getSize(): number;
+    getId(): string;
+    checkIfIsAborted(): void;
     init(): Promise<FileObjectUpload>;
-    CheckBucketExistance(): Promise<boolean>;
-    StageFile(): Promise<void>;
+    checkBucketExistence(): Promise<boolean>;
+    stage(): Promise<void>;
     SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse>;
-    NegotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated>;
+    negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated>;
     NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean>;
     GenerateHmac(shardMetas: ShardMeta[]): string;
-    StartUploadFile(): Promise<EncryptStream>;
-    UploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta>;
+    encrypt(): EncryptStream;
+    upload(callback: UploadProgressCallback): Promise<ShardMeta[]>;
+    uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta>;
+    createBucketEntry(shardMetas: ShardMeta[]): Promise<void>;
+    abort(): void;
+    isAborted(): boolean;
 }
+export declare function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): api.CreateEntryFromFrameBody;

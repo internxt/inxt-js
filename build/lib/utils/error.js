@@ -13,18 +13,21 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ShardDownloaderStream = void 0;
-var stream_1 = require("stream");
-var ShardDownloaderStream = /** @class */ (function (_super) {
-    __extends(ShardDownloaderStream, _super);
-    function ShardDownloaderStream(fileInfo, shardInfo) {
-        var _this = _super.call(this) || this;
-        _this.fileInfo = fileInfo;
-        _this.shardInfo = shardInfo;
+exports.wrap = exports.WrappedError = void 0;
+var WrappedError = /** @class */ (function (_super) {
+    __extends(WrappedError, _super);
+    function WrappedError(message) {
+        var _this = _super.call(this, message) || this;
+        _this.header = '';
         return _this;
     }
-    ShardDownloaderStream.prototype.startDownload = function () {
-    };
-    return ShardDownloaderStream;
-}(stream_1.Transform));
-exports.ShardDownloaderStream = ShardDownloaderStream;
+    return WrappedError;
+}(Error));
+exports.WrappedError = WrappedError;
+exports.wrap = function (header, err) {
+    var wrappedError = new WrappedError(header + ': ' + err.message);
+    wrappedError.stack = err.stack;
+    wrappedError.name = err.name;
+    wrappedError.header = header;
+    return wrappedError;
+};

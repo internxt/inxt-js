@@ -56,6 +56,7 @@ exports.FileObject = void 0;
 var crypto_1 = require("crypto");
 var events_1 = require("events");
 var async_1 = require("async");
+var multistream_1 = __importDefault(require("multistream"));
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var filemuxer_1 = __importDefault(require("../lib/filemuxer"));
 var crypto_2 = require("../lib/crypto");
@@ -67,7 +68,6 @@ var rs_wrapper_1 = require("rs-wrapper");
 var logger_1 = require("../lib/utils/logger");
 var buffer_1 = require("../lib/utils/buffer");
 var constants_1 = require("./constants");
-var MultiStream = require('multistream');
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -350,7 +350,7 @@ var FileObject = /** @class */ (function (_super) {
                         // Order streams by shard index
                         streams.sort(function (sA, sB) { return sA.index - sB.index; });
                         // Unify them
-                        fileStream = new MultiStream(streams.map(function (s) { return s.content; }));
+                        fileStream = new multistream_1.default(streams.map(function (s) { return s.content; }));
                         return [2 /*return*/, fileStream];
                 }
             });

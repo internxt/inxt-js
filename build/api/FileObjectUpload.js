@@ -1,4 +1,17 @@
 "use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -69,33 +82,58 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FileObjectUpload = void 0;
+exports.generateBucketEntry = exports.FileObjectUpload = void 0;
 var rs_wrapper_1 = require("rs-wrapper");
+var stream_1 = require("stream");
 var crypto_1 = require("crypto");
 var api = __importStar(require("../services/request"));
 var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
 var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
-var logger_1 = require("../lib/utils/logger");
 var reports_1 = require("./reports");
-var FileObjectUpload = /** @class */ (function () {
-    function FileObjectUpload(config, fileMeta, bucketId) {
-        this.config = config;
-        this.index = Buffer.alloc(0);
-        this.fileMeta = fileMeta;
-        this.bucketId = bucketId;
-        this.frameId = '';
-        this.funnel = new funnelStream_1.FunnelStream(rs_wrapper_1.utils.determineShardSize(fileMeta.size));
-        this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
-        this.fileEncryptionKey = crypto_1.randomBytes(32);
+var promisify_1 = require("../lib/utils/promisify");
+var error_1 = require("../lib/utils/error");
+var constants_1 = require("./constants");
+var FileObjectUpload = /** @class */ (function (_super) {
+    __extends(FileObjectUpload, _super);
+    function FileObjectUpload(config, fileMeta, bucketId, logger) {
+        var _this = _super.call(this) || this;
+        _this.requests = [];
+        _this.id = '';
+        _this.aborted = false;
+        _this.encrypted = false;
+        _this.config = config;
+        _this.index = Buffer.alloc(0);
+        _this.fileMeta = fileMeta;
+        _this.bucketId = bucketId;
+        _this.frameId = '';
+        _this.funnel = new funnelStream_1.FunnelStream(rs_wrapper_1.utils.determineShardSize(fileMeta.size));
+        _this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.uploadStream = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.fileEncryptionKey = crypto_1.randomBytes(32);
+        _this.logger = logger;
+        _this.once(constants_1.UPLOAD_CANCELLED, _this.abort.bind(_this));
+        return _this;
     }
+    FileObjectUpload.prototype.getSize = function () {
+        return this.fileMeta.size;
+    };
+    FileObjectUpload.prototype.getId = function () {
+        return this.id;
+    };
+    FileObjectUpload.prototype.checkIfIsAborted = function () {
+        if (this.isAborted()) {
+            throw new Error('Upload aborted');
+        }
+    };
     FileObjectUpload.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _a;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
+                        this.checkIfIsAborted();
                         this.index = crypto_1.randomBytes(32);
                         _a = this;
                         return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index)];
@@ -107,55 +145,58 @@ var FileObjectUpload = /** @class */ (function () {
             });
         });
     };
-    FileObjectUpload.prototype.CheckBucketExistance = function () {
+    FileObjectUpload.prototype.checkBucketExistence = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: 
-                    // if bucket not exists, bridge returns an error
-                    return [4 /*yield*/, api.getBucketById(this.config, this.bucketId)];
-                    case 1:
-                        // if bucket not exists, bridge returns an error
-                        _a.sent();
-                        logger_1.logger.info('Bucket %s exists', this.bucketId);
-                        return [2 /*return*/, true];
-                }
+                this.checkIfIsAborted();
+                // if bucket not exists, bridge returns an error
+                return [2 /*return*/, api.getBucketById(this.config, this.bucketId).then(function (res) {
+                        _this.logger.info('Bucket %s exists', _this.bucketId);
+                        return res ? true : false;
+                    })
+                        .catch(function (err) {
+                        throw error_1.wrap('Bucket existence check error', err);
+                    })];
             });
         });
     };
-    FileObjectUpload.prototype.StageFile = function () {
+    FileObjectUpload.prototype.stage = function () {
         var _this = this;
+        this.checkIfIsAborted();
         return api.createFrame(this.config).then(function (frame) {
             if (!frame || !frame.id) {
-                throw new Error('Bridge frame staging error');
+                throw new Error('Frame response is empty');
             }
             _this.frameId = frame.id;
-            logger_1.logger.info('Staged a file with frame %s', _this.frameId);
+            _this.logger.info('Staged a file with frame %s', _this.frameId);
+        }).catch(function (err) {
+            throw error_1.wrap('Bridge frame creation error', err);
         });
     };
     FileObjectUpload.prototype.SaveFileInNetwork = function (bucketEntry) {
-        return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry);
+        this.checkIfIsAborted();
+        return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
+            .catch(function (err) {
+            throw error_1.wrap('Bucket entry creation error', err);
+        });
     };
-    FileObjectUpload.prototype.NegotiateContract = function (frameId, shardMeta) {
-        return api.addShardToFrame(this.config, frameId, shardMeta);
+    FileObjectUpload.prototype.negotiateContract = function (frameId, shardMeta) {
+        this.checkIfIsAborted();
+        return api.addShardToFrame(this.config, frameId, shardMeta)
+            .catch(function (err) {
+            throw error_1.wrap('Contract negotiation error', err);
+        });
     };
     FileObjectUpload.prototype.NodeRejectedShard = function (encryptedShard, shard) {
-        return __awaiter(this, void 0, void 0, function () {
-            var err_1;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, api.sendShardToNode(this.config, shard, encryptedShard)];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/, false];
-                    case 2:
-                        err_1 = _a.sent();
-                        return [2 /*return*/, Promise.reject(err_1)];
-                    case 3: return [2 /*return*/];
-                }
-            });
+        this.checkIfIsAborted();
+        var request = api.sendShardToNode(this.config, shard, encryptedShard);
+        this.requests.push(request);
+        return request.start()
+            .then(function () { return false; })
+            .catch(function (err) {
+            console.log('ERR', err);
+            throw error_1.wrap('Farmer request error', err);
         });
     };
     FileObjectUpload.prototype.GenerateHmac = function (shardMetas) {
@@ -166,47 +207,75 @@ var FileObjectUpload = /** @class */ (function () {
         }
         return hmac.digest().toString('hex');
     };
-    FileObjectUpload.prototype.StartUploadFile = function () {
+    FileObjectUpload.prototype.encrypt = function () {
+        this.uploadStream = this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
+        this.encrypted = true;
+        return this.uploadStream;
+    };
+    FileObjectUpload.prototype.upload = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
+            var shardIndex, uploads, fileSize, currentBytesUploaded, uploadResponses;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        logger_1.logger.info('Starting file upload');
-                        return [4 /*yield*/, this.CheckBucketExistance()];
+                        this.checkIfIsAborted();
+                        if (!this.encrypted) {
+                            throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
+                        }
+                        shardIndex = 0;
+                        uploads = [];
+                        this.uploadStream.on('data', function (shard) {
+                            uploads.push(_this.uploadShard(shard, shard.length, _this.frameId, shardIndex++, 3, false));
+                        });
+                        return [4 /*yield*/, promisify_1.promisifyStream(this.uploadStream)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, this.StageFile()];
+                        fileSize = this.getSize();
+                        this.logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / rs_wrapper_1.utils.determineShardSize(fileSize)), rs_wrapper_1.utils.determineShardSize(fileSize));
+                        currentBytesUploaded = 0;
+                        return [4 /*yield*/, Promise.all(uploads.map(function (request) { return __awaiter(_this, void 0, void 0, function () {
+                                var shardMeta;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0: return [4 /*yield*/, request];
+                                        case 1:
+                                            shardMeta = _a.sent();
+                                            currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
+                                            return [2 /*return*/, shardMeta];
+                                    }
+                                });
+                            }); })).catch(function (err) {
+                                throw error_1.wrap('Farmer request error', err);
+                            })];
                     case 2:
-                        _a.sent();
-                        return [2 /*return*/, this.fileMeta.content.pipe(this.funnel).pipe(this.cipher)];
+                        uploadResponses = _a.sent();
+                        return [2 /*return*/, uploadResponses];
                 }
             });
         });
     };
-    FileObjectUpload.prototype.UploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
+    FileObjectUpload.prototype.uploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
         return __awaiter(this, void 0, void 0, function () {
-            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_2;
+            var shardMeta, negotiatedContract, token, operation, farmer, hash, shard, exchangeReport, err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-                        logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
-                        token = "", operation = "";
-                        farmer = { userAgent: "", protocol: "", address: "", port: 0, nodeID: "", lastSeen: new Date() };
+                        this.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 4, , 8]);
-                        return [4 /*yield*/, this.NegotiateContract(frameId, shardMeta)];
+                        return [4 /*yield*/, this.negotiateContract(frameId, shardMeta)];
                     case 2:
-                        if (negotiatedContract = _a.sent()) {
-                            token = negotiatedContract.token;
-                            operation = negotiatedContract.operation;
-                            farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
-                            logger_1.logger.debug('Contract for shard %s (index %s, size %s) with token %s', shardMeta.hash, shardMeta.index, shardMeta.size, token);
+                        negotiatedContract = _a.sent();
+                        if (!negotiatedContract) {
+                            throw new Error('Unable to receive storage offer');
                         }
-                        else {
-                            throw new Error('Bridge negotiating contract error');
-                        }
+                        token = negotiatedContract.token;
+                        operation = negotiatedContract.operation;
+                        farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
+                        this.logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s', shardMeta.hash, shardMeta.index, shardMeta.size, token);
                         hash = shardMeta.hash;
                         shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: parity, token: token, farmer: farmer, operation: operation };
                         exchangeReport = new reports_1.ExchangeReport(this.config);
@@ -218,7 +287,7 @@ var FileObjectUpload = /** @class */ (function () {
                             exchangeReport.UploadError();
                         }
                         else {
-                            logger_1.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+                            this.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
                             exchangeReport.UploadOk();
                         }
                         exchangeReport.params.exchangeEnd = new Date();
@@ -227,22 +296,62 @@ var FileObjectUpload = /** @class */ (function () {
                         });
                         return [3 /*break*/, 8];
                     case 4:
-                        err_2 = _a.sent();
-                        if (!(attemps > 1)) return [3 /*break*/, 6];
-                        logger_1.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_2.message);
-                        return [4 /*yield*/, this.UploadShard(encryptedShard, shardSize, frameId, index, --attemps, parity)];
+                        err_1 = _a.sent();
+                        if (!(attemps > 1 && !this.aborted)) return [3 /*break*/, 6];
+                        this.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_1.message);
+                        return [4 /*yield*/, this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity)];
                     case 5:
                         _a.sent();
                         return [3 /*break*/, 7];
-                    case 6: return [2 /*return*/, Promise.reject(err_2)];
+                    case 6: return [2 /*return*/, Promise.reject(error_1.wrap('Upload shard error', err_1))];
                     case 7: return [3 /*break*/, 8];
                     case 8:
-                        logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
+                        this.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
                         return [2 /*return*/, shardMeta];
                 }
             });
         });
     };
+    FileObjectUpload.prototype.createBucketEntry = function (shardMetas) {
+        var _this = this;
+        return this.SaveFileInNetwork(generateBucketEntry(this, this.fileMeta, shardMetas, false))
+            .then(function (bucketEntry) {
+            if (!bucketEntry) {
+                throw new Error('Can not save the file in the network');
+            }
+            _this.id = bucketEntry.id;
+        })
+            .catch(function (err) {
+            throw error_1.wrap('Bucket entry creation error', err);
+        });
+    };
+    FileObjectUpload.prototype.abort = function () {
+        this.logger.info('Aborting file upload');
+        this.aborted = true;
+        this.requests.forEach(function (r) { return r.abort(); });
+    };
+    FileObjectUpload.prototype.isAborted = function () {
+        return this.aborted;
+    };
     return FileObjectUpload;
-}());
+}(stream_1.EventEmitter));
 exports.FileObjectUpload = FileObjectUpload;
+function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
+    var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
+    var progressCounter = newCurrentBytes / totalBytes;
+    progress(progressCounter, newCurrentBytes, totalBytes);
+    return newCurrentBytes;
+}
+function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
+    var bucketEntry = {
+        frame: fileObject.frameId,
+        filename: fileMeta.name,
+        index: fileObject.index.toString('hex'),
+        hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
+    };
+    if (rs) {
+        bucketEntry.erasure = { type: "reedsolomon" };
+    }
+    return bucketEntry;
+}
+exports.generateBucketEntry = generateBucketEntry;
