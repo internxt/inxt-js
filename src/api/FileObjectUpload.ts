@@ -247,6 +247,7 @@ export class FileObjectUpload extends EventEmitter {
         // no op
       });
     } catch (err) {
+      if (attemps > 1 && !this.aborted) {
         this.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
         await this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity);
       } else {
