@@ -361,7 +361,6 @@ function sendShardToNode(config, shard, content) {
         headers: {
             'Content-Type': 'application/octet-stream',
             'x-storj-node-id': shard.farmer.nodeID,
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         },
         data: content
     };

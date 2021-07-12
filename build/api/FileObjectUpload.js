@@ -195,7 +195,6 @@ var FileObjectUpload = /** @class */ (function (_super) {
         return request.start()
             .then(function () { return false; })
             .catch(function (err) {
-            console.log('ERR', err);
             throw error_1.wrap('Farmer request error', err);
         });
     };
