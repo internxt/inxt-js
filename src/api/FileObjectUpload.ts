@@ -1,5 +1,5 @@
 import { utils } from 'rs-wrapper';
-import { Readable } from 'stream';
+import { EventEmitter, Readable } from 'stream';
 import { randomBytes } from 'crypto';
 
 import { EnvironmentConfig, UploadProgressCallback } from '..';
@@ -16,6 +16,7 @@ import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
 import { promisifyStream } from '../lib/utils/promisify';
 import { wrap } from '../lib/utils/error';
+import { UPLOAD_CANCELLED } from './constants';
 
 export interface FileMeta {
   size: number;
@@ -23,10 +24,12 @@ export interface FileMeta {
   content: Readable;
 }
 
-export class FileObjectUpload {
+export class FileObjectUpload extends EventEmitter {
   private config: EnvironmentConfig;
   private fileMeta: FileMeta;
+  private requests: api.INXTRequest[] = [];
   private id = '';
+  private aborted = false;
 
   bucketId: string;
   frameId: string;
@@ -38,7 +41,9 @@ export class FileObjectUpload {
   funnel: FunnelStream;
   fileEncryptionKey: Buffer;
 
-  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string)  {
+  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string) {
+    super();
+
     this.config = config;
     this.index = Buffer.alloc(0);
     this.fileMeta = fileMeta;
@@ -48,6 +53,8 @@ export class FileObjectUpload {
     this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
     this.uploadStream = new EncryptStream(randomBytes(32), randomBytes(16));
     this.fileEncryptionKey = randomBytes(32);
+
+    this.once(UPLOAD_CANCELLED, this.abort.bind(this));
   }
 
   getSize(): number {
@@ -58,7 +65,15 @@ export class FileObjectUpload {
     return this.id;
   }
 
+  checkIfIsAborted() {
+    if (this.isAborted()) {
+      throw new Error('Upload aborted');
+    }
+  }
+
   async init(): Promise<FileObjectUpload> {
+    this.checkIfIsAborted();
+
     this.index = randomBytes(32);
     this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
 
@@ -68,6 +83,8 @@ export class FileObjectUpload {
   }
 
   async checkBucketExistence(): Promise<boolean> {
+    this.checkIfIsAborted();
+
     // if bucket not exists, bridge returns an error
     return api.getBucketById(this.config, this.bucketId).then((res) => {
       logger.info('Bucket %s exists', this.bucketId);
@@ -80,6 +97,8 @@ export class FileObjectUpload {
   }
 
   stage(): Promise<void> {
+    this.checkIfIsAborted();
+
     return api.createFrame(this.config).then((frame) => {
       if (!frame || !frame.id) {
         throw new Error('Frame response is empty');
@@ -94,6 +113,8 @@ export class FileObjectUpload {
   }
 
   SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
+    this.checkIfIsAborted();
+
     return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
       .catch((err) => {
         throw wrap('Bucket entry creation error', err);
@@ -101,6 +122,8 @@ export class FileObjectUpload {
   }
 
   negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
+    this.checkIfIsAborted();
+
     return api.addShardToFrame(this.config, frameId, shardMeta)
       .catch((err) => {
         throw wrap('Contract negotiation error', err);
@@ -108,7 +131,13 @@ export class FileObjectUpload {
   }
 
   NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
-    return api.sendShardToNode(this.config, shard, encryptedShard)
+    this.checkIfIsAborted();
+
+    const request = api.sendShardToNode(this.config, shard, encryptedShard);
+
+    this.requests.push(request);
+
+    return request.start<api.SendShardToNodeResponse>()
       .then(() => false)
       .catch((err) => {
         throw wrap('Farmer request error', err);
@@ -133,6 +162,8 @@ export class FileObjectUpload {
   }
 
   async upload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    this.checkIfIsAborted();
+
     if (!this.encrypted) {
       throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
     }
@@ -234,6 +265,17 @@ export class FileObjectUpload {
       .catch((err) => {
         throw wrap('Bucket entry creation error', err);
       });
+  }
+
+  abort(): void {
+    logger.info('Aborting file upload');
+
+    this.aborted = true;
+    this.requests.forEach((r) => r.abort());
+  }
+
+  isAborted(): boolean {
+    return this.aborted;
   }
 }
 

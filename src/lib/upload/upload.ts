@@ -1,4 +1,6 @@
 import { EnvironmentConfig, UploadProgressCallback, UploadFinishCallback } from "../..";
+import { ActionState } from "../../api/ActionState";
+import { UPLOAD_CANCELLED } from "../../api/constants";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
 import { logger } from "../utils/logger";
 
@@ -10,8 +12,10 @@ import { logger } from "../utils/logger";
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export async function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback): Promise<void> {
+export async function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, progress: UploadProgressCallback, finish: UploadFinishCallback, actionState: ActionState): Promise<void> {
     const file = new FileObjectUpload(config, fileMeta, bucketId);
+
+    actionState.on(UPLOAD_CANCELLED, () => { file.emit(UPLOAD_CANCELLED); });
 
     try {
         await file.init();
@@ -29,6 +33,9 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
 
         finish(null, file.getId());
     } catch (err) {
+        if (file.isAborted()) {
+            return finish(new Error('Process killed by user'), null);
+        }
         finish(err, null);
     }
 }

@@ -16,6 +16,7 @@ import { ActionState, ActionTypes } from './api/ActionState';
 
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
+import { createReadStream, statSync } from 'fs';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -54,6 +55,8 @@ type ListFilesCallback = (err: Error | null, result: any)  => void;
 
 type DeleteFileCallback = (err: Error | null, result: any)  => void;
 
+type DebugCallback = (message: string) => void;
+
 interface UploadFileParams {
   filename: string;
   fileSize: number;
@@ -63,11 +66,9 @@ interface UploadFileParams {
 }
 
 interface StoreFileParams {
-  filename: string;
-  fileSize: number;
-  fileContent: Readable;
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
+  debug?: DebugCallback;
 }
 
 export class Environment {
@@ -176,6 +177,8 @@ export class Environment {
    * @param params Upload file params
    */
   uploadFile(bucketId: string, params: UploadFileParams): void {
+    const uploadState = new ActionState(ActionTypes.Upload);
+
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
@@ -209,7 +212,7 @@ export class Environment {
         const content = BlobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
 
-        upload(this.config, bucketId, fileToUpload, progress, finished);
+        upload(this.config, bucketId, fileToUpload, progress, finished, uploadState);
       })
       .catch((err: Error) => {
         logger.error(`Error encrypting filename due to ${err.message}`);
@@ -224,7 +227,7 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  storeFile(bucketId: string, params: StoreFileParams): ActionState {
+  storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
@@ -239,31 +242,36 @@ export class Environment {
       return uploadState;
     }
 
-    if (!params.filename) {
-      params.finishedCallback(Error('Filename was not provided'), null);
+    const fileStat = statSync(filepath);
 
-      return uploadState;
-    }
-
-    if (params.fileSize === 0) {
+    if (fileStat.size === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
 
       return uploadState;
     }
 
-    EncryptFilename(this.config.encryptionKey, bucketId, params.filename)
+    EncryptFilename(this.config.encryptionKey, bucketId, filepath)
       .then((name: string) => {
-        logger.debug('Filename %s encrypted is %s', params.filename, name);
+        // TODO: Get file from file path provided instead of expecting a Readable
+        logger.debug('Filename %s encrypted is %s', filepath, name);
 
-        const fileToUpload: FileMeta = { content: params.fileContent, name, size: params.fileSize };
+        const fileToUpload: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
 
-        upload(this.config, bucketId, fileToUpload, params.progressCallback, params.finishedCallback);
+        upload(this.config, bucketId, fileToUpload, params.progressCallback, params.finishedCallback, uploadState);
       })
       .catch((err: Error) => {
         params.finishedCallback(err, null);
       });
 
     return uploadState;
+  }
+
+  /**
+   * Cancels a file upload
+   * @param {ActionState} state Upload state
+   */
+  storeFileCancel(state: ActionState): void {
+    state.stop();
   }
 
   resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState {
