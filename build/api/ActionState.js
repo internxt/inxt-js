@@ -31,6 +31,7 @@ var ActionState = /** @class */ (function (_super) {
     ActionState.prototype.stop = function () {
         if (this.type === ActionTypes.Download) {
             this.emit(constants_1.DOWNLOAD_CANCELLED);
+            return;
         }
         if (this.type === ActionTypes.Upload) {
             this.emit(constants_1.UPLOAD_CANCELLED);

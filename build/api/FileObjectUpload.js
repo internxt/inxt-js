@@ -92,6 +92,7 @@ var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
 var reports_1 = require("./reports");
+var promisify_1 = require("../lib/utils/promisify");
 var error_1 = require("../lib/utils/error");
 var constants_1 = require("./constants");
 var uploader_1 = require("../lib/upload/uploader");
@@ -110,7 +111,6 @@ var FileObjectUpload = /** @class */ (function (_super) {
         _this.frameId = '';
         _this.funnel = new funnelStream_1.FunnelStream(rs_wrapper_1.utils.determineShardSize(fileMeta.size));
         _this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
-        _this.uploadStream = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         _this.fileEncryptionKey = crypto_1.randomBytes(32);
         _this.logger = logger;
         _this.once(constants_1.UPLOAD_CANCELLED, _this.abort.bind(_this));
@@ -197,9 +197,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         //   .catch((err) => {
         //     throw wrap('Farmer request error', err);
         //   });
-        return request.start({
-            data: encryptedShard
-        })
+        return request.start({ data: encryptedShard })
             .then(function () { return false; })
             .catch(function (err) {
             throw error_1.wrap('Farmer request error', err);
@@ -214,9 +212,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
         return hmac.digest().toString('hex');
     };
     FileObjectUpload.prototype.encrypt = function () {
-        this.uploadStream = this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
         this.encrypted = true;
-        return this.uploadStream;
+        return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
     };
     FileObjectUpload.prototype.sequentialUpload = function (callback) {
         var _this = this;
@@ -226,7 +223,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
         return new Promise(function (resolve, reject) {
-            _this.uploadStream.pipe(uploader)
+            _this.cipher.pipe(uploader)
                 .on('error', function (err) {
                 reject(error_1.wrap('Farmer request error', err));
             })
@@ -238,6 +235,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.upload = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
+            var shardIndex, uploads, fileSize, currentBytesUploaded, uploadResponses;
+            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -245,8 +244,34 @@ var FileObjectUpload = /** @class */ (function (_super) {
                         if (!this.encrypted) {
                             throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
                         }
-                        return [4 /*yield*/, this.sequentialUpload(callback)];
-                    case 1: return [2 /*return*/, _a.sent()];
+                        shardIndex = 0;
+                        uploads = [];
+                        this.cipher.on('data', function (shard) {
+                            uploads.push(_this.uploadShard(shard, shard.length, _this.frameId, shardIndex++, 3, false));
+                        });
+                        return [4 /*yield*/, promisify_1.promisifyStream(this.cipher)];
+                    case 1:
+                        _a.sent();
+                        fileSize = this.getSize();
+                        this.logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / rs_wrapper_1.utils.determineShardSize(fileSize)), rs_wrapper_1.utils.determineShardSize(fileSize));
+                        currentBytesUploaded = 0;
+                        return [4 /*yield*/, Promise.all(uploads.map(function (request) { return __awaiter(_this, void 0, void 0, function () {
+                                var shardMeta;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0: return [4 /*yield*/, request];
+                                        case 1:
+                                            shardMeta = _a.sent();
+                                            currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
+                                            return [2 /*return*/, shardMeta];
+                                    }
+                                });
+                            }); })).catch(function (err) {
+                                throw error_1.wrap('Farmer request error', err);
+                            })];
+                    case 2:
+                        uploadResponses = _a.sent();
+                        return [2 /*return*/, uploadResponses];
                 }
             });
         });
@@ -325,6 +350,11 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.logger.info('Aborting file upload');
         this.aborted = true;
         this.requests.forEach(function (r) { return r.abort(); });
+        this.funnel.unpipe(this.cipher);
+        this.fileMeta.content.unpipe(this.funnel);
+        this.fileMeta.content.destroy();
+        this.funnel.destroy();
+        this.cipher.destroy();
     };
     FileObjectUpload.prototype.isAborted = function () {
         return this.aborted;
