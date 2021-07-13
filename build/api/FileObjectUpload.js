@@ -92,9 +92,9 @@ var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
 var reports_1 = require("./reports");
-var promisify_1 = require("../lib/utils/promisify");
 var error_1 = require("../lib/utils/error");
 var constants_1 = require("./constants");
+var uploader_1 = require("../lib/upload/uploader");
 var FileObjectUpload = /** @class */ (function (_super) {
     __extends(FileObjectUpload, _super);
     function FileObjectUpload(config, fileMeta, bucketId, logger) {
@@ -190,9 +190,16 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.NodeRejectedShard = function (encryptedShard, shard) {
         this.checkIfIsAborted();
-        var request = api.sendShardToNode(this.config, shard, encryptedShard);
+        var request = api.sendShardToNode(this.config, shard);
         this.requests.push(request);
-        return request.start()
+        // return request.stream<api.SendShardToNodeResponse>(Readable.from(encryptedShard))
+        //   .then(() => false)
+        //   .catch((err) => {
+        //     throw wrap('Farmer request error', err);
+        //   });
+        return request.start({
+            data: encryptedShard
+        })
             .then(function () { return false; })
             .catch(function (err) {
             throw error_1.wrap('Farmer request error', err);
@@ -211,10 +218,26 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.encrypted = true;
         return this.uploadStream;
     };
+    FileObjectUpload.prototype.sequentialUpload = function (callback) {
+        var _this = this;
+        var uploader = new uploader_1.UploaderStream(1, this, rs_wrapper_1.utils.determineShardSize(this.fileMeta.size));
+        var currentBytesUploaded = 0;
+        uploader.on('upload-progress', function (bytesUploaded) {
+            currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
+        });
+        return new Promise(function (resolve, reject) {
+            _this.uploadStream.pipe(uploader)
+                .on('error', function (err) {
+                reject(error_1.wrap('Farmer request error', err));
+            })
+                .on('end', function () {
+                // console.log('All uploads finished');
+                resolve(uploader.getShardsMeta());
+            });
+        });
+    };
     FileObjectUpload.prototype.upload = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
-            var shardIndex, uploads, fileSize, currentBytesUploaded, uploadResponses;
-            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -222,34 +245,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
                         if (!this.encrypted) {
                             throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
                         }
-                        shardIndex = 0;
-                        uploads = [];
-                        this.uploadStream.on('data', function (shard) {
-                            uploads.push(_this.uploadShard(shard, shard.length, _this.frameId, shardIndex++, 3, false));
-                        });
-                        return [4 /*yield*/, promisify_1.promisifyStream(this.uploadStream)];
-                    case 1:
-                        _a.sent();
-                        fileSize = this.getSize();
-                        this.logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / rs_wrapper_1.utils.determineShardSize(fileSize)), rs_wrapper_1.utils.determineShardSize(fileSize));
-                        currentBytesUploaded = 0;
-                        return [4 /*yield*/, Promise.all(uploads.map(function (request) { return __awaiter(_this, void 0, void 0, function () {
-                                var shardMeta;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0: return [4 /*yield*/, request];
-                                        case 1:
-                                            shardMeta = _a.sent();
-                                            currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
-                                            return [2 /*return*/, shardMeta];
-                                    }
-                                });
-                            }); })).catch(function (err) {
-                                throw error_1.wrap('Farmer request error', err);
-                            })];
-                    case 2:
-                        uploadResponses = _a.sent();
-                        return [2 /*return*/, uploadResponses];
+                        return [4 /*yield*/, this.sequentialUpload(callback)];
+                    case 1: return [2 /*return*/, _a.sent()];
                 }
             });
         });

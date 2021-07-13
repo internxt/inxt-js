@@ -52,13 +52,12 @@ function merkleTree(encrypted) {
     var challenges = challengeArray();
     var preleaves = preleafArray(encrypted, challenges);
     var leaves = leafArray(preleaves);
-    var merkleTree = {
+    return {
         leaf: arrayBufferToString(leaves),
         challenges: challenges,
         challenges_as_str: arrayBufferToString(challenges),
         preleaf: preleaves
     };
-    return merkleTree;
 }
 exports.merkleTree = merkleTree;
 function getChallenges(mT) {

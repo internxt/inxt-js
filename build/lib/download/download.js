@@ -50,15 +50,14 @@ function Download(config, bucketId, fileId, options, state) {
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
-                    if (!config.encryptionKey) {
-                        throw Error('Encryption key required');
-                    }
+                    // if (!config.encryptionKey) { throw Error('Encryption key required'); }
                     if (!bucketId) {
                         throw Error('Bucket id required');
                     }
                     if (!fileId) {
                         throw Error('File id required');
                     }
+                    console.log('fileId', fileId);
                     _c.label = 1;
                 case 1:
                     _c.trys.push([1, 10, , 11]);
@@ -81,6 +80,7 @@ function Download(config, bucketId, fileId, options, state) {
                     return [4 /*yield*/, promisify_1.promisifyStream(fileStream)];
                 case 5:
                     _c.sent();
+                    console.log('HE PODIDO DESCARGARLO');
                     fileContent = Buffer.concat(fileChunks_1);
                     rs = File_1.fileInfo && File_1.fileInfo.erasure && File_1.fileInfo.erasure.type === 'reedsolomon';
                     shardsStatus = File_1.rawShards.map(function (shard) { return shard.healthy; });
@@ -99,6 +99,7 @@ function Download(config, bucketId, fileId, options, state) {
                 case 9: return [3 /*break*/, 11];
                 case 10:
                     err_1 = _c.sent();
+                    console.error(err_1);
                     options.finishedCallback(err_1, null);
                     return [3 /*break*/, 11];
                 case 11: return [2 /*return*/];

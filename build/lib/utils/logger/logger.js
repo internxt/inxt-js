@@ -65,7 +65,7 @@ var getLoggerInstance = function (level, debug) {
         level: levelName,
         exitOnError: true,
         handleExceptions: true,
-        format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }), Winston.format.splat(), Winston.format.printf(function (info) {
+        format: Winston.format.combine(Winston.format.colorize({ all: true }), Winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), Winston.format.splat(), Winston.format.printf(function (info) {
             if (debug && debug.enabled) {
                 debug.debugCallback(info.message);
             }

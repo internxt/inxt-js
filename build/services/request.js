@@ -73,6 +73,7 @@ exports.sendShardToNode = exports.sendUploadExchangeReport = exports.addShardToF
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
 var stream_1 = require("stream");
+var http_1 = require("http");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
@@ -150,22 +151,68 @@ function request(config, method, targetUrl, params, useProxy) {
 }
 exports.request = request;
 var INXTRequest = /** @class */ (function () {
-    function INXTRequest(config, method, targetUrl, params, useProxy) {
+    function INXTRequest(config, method, targetUrl, useProxy) {
+        this.streaming = false;
         this.method = method;
         this.config = config;
         this.targetUrl = targetUrl;
-        this.params = params;
         this.useProxy = useProxy !== null && useProxy !== void 0 ? useProxy : false;
         this.cancel = function () { return null; };
     }
-    INXTRequest.prototype.start = function () {
+    INXTRequest.prototype.start = function (params) {
         // TODO: Abstract from axios
         var source = axios_1.default.CancelToken.source();
         var cancelToken = source.token;
-        this.req = request(this.config, this.method, this.targetUrl, __assign(__assign({}, this.params), { cancelToken: cancelToken }), this.useProxy).then(function (res) { return res.data; });
+        this.req = request(this.config, this.method, this.targetUrl, __assign(__assign({}, params), { cancelToken: cancelToken }), this.useProxy).then(function (res) { return res.data; });
         return this.req;
     };
+    INXTRequest.prototype.stream = function (content, options) {
+        return __awaiter(this, void 0, void 0, function () {
+            var proxy, targetUrl, uriParts, stream_2, stream;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.streaming = true;
+                        if (!this.useProxy) return [3 /*break*/, 2];
+                        return [4 /*yield*/, proxy_1.getProxy()];
+                    case 1:
+                        proxy = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        targetUrl = "" + (proxy && proxy.url ? proxy.url + '/' : '') + this.targetUrl;
+                        uriParts = url.parse(targetUrl);
+                        this.req = https.request(__assign(__assign({}, options), { method: this.method, protocol: uriParts.protocol, hostname: uriParts.hostname, port: uriParts.port, path: uriParts.path }));
+                        if (this.method === Methods.Get && content instanceof stream_1.Writable) {
+                            stream_2 = this.req.pipe(content);
+                            return [2 /*return*/, new Promise(function (resolve, reject) {
+                                    stream_2.on('error', reject);
+                                    stream_2.on('end', function (x) {
+                                        proxy === null || proxy === void 0 ? void 0 : proxy.free();
+                                        resolve(x);
+                                    });
+                                })];
+                        }
+                        stream = content.pipe(this.req);
+                        return [2 /*return*/, new Promise(function (resolve, reject) {
+                                var chunks = '';
+                                stream.on('data', function (chunk) { chunks += chunk; });
+                                stream.on('end', function () {
+                                    proxy === null || proxy === void 0 ? void 0 : proxy.free();
+                                    console.log('END', JSON.parse(chunks));
+                                    resolve(JSON.parse(chunks));
+                                });
+                                stream.on('abort', reject);
+                                stream.on('error', reject);
+                                stream.on('timeout', reject);
+                            })];
+                }
+            });
+        });
+    };
     INXTRequest.prototype.abort = function () {
+        if (this.streaming && this.req instanceof http_1.ClientRequest) {
+            return this.req.destroy();
+        }
         this.cancel();
     };
     INXTRequest.prototype.isCancelled = function (err) {
@@ -355,15 +402,8 @@ exports.sendUploadExchangeReport = sendUploadExchangeReport;
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-function sendShardToNode(config, shard, content) {
+function sendShardToNode(config, shard) {
     var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
-    var defParams = {
-        headers: {
-            'Content-Type': 'application/octet-stream',
-            'x-storj-node-id': shard.farmer.nodeID,
-        },
-        data: content
-    };
-    return new INXTRequest(config, Methods.Post, targetUrl, defParams, true);
+    return new INXTRequest(config, Methods.Post, targetUrl, true);
 }
 exports.sendShardToNode = sendShardToNode;

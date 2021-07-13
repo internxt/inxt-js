@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import { Readable } from 'stream';
+import * as https from 'https';
+import { Readable, Writable } from 'stream';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 import { ExchangeReport } from '../api/reports';
@@ -17,10 +18,11 @@ export declare class INXTRequest {
     private method;
     private config;
     private targetUrl;
-    private params;
     private useProxy;
-    constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean);
-    start<K>(): Promise<K>;
+    private streaming;
+    constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, useProxy?: boolean);
+    start<K>(params: AxiosRequestConfig): Promise<K>;
+    stream<K>(content: Readable | Writable, options?: https.RequestOptions): Promise<K>;
     abort(): void;
     isCancelled(err: Error): boolean;
 }
@@ -136,5 +138,5 @@ export interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export declare function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): INXTRequest;
+export declare function sendShardToNode(config: EnvironmentConfig, shard: Shard): INXTRequest;
 export {};

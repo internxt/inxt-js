@@ -129,6 +129,7 @@ export interface EnvironmentConfig {
     webProxy?: string;
     config?: {
         shardRetry: number;
+        maxConcurrency: number;
     };
 }
 export {};
