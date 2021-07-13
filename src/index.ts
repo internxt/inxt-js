@@ -347,6 +347,7 @@ export interface EnvironmentConfig {
   logLevel?: number;
   webProxy?: string;
   config?: {
-    shardRetry: number
+    shardRetry: number,
+    maxConcurrency: number
   };
 }
