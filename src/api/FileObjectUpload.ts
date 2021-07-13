@@ -17,6 +17,7 @@ import { Shard } from "./shard";
 import { promisifyStream } from '../lib/utils/promisify';
 import { wrap } from '../lib/utils/error';
 import { UPLOAD_CANCELLED } from './constants';
+import { UploaderStream } from '../lib/upload/uploader';
 
 export interface FileMeta {
   size: number;
@@ -136,11 +137,19 @@ export class FileObjectUpload extends EventEmitter {
   NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
     this.checkIfIsAborted();
 
-    const request = api.sendShardToNode(this.config, shard, encryptedShard);
+    const request = api.sendShardToNode(this.config, shard);
 
     this.requests.push(request);
 
-    return request.start<api.SendShardToNodeResponse>()
+    // return request.stream<api.SendShardToNodeResponse>(Readable.from(encryptedShard))
+    //   .then(() => false)
+    //   .catch((err) => {
+    //     throw wrap('Farmer request error', err);
+    //   });
+
+    return request.start<api.SendShardToNodeResponse>({
+      data: encryptedShard
+    })
       .then(() => false)
       .catch((err) => {
         throw wrap('Farmer request error', err);
@@ -164,6 +173,27 @@ export class FileObjectUpload extends EventEmitter {
     return this.uploadStream;
   }
 
+  private sequentialUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    const uploader = new UploaderStream(1, this, utils.determineShardSize(this.fileMeta.size));
+
+    let currentBytesUploaded = 0;
+    uploader.on('upload-progress', (bytesUploaded: number) => {
+      currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
+    });
+
+    return new Promise((resolve, reject) => {
+      this.uploadStream.pipe(uploader)
+        .on('error', (err: Error) => {
+          reject(wrap('Farmer request error', err));
+        })
+        .on('end', () => {
+          // console.log('All uploads finished');
+
+          resolve(uploader.getShardsMeta());
+        });
+    });
+  } 
+
   async upload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
     this.checkIfIsAborted();
 
@@ -171,37 +201,38 @@ export class FileObjectUpload extends EventEmitter {
       throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
     }
 
-    let shardIndex = 0;
+    return await this.sequentialUpload(callback);
 
-    const uploads: Promise<ShardMeta>[] = [];
+    // let shardIndex = 0;
 
-    this.uploadStream.on('data', (shard: Buffer) => {
-      uploads.push(this.uploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
-    });
+    // const uploads: Promise<ShardMeta>[] = [];
+    // this.uploadStream.on('data', (shard: Buffer) => {
+    //   uploads.push(this.uploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
+    // });
 
-    await promisifyStream(this.uploadStream);
+    // await promisifyStream(this.uploadStream);
 
-    const fileSize = this.getSize();
+    // const fileSize = this.getSize();
 
-    this.logger.debug('Shards obtained %s, shardSize %s',
-      Math.ceil(fileSize / utils.determineShardSize(fileSize)),
-      utils.determineShardSize(fileSize)
-    );
+    // this.logger.debug('Shards obtained %s, shardSize %s',
+    //   Math.ceil(fileSize / utils.determineShardSize(fileSize)),
+    //   utils.determineShardSize(fileSize)
+    // );
 
-    let currentBytesUploaded = 0;
-    const uploadResponses = await Promise.all(
-      uploads.map(async (request) => {
-        const shardMeta = await request;
+    // let currentBytesUploaded = 0;
+    // const uploadResponses = await Promise.all(
+    //   uploads.map(async (request) => {
+    //     const shardMeta = await request;
 
-        currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
+    //     currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
 
-        return shardMeta;
-      })
-    ).catch((err) => {
-      throw wrap('Farmer request error', err);
-    });
+    //     return shardMeta;
+    //   })
+    // ).catch((err) => {
+    //   throw wrap('Farmer request error', err);
+    // });
 
-    return uploadResponses;
+    // return uploadResponses;
   }
 
   async uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
