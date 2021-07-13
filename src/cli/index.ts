@@ -19,7 +19,7 @@ program
     // .option('-d, --debug', 'set the debug log level')
     .option('-u, --upload', 'upload file from provided path')
     .option('-d, --download', 'download file to provided path')
-    .option('-f, --fileId', 'file id to download (only for downloads)')
+    .option('-f, --fileId <file_id>', 'file id to download (only for downloads)')
     .option('-p, --path <file_path>', 'file path where file is going to be uplaoded or downloaded');
 
 program.parse(process.argv);
