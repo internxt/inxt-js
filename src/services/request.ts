@@ -1,6 +1,6 @@
 import * as url from 'url';
 import * as https from 'https';
-import { Readable } from 'stream';
+import { PassThrough, Readable, Writable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
@@ -55,31 +55,31 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
 type CancelFunction = Function;
 
 export class INXTRequest {
-  private req: Promise<any> | undefined;
+  private req: Promise<any> | ClientRequest | undefined;
   private cancel: CancelFunction;
 
   private method: Methods;
   private config: EnvironmentConfig;
   private targetUrl: string;
-  private params: AxiosRequestConfig;
   private useProxy: boolean;
 
-  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean) {
+  private streaming = false;
+
+  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, useProxy?: boolean) {
     this.method = method;
     this.config = config;
     this.targetUrl = targetUrl;
-    this.params = params;
     this.useProxy = useProxy ?? false;
 
     this.cancel = () => null;
   }
 
-  start<K>(): Promise<K> {
+  start<K>(params: AxiosRequestConfig): Promise<K> {
     // TODO: Abstract from axios
     const source = axios.CancelToken.source();
     const cancelToken = source.token;
 
-    this.req = request(this.config, this.method, this.targetUrl, { ...this.params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
+    this.req = request(this.config, this.method, this.targetUrl, { ...params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
 
     return this.req;
   }
@@ -365,16 +365,8 @@ export interface SendShardToNodeResponse {
  * @param shard Interface that has the contact info
  * @param content Buffer with shard content
  */
-export function sendShardToNode(config: EnvironmentConfig, shard: Shard, content: Buffer): INXTRequest {
+export function sendShardToNode(config: EnvironmentConfig, shard: Shard): INXTRequest {
   const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'x-storj-node-id': shard.farmer.nodeID,
-    },
-    data: content
-  };
-
-  return new INXTRequest(config, Methods.Post, targetUrl, defParams, true);
+  return new INXTRequest(config, Methods.Post, targetUrl, true);
 }

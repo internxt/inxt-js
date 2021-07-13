@@ -1,24 +1,27 @@
 import { Transform, TransformOptions } from "stream";
+
 import { FileObjectUpload } from "../../api/FileObjectUpload";
+import { ripemd160, sha256 } from "../crypto";
 import { ShardMeta } from "../shardMeta";
 
 export class UploaderStream extends Transform {
     private parallelUploads: number;
     private fileObject: FileObjectUpload;
     private indexCounter = 0;
-    private shardSize = 0;
-    private internalBuffer: Buffer = Buffer.alloc(0);
+
+    private pendingShards: Buffer[] = [];
+    private maxConcurrentBytes: number;
+    private limitOffset = 0;
 
     uploads: ShardMeta[] = [];
 
-    constructor(parallelUploads = 1, fileObject: FileObjectUpload, shardSize: number, options?: TransformOptions) {
+    constructor(parallelUploads = 1, fileObject: FileObjectUpload, shardSize: number, maxConcurrentBytes?: number, options?: TransformOptions) {
         super(options);
 
         this.parallelUploads = parallelUploads;
         this.fileObject = fileObject;
-        this.shardSize = shardSize;
 
-        // this.internalBuffer = Buffer.alloc(shardSize * parallelUploads);
+        this.maxConcurrentBytes = maxConcurrentBytes || shardSize;
     }
 
     getShardsMeta(): ShardMeta[] {
@@ -26,6 +29,7 @@ export class UploaderStream extends Transform {
     }
 
     _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer | null) => void): void {
+        console.log('Hash %s for shard %s', ripemd160(sha256(chunk)).toString('hex'), this.indexCounter);
         if (this.parallelUploads > 1) {
             // TODO
             return cb(null, null);

@@ -52,7 +52,7 @@ const getLoggerInstance = (level: number, debug?: { enabled: boolean, debugCallb
         handleExceptions: true,
         format: Winston.format.combine(
             Winston.format.colorize({ all: true }),
-            Winston.format.timestamp({ format: 'YYYY-MM-DD HH:MM:SS' }),
+            Winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             Winston.format.splat(),
             Winston.format.printf((info: Winston.Logform.TransformableInfo) => {
                 if (debug && debug.enabled) {
