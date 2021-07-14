@@ -69,14 +69,12 @@ function merkleTree(encrypted: Buffer): MerkleTree {
   const preleaves = preleafArray(encrypted, challenges);
   const leaves = leafArray(preleaves);
 
-  const merkleTree: MerkleTree = {
+  return {
     leaf: arrayBufferToString(leaves),
     challenges,
     challenges_as_str: arrayBufferToString(challenges),
     preleaf: preleaves
   };
-
-  return merkleTree;
 }
 
 function getChallenges(mT: MerkleTree): string[] {
