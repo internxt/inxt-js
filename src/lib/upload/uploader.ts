@@ -29,7 +29,6 @@ export class UploaderStream extends Transform {
     }
 
     _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer | null) => void): void {
-        console.log('Hash %s for shard %s', ripemd160(sha256(chunk)).toString('hex'), this.indexCounter);
         if (this.parallelUploads > 1) {
             // TODO
             return cb(null, null);
@@ -51,6 +50,5 @@ export class UploaderStream extends Transform {
 
     _flush(cb: () => void) {
         cb();
-        this.emit('end');
     }
 }
