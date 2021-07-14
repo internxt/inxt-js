@@ -39,7 +39,6 @@ var FunnelStream = /** @class */ (function (_super) {
         this.pushToReadable(this.buffer);
     };
     FunnelStream.prototype._transform = function (chunk, enc, done) {
-        // console.log('chunk length', chunk.length);
         var _this = this;
         if (this.bufferStillHasData()) {
             var bytesToPush_1 = (this.limit - this.bufferOffset);

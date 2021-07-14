@@ -222,28 +222,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
         return new Promise(function (resolve, reject) {
-            // this.cipher.pipe(uploader)
-            //   .on('error', (err: Error) => {
-            //     reject(wrap('Farmer request error', err));
-            //   })
-            //   .on('end', () => {
-            //     // console.log('All uploads finished');
-            //     resolve(uploader.getShardsMeta());
-            //   });
-            var chunks = [];
-            var totalSize = 0;
-            _this.cipher.on('data', function (chunk) {
-                chunks.push(chunk);
-                console.log('SHA256 %s', crypto_2.sha256(chunk).toString('hex'));
-                console.log('LENGTH %s', chunk.length);
-                totalSize += chunk.length;
-                uploader.write(chunk);
-            });
-            _this.cipher.on('end', function () {
-                uploader.end();
-            });
-            uploader
-                .on('data', function () { })
+            _this.cipher.pipe(uploader)
                 .on('error', function (err) {
                 reject(error_1.wrap('Farmer request error', err));
             })
@@ -251,6 +230,27 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 // console.log('All uploads finished');
                 resolve(uploader.getShardsMeta());
             });
+            // const chunks: Buffer[] = [];
+            // let totalSize = 0;
+            // this.cipher.on('data', (chunk: Buffer) => {
+            //   chunks.push(chunk);
+            //   console.log('SHA256 %s', sha256(chunk).toString('hex'));
+            //   console.log('LENGTH %s', chunk.length);
+            //   totalSize += chunk.length;
+            //   uploader.write(chunk);
+            // });
+            // this.cipher.on('end', () => {
+            //   uploader.end();
+            // });
+            // uploader
+            //   .on('data', () => {})
+            //   .on('error', (err: Error) => {
+            //     reject(wrap('Farmer request error', err));
+            //   })
+            //   .on('end', () => {
+            //     // console.log('All uploads finished');
+            //     resolve(uploader.getShardsMeta());
+            //   });
         });
     };
     FileObjectUpload.prototype.upload = function (callback) {
