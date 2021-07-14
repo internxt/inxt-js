@@ -296,35 +296,22 @@ var FileObject = /** @class */ (function (_super) {
                         if (!this.fileInfo) {
                             throw new Error('Undefined fileInfo');
                         }
-                        return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
-                                var shardBuffer, err_2;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0:
-                                            this.checkIfIsAborted();
-                                            _a.label = 1;
-                                        case 1:
-                                            _a.trys.push([1, 3, , 4]);
-                                            if (shard.healthy === false) {
-                                                throw new Error('Bridge request pointer error');
-                                            }
-                                            logger_1.logger.info('Downloading shard %s', shard.index);
-                                            return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
-                                        case 2:
-                                            shardBuffer = _a.sent();
-                                            logger_1.logger.info('Shard %s downloaded OK', shard.index);
-                                            this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
-                                            this.downloads.push({ content: buffer_1.bufferToStream(shardBuffer), index: shard.index });
-                                            shard.healthy = true;
-                                            return [3 /*break*/, 4];
-                                        case 3:
-                                            err_2 = _a.sent();
-                                            logger_1.logger.error('Error downloading shard %s reason %s', shard.index, err_2.message);
-                                            throw err_2;
-                                        case 4: return [2 /*return*/];
-                                    }
+                        return [4 /*yield*/, async_1.eachLimit(this.rawShards, 2, function (shard, nextItem) {
+                                _this.checkIfIsAborted();
+                                if (shard.healthy === false) {
+                                    throw new Error('Bridge request pointer error');
+                                }
+                                logger_1.logger.info('Downloading shard %s', shard.index);
+                                _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
+                                    logger_1.logger.info('Shard %s downloaded OK', shard.index);
+                                    _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
+                                    _this.downloads.push({ content: buffer_1.bufferToStream(shardBuffer), index: shard.index });
+                                    shard.healthy = true;
+                                    nextItem();
+                                }).catch(function (err) {
+                                    nextItem(err);
                                 });
-                            }); }))];
+                            })];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];
