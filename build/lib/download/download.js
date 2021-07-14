@@ -36,51 +36,34 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Download = void 0;
+exports.download = void 0;
 var FileObject_1 = require("../../api/FileObject");
 var events_1 = require("../events");
 var constants_1 = require("../../api/constants");
-function Download(config, bucketId, fileId, options, state) {
+function download(config, bucketId, fileId, options, state) {
     return __awaiter(this, void 0, void 0, function () {
-        var file, err_1;
+        var file;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!config.encryptionKey) {
-                        throw Error('Encryption key required');
-                    }
-                    if (!bucketId) {
-                        throw Error('Bucket id required');
-                    }
-                    if (!fileId) {
-                        throw Error('File id required');
-                    }
-                    _a.label = 1;
-                case 1:
-                    _a.trys.push([1, 5, , 6]);
                     file = new FileObject_1.FileObject(config, bucketId, fileId);
                     handleStateChanges(file, state, options);
                     return [4 /*yield*/, file.getInfo()];
-                case 2:
+                case 1:
                     _a.sent();
                     return [4 /*yield*/, file.getMirrors()];
-                case 3:
+                case 2:
                     _a.sent();
                     handleProgress(file, options);
                     return [4 /*yield*/, file.download()];
-                case 4:
+                case 3:
                     _a.sent();
-                    return [2 /*return*/, options.finishedCallback(null, file.decrypt())];
-                case 5:
-                    err_1 = _a.sent();
-                    options.finishedCallback(err_1, null);
-                    return [3 /*break*/, 6];
-                case 6: return [2 /*return*/];
+                    return [2 /*return*/, file.decrypt()];
             }
         });
     });
 }
-exports.Download = Download;
+exports.download = download;
 // TODO: use propagate lib
 function attachFileObjectListeners(f, notified) {
     // propagate events to notified
@@ -95,7 +78,8 @@ function attachFileObjectListeners(f, notified) {
 }
 function handleProgress(fl, options) {
     var _a;
-    var totalBytesDownloaded = 0, totalBytesDecrypted = 0;
+    var totalBytesDownloaded = 0;
+    var totalBytesDecrypted = 0;
     var progress = 0;
     var totalBytes = fl.rawShards.length > 0 ?
         fl.rawShards.reduce(function (a, b) { return ({ size: a.size + b.size }); }, { size: 0 }).size :
@@ -104,10 +88,10 @@ function handleProgress(fl, options) {
         throw new Error('Total file size can not be 0');
     }
     function getDownloadProgress() {
-        return (totalBytesDownloaded / totalBytes) * 100;
+        return (totalBytesDownloaded / totalBytes);
     }
     function getDecryptionProgress() {
-        return (totalBytesDecrypted / totalBytes) * 100;
+        return (totalBytesDecrypted / totalBytes);
     }
     fl.on(events_1.DOWNLOAD.PROGRESS, function (addedBytes) {
         totalBytesDownloaded += addedBytes;

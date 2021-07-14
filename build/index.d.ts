@@ -106,7 +106,6 @@ export declare class Environment {
      * @param {ActionState} state Upload state
      */
     storeFileCancel(state: ActionState): void;
-    resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState;
     /**
      * Downloads a file, returns state object
      * @param bucketId Bucket id where file is
@@ -114,6 +113,7 @@ export declare class Environment {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
+    resolveFile(bucketId: string, fileId: string, filePath: string, options: DesktopDownloadFileOptions): ActionState;
     /**
      * Cancels the download
      * @param state Download file state at the moment

@@ -13,16 +13,15 @@ exports.DownloadOptionsAdapter = function (options) {
         if (err) {
             if (err.message === constants_1.DOWNLOAD_CANCELLED) {
                 logger_1.logger.info('Download cancelled');
-                return options.finishedCallback(null, null);
+                return options.finishedCallback(null);
             }
             logger_1.logger.error('Error downloading file due to %s', err.message);
             logger_1.logger.error(err);
-            return options.finishedCallback(err, null);
+            return options.finishedCallback(err);
         }
         if (!fileStream) {
-            return options.finishedCallback(Error('File stream is null'), null);
+            return options.finishedCallback(Error('File stream is null'));
         }
-        options.finishedCallback(err, fileStream);
     };
     return {
         progressCallback: options.progressCallback,

@@ -67,6 +67,7 @@ var events_2 = require("../lib/events");
 var logger_1 = require("../lib/utils/logger");
 var buffer_1 = require("../lib/utils/buffer");
 var constants_1 = require("./constants");
+var error_1 = require("../lib/utils/error");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId) {
@@ -103,12 +104,18 @@ var FileObject = /** @class */ (function (_super) {
                         logger_1.logger.info('Retrieving file info...');
                         if (!!this.fileInfo) return [3 /*break*/, 3];
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileInfo(this.config, this.bucketId, this.fileId)];
+                        return [4 /*yield*/, fileinfo_1.GetFileInfo(this.config, this.bucketId, this.fileId)
+                                .catch(function (err) {
+                                throw error_1.wrap('Get file info error', err);
+                            })];
                     case 1:
                         _a.fileInfo = _c.sent();
                         if (!this.config.encryptionKey) return [3 /*break*/, 3];
                         _b = this;
-                        return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'))];
+                        return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'))
+                                .catch(function (err) {
+                                throw error_1.wrap('Generate file key error', err);
+                            })];
                     case 2:
                         _b.fileKey = _c.sent();
                         _c.label = 3;

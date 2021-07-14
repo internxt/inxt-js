@@ -1,7 +1,5 @@
-/// <reference types="node" />
-import { Readable } from "stream";
 import { DecryptionProgressCallback, DownloadFileOptions, DownloadProgressCallback } from "../..";
-export declare type DesktopDownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
+export declare type DesktopDownloadFinishedCallback = (err: Error | null) => void;
 export interface DesktopDownloadFileOptions {
     progressCallback: DownloadProgressCallback;
     decryptionProgressCallback?: DecryptionProgressCallback;

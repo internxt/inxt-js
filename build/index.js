@@ -12,7 +12,6 @@ var crypto_1 = require("./lib/crypto");
 var constants_1 = require("./api/constants");
 var ActionState_1 = require("./api/ActionState");
 var Web_1 = require("./api/adapters/Web");
-var Desktop_1 = require("./api/adapters/Desktop");
 var logger_1 = require("./lib/utils/logger");
 var Environment = /** @class */ (function () {
     function Environment(config) {
@@ -94,7 +93,7 @@ var Environment = /** @class */ (function () {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
-        download_1.Download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), downloadState);
+        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), downloadState);
         return downloadState;
     };
     /**
@@ -178,19 +177,6 @@ var Environment = /** @class */ (function () {
     Environment.prototype.storeFileCancel = function (state) {
         state.stop();
     };
-    Environment.prototype.resolveFile = function (bucketId, fileId, options) {
-        var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
-        if (!this.config.encryptionKey) {
-            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        if (!bucketId) {
-            options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        download_1.Download(this.config, bucketId, fileId, Desktop_1.DownloadOptionsAdapter(options), downloadState);
-        return downloadState;
-    };
     /**
      * Downloads a file, returns state object
      * @param bucketId Bucket id where file is
@@ -198,26 +184,34 @@ var Environment = /** @class */ (function () {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    // resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
-    //   if (!options.overwritte && fs.existsSync(filePath)) {
-    //     return options.finishedCallback(new Error('File already exists'))
-    //   }
-    //   const fileStream = fs.createWriteStream(filePath)
-    //   Download(this.config, bucketId, fileId, options).then(stream => {
-    //     console.log('START DUMPING FILE')
-    //     const dump = stream.pipe(fileStream)
-    //     dump.on('error', (err) => {
-    //       console.log('DUMP FILE error', err.message)
-    //       options.finishedCallback(err)
-    //     })
-    //     dump.on('end', (err) => {
-    //       console.log('DUMP FILE END')
-    //       options.finishedCallback(err)
-    //     })
-    //   })
-    //   /* TODO: Returns state object */
-    //   return
-    // }
+    Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
+        var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
+        if (!this.config.encryptionKey) {
+            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED));
+            return downloadState;
+        }
+        if (!bucketId) {
+            options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED));
+            return downloadState;
+        }
+        if (!fileId) {
+            options.finishedCallback(Error('File id not provided'));
+            return downloadState;
+        }
+        download_1.download(this.config, bucketId, fileId, options, downloadState)
+            .then(function (fileStream) {
+            fileStream.pipe(fs_1.createWriteStream(filePath))
+                .on('error', function (err) {
+                options.finishedCallback(err);
+            })
+                .on('close', function () {
+                options.finishedCallback(null);
+            });
+        }).catch(function (err) {
+            options.finishedCallback(err);
+        });
+        return downloadState;
+    };
     /**
      * Cancels the download
      * @param state Download file state at the moment
