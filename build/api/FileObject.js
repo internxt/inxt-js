@@ -76,26 +76,30 @@ var FileObject = /** @class */ (function (_super) {
         _this.length = -1;
         _this.final_length = -1;
         _this.totalSizeWithECs = 0;
-        _this.stopped = false;
+        _this.aborted = false;
         _this.downloads = [];
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
         _this.fileKey = Buffer.alloc(0);
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.once(constants_1.DOWNLOAD_CANCELLED, _this.abort.bind(_this));
         // DOWNLOAD_CANCELLED attach one listener per concurrent download
         _this.setMaxListeners(100);
         return _this;
     }
+    FileObject.prototype.checkIfIsAborted = function () {
+        if (this.isAborted()) {
+            throw new Error('Upload aborted');
+        }
+    };
     FileObject.prototype.getInfo = function () {
         return __awaiter(this, void 0, void 0, function () {
             var _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        if (this.stopped) {
-                            return [2 /*return*/];
-                        }
+                        this.checkIfIsAborted();
                         logger_1.logger.info('Retrieving file info...');
                         if (!!this.fileInfo) return [3 /*break*/, 3];
                         _a = this;
@@ -120,9 +124,7 @@ var FileObject = /** @class */ (function (_super) {
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        if (this.stopped) {
-                            return [2 /*return*/];
-                        }
+                        this.checkIfIsAborted();
                         logger_1.logger.info('Retrieving file mirrors...');
                         _a = this;
                         return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
@@ -170,6 +172,7 @@ var FileObject = /** @class */ (function (_super) {
         });
     };
     FileObject.prototype.StartDownloadShard = function (index) {
+        this.checkIfIsAborted();
         if (!this.fileInfo) {
             throw new Error('Undefined fileInfo');
         }
@@ -185,6 +188,7 @@ var FileObject = /** @class */ (function (_super) {
     FileObject.prototype.TryDownloadShardWithFileMuxer = function (shard, excluded) {
         var _this = this;
         if (excluded === void 0) { excluded = []; }
+        this.checkIfIsAborted();
         var exchangeReport = new reports_1.ExchangeReport(this.config);
         return new Promise(function (resolve, reject) {
             var _a;
@@ -285,17 +289,12 @@ var FileObject = /** @class */ (function (_super) {
                         if (!this.fileInfo) {
                             throw new Error('Undefined fileInfo');
                         }
-                        this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                            _this.handleDownloadCancel();
-                        });
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, err_2;
                                 return __generator(this, function (_a) {
                                     switch (_a.label) {
                                         case 0:
-                                            if (this.stopped) {
-                                                return [2 /*return*/];
-                                            }
+                                            this.checkIfIsAborted();
                                             _a.label = 1;
                                         case 1:
                                             _a.trys.push([1, 3, , 4]);
@@ -332,20 +331,21 @@ var FileObject = /** @class */ (function (_super) {
             throw new Error('Undefined fileInfo');
         }
         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
-            .on('error', function (err) {
-            _this.emit(events_2.DECRYPT.ERROR, err);
-        })
-            .on(events_2.DECRYPT.PROGRESS, function (msg) {
-            _this.emit(events_2.DECRYPT.PROGRESS, msg);
-        });
+            .on(events_2.DECRYPT.PROGRESS, function (msg) { _this.emit(events_2.DECRYPT.PROGRESS, msg); })
+            .on('error', function (err) { _this.emit(events_2.DECRYPT.ERROR, err); });
+        // sort downloads by shard index
         this.downloads.sort(function (sA, sB) { return sA.index - sB.index; });
         return new multistream_1.default(this.downloads.map(function (s) { return s.content; })).pipe(this.decipher);
     };
-    FileObject.prototype.handleDownloadCancel = function () {
-        this.stopped = true;
-        this.downloads.map(function (streamObj) { return streamObj.content; }).forEach(function (stream) {
-            stream.destroy();
+    FileObject.prototype.abort = function () {
+        logger_1.logger.info('Aborting file upload');
+        this.aborted = true;
+        this.downloads.forEach(function (download) {
+            download.content.destroy();
         });
+    };
+    FileObject.prototype.isAborted = function () {
+        return this.aborted;
     };
     return FileObject;
 }(events_1.EventEmitter));
