@@ -15,7 +15,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploaderStream = void 0;
 var stream_1 = require("stream");
-var crypto_1 = require("../crypto");
 var UploaderStream = /** @class */ (function (_super) {
     __extends(UploaderStream, _super);
     function UploaderStream(parallelUploads, fileObject, shardSize, maxConcurrentBytes, options) {
@@ -39,8 +38,6 @@ var UploaderStream = /** @class */ (function (_super) {
             // TODO
             return cb(null, null);
         }
-        console.log('SHA256 %s', crypto_1.sha256(chunk).toString('hex'));
-        console.log('LENGTH %s', chunk.length);
         // console.log('Uploading shard %s chunkSize %s', this.indexCounter, chunk.length);
         this.fileObject.uploadShard(chunk, chunk.length, this.fileObject.frameId, this.indexCounter++, 3, false)
             .then(function (shardMeta) {

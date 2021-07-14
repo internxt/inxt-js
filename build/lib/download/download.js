@@ -42,7 +42,7 @@ var events_1 = require("../events");
 var constants_1 = require("../../api/constants");
 function Download(config, bucketId, fileId, options, state) {
     return __awaiter(this, void 0, void 0, function () {
-        var file, fileStream, err_1;
+        var file, err_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -69,8 +69,8 @@ function Download(config, bucketId, fileId, options, state) {
                     handleProgress(file, options);
                     return [4 /*yield*/, file.download()];
                 case 4:
-                    fileStream = _a.sent();
-                    return [2 /*return*/, options.finishedCallback(null, fileStream.pipe(file.decipher))];
+                    _a.sent();
+                    return [2 /*return*/, options.finishedCallback(null, file.decrypt())];
                 case 5:
                     err_1 = _a.sent();
                     options.finishedCallback(err_1, null);

@@ -26,6 +26,7 @@ export declare class FileObject extends EventEmitter {
     getMirrors(): Promise<void>;
     StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
-    download(): Promise<Readable>;
+    download(): Promise<void>;
+    decrypt(): Readable;
     private handleDownloadCancel;
 }

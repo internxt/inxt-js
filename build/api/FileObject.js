@@ -278,7 +278,6 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.download = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var fileStream;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -287,11 +286,8 @@ var FileObject = /** @class */ (function (_super) {
                             throw new Error('Undefined fileInfo');
                         }
                         this.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                            _this.handleDownloadCancel(_this.downloads.map(function (stream) { return stream.content; }).concat([fileStream]));
+                            _this.handleDownloadCancel();
                         });
-                        this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16));
-                        this.decipher.on('error', function (err) { return _this.emit(events_2.DECRYPT.ERROR, err); });
-                        this.decipher.on(events_2.DECRYPT.PROGRESS, function (msg) { return _this.emit(events_2.DECRYPT.PROGRESS, msg); });
                         return [4 /*yield*/, Promise.all(this.rawShards.map(function (shard, i) { return __awaiter(_this, void 0, void 0, function () {
                                 var shardBuffer, err_2;
                                 return __generator(this, function (_a) {
@@ -312,10 +308,7 @@ var FileObject = /** @class */ (function (_super) {
                                             shardBuffer = _a.sent();
                                             logger_1.logger.info('Shard %s downloaded OK', shard.index);
                                             this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
-                                            this.downloads.push({
-                                                content: buffer_1.bufferToStream(shardBuffer),
-                                                index: shard.index
-                                            });
+                                            this.downloads.push({ content: buffer_1.bufferToStream(shardBuffer), index: shard.index });
                                             shard.healthy = true;
                                             return [3 /*break*/, 4];
                                         case 3:
@@ -328,23 +321,30 @@ var FileObject = /** @class */ (function (_super) {
                             }); }))];
                     case 1:
                         _a.sent();
-                        // Order streams by shard index
-                        this.downloads.sort(function (sA, sB) { return sA.index - sB.index; });
-                        // Unify them
-                        fileStream = new multistream_1.default(this.downloads.map(function (s) { return s.content; }));
-                        return [2 /*return*/, fileStream];
+                        return [2 /*return*/];
                 }
             });
         });
     };
-    // async decrypt(): Promise<Readable> {
-    // }
-    FileObject.prototype.handleDownloadCancel = function (streams) {
+    FileObject.prototype.decrypt = function () {
+        var _this = this;
+        if (!this.fileInfo) {
+            throw new Error('Undefined fileInfo');
+        }
+        this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
+            .on('error', function (err) {
+            _this.emit(events_2.DECRYPT.ERROR, err);
+        })
+            .on(events_2.DECRYPT.PROGRESS, function (msg) {
+            _this.emit(events_2.DECRYPT.PROGRESS, msg);
+        });
+        this.downloads.sort(function (sA, sB) { return sA.index - sB.index; });
+        return new multistream_1.default(this.downloads.map(function (s) { return s.content; })).pipe(this.decipher);
+    };
+    FileObject.prototype.handleDownloadCancel = function () {
         this.stopped = true;
-        streams.forEach(function (stream) {
-            if (stream) {
-                stream.destroy();
-            }
+        this.downloads.map(function (streamObj) { return streamObj.content; }).forEach(function (stream) {
+            stream.destroy();
         });
     };
     return FileObject;

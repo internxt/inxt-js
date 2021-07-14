@@ -223,6 +223,9 @@ var FileObjectUpload = /** @class */ (function (_super) {
         });
         return new Promise(function (resolve, reject) {
             _this.cipher.pipe(uploader)
+                .on('data', function () {
+                // no op
+            })
                 .on('error', function (err) {
                 reject(error_1.wrap('Farmer request error', err));
             })
