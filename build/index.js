@@ -180,10 +180,10 @@ var Environment = /** @class */ (function () {
     };
     Environment.prototype.resolveFile = function (bucketId, fileId, options) {
         var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
-        // if (!this.config.encryptionKey) {
-        //   options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-        //   return downloadState;
-        // }
+        if (!this.config.encryptionKey) {
+            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
+            return downloadState;
+        }
         if (!bucketId) {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;

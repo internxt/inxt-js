@@ -4,12 +4,10 @@ exports.GetFileMirrors = exports.ReplacePointer = exports.GetFileMirror = export
 var async_1 = require("async");
 var request_1 = require("../services/request");
 function GetFileInfo(config, bucketId, fileId) {
-    console.log('fileId', fileId);
     return request_1.request(config, 'get', config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "/info", {}, false)
         .then(function (res) { return res.data; })
         .catch(function (err) {
         var _a;
-        // console.log('err', err);
         switch ((_a = err.response) === null || _a === void 0 ? void 0 : _a.status) {
             case 404:
                 throw Error(err.response.data.error);
@@ -23,12 +21,8 @@ function GetFileMirror(config, bucketId, fileId, limit, skip, excludeNodes) {
     if (excludeNodes === void 0) { excludeNodes = []; }
     var excludeNodeIds = excludeNodes.join(',');
     var targetUrl = config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId + "?limit=" + limit + "&skip=" + skip + "&exclude=" + excludeNodeIds;
-    console.log('URL', targetUrl);
     return request_1.request(config, 'GET', targetUrl, { responseType: 'json' }, false)
-        .then(function (res) {
-        console.log('DATA', res.data);
-        return res.data;
-    });
+        .then(function (res) { return res.data; });
 }
 exports.GetFileMirror = GetFileMirror;
 function ReplacePointer(config, bucketId, fileId, pointerIndex, excludeNodes) {

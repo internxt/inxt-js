@@ -92,7 +92,6 @@ var crypto_2 = require("../lib/crypto");
 var funnelStream_1 = require("../lib/funnelStream");
 var shardMeta_1 = require("../lib/shardMeta");
 var reports_1 = require("./reports");
-var promisify_1 = require("../lib/utils/promisify");
 var error_1 = require("../lib/utils/error");
 var constants_1 = require("./constants");
 var uploader_1 = require("../lib/upload/uploader");
@@ -223,7 +222,22 @@ var FileObjectUpload = /** @class */ (function (_super) {
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
         return new Promise(function (resolve, reject) {
-            _this.cipher.pipe(uploader)
+            // this.cipher.pipe(uploader)
+            //   .on('error', (err: Error) => {
+            //     reject(wrap('Farmer request error', err));
+            //   })
+            //   .on('end', () => {
+            //     // console.log('All uploads finished');
+            //     resolve(uploader.getShardsMeta());
+            //   });
+            _this.cipher.on('data', function (chunk) {
+                uploader.write(chunk);
+            });
+            _this.cipher.on('end', function () {
+                uploader.end();
+            });
+            uploader
+                .on('data', function () { })
                 .on('error', function (err) {
                 reject(error_1.wrap('Farmer request error', err));
             })
@@ -235,8 +249,6 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.upload = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
-            var shardIndex, uploads, fileSize, currentBytesUploaded, uploadResponses;
-            var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -244,34 +256,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
                         if (!this.encrypted) {
                             throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
                         }
-                        shardIndex = 0;
-                        uploads = [];
-                        this.cipher.on('data', function (shard) {
-                            uploads.push(_this.uploadShard(shard, shard.length, _this.frameId, shardIndex++, 3, false));
-                        });
-                        return [4 /*yield*/, promisify_1.promisifyStream(this.cipher)];
-                    case 1:
-                        _a.sent();
-                        fileSize = this.getSize();
-                        this.logger.debug('Shards obtained %s, shardSize %s', Math.ceil(fileSize / rs_wrapper_1.utils.determineShardSize(fileSize)), rs_wrapper_1.utils.determineShardSize(fileSize));
-                        currentBytesUploaded = 0;
-                        return [4 /*yield*/, Promise.all(uploads.map(function (request) { return __awaiter(_this, void 0, void 0, function () {
-                                var shardMeta;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0: return [4 /*yield*/, request];
-                                        case 1:
-                                            shardMeta = _a.sent();
-                                            currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
-                                            return [2 /*return*/, shardMeta];
-                                    }
-                                });
-                            }); })).catch(function (err) {
-                                throw error_1.wrap('Farmer request error', err);
-                            })];
-                    case 2:
-                        uploadResponses = _a.sent();
-                        return [2 /*return*/, uploadResponses];
+                        return [4 /*yield*/, this.sequentialUpload(callback)];
+                    case 1: return [2 /*return*/, _a.sent()];
                 }
             });
         });
