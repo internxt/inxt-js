@@ -18,7 +18,7 @@ export class FunnelStream extends Transform {
     }
 
     private bufferIsEmpty(): boolean {
-        return this.bufferOffset == 0;
+        return this.bufferOffset === 0;
     }
 
     private pushToReadable(b: Buffer): void {
@@ -45,7 +45,7 @@ export class FunnelStream extends Transform {
                 this.pushBuffer();
 
                 resetOffset();
-                chunk = chunk.slice(0, chunk.length - bytesToPush);
+                chunk = chunk.slice(bytesToPush, chunk.length);
             } else {
                 addToBuffer();
                 incrementOffset(chunk.length);
@@ -85,7 +85,7 @@ export class FunnelStream extends Transform {
 
     _flush(done: () => void): void {
         if (this.bufferStillHasData()) {
-            this.pushToReadable(this.buffer.slice(0, this.lastChunkLength));
+            this.pushToReadable(this.buffer.slice(0, this.bufferOffset));
         }
         done();
     }
