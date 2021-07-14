@@ -95,7 +95,6 @@ var reports_1 = require("./reports");
 var error_1 = require("../lib/utils/error");
 var constants_1 = require("./constants");
 var uploader_1 = require("../lib/upload/uploader");
-var fs_1 = require("fs");
 var FileObjectUpload = /** @class */ (function (_super) {
     __extends(FileObjectUpload, _super);
     function FileObjectUpload(config, fileMeta, bucketId, logger) {
@@ -129,13 +128,19 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.init = function () {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                this.checkIfIsAborted();
-                this.index = Buffer.from('11111111111111111111111111111111', 'hex');
-                // this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
-                this.fileEncryptionKey = Buffer.from('1111111111111111111111111111111111111111111111111111111111111111', 'hex');
-                this.cipher = new encryptStream_1.default(this.fileEncryptionKey, this.index.slice(0, 16));
-                return [2 /*return*/, this];
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        this.checkIfIsAborted();
+                        this.index = crypto_1.randomBytes(32);
+                        _a = this;
+                        return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index)];
+                    case 1:
+                        _a.fileEncryptionKey = _b.sent();
+                        this.cipher = new encryptStream_1.default(this.fileEncryptionKey, this.index.slice(0, 16));
+                        return [2 /*return*/, this];
+                }
             });
         });
     };
@@ -235,8 +240,6 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 uploader.write(chunk);
             });
             _this.cipher.on('end', function () {
-                stream_1.Readable.from(Buffer.concat(chunks)).pipe(fs_1.createWriteStream('res2.txt'));
-                console.log('total', totalSize);
                 uploader.end();
             });
             uploader

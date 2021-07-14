@@ -22,7 +22,6 @@ var FunnelStream = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.bufferOffset = 0;
         _this.lastChunkLength = 0;
-        _this.bytesCounter = 0;
         _this.limit = limit;
         _this.buffer = Buffer.alloc(limit);
         return _this;
@@ -34,7 +33,6 @@ var FunnelStream = /** @class */ (function (_super) {
         return this.bufferOffset === 0;
     };
     FunnelStream.prototype.pushToReadable = function (b) {
-        this.bytesCounter += b.length;
         this.push(b);
     };
     FunnelStream.prototype.pushBuffer = function () {
