@@ -20,9 +20,10 @@ export declare class FileObject extends EventEmitter {
     totalSizeWithECs: number;
     decipher: DecryptStream;
     private stopped;
+    private downloads;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
-    GetFileInfo(): Promise<FileInfo | undefined>;
-    GetFileMirrors(): Promise<void>;
+    getInfo(): Promise<FileInfo | undefined>;
+    getMirrors(): Promise<void>;
     StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
     download(): Promise<Readable>;

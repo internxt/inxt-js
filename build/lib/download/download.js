@@ -37,18 +37,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Download = void 0;
-var rs_wrapper_1 = require("rs-wrapper");
 var FileObject_1 = require("../../api/FileObject");
 var events_1 = require("../events");
-var logger_1 = require("../utils/logger");
-var buffer_1 = require("../utils/buffer");
-var promisify_1 = require("../utils/promisify");
 var constants_1 = require("../../api/constants");
 function Download(config, bucketId, fileId, options, state) {
     return __awaiter(this, void 0, void 0, function () {
-        var File_1, fileStream, fileChunks_1, shards, parities, fileContent, rs, shardsStatus, corruptShards, fileSize, _a, _b, err_1;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        var file, fileStream, err_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
                     if (!config.encryptionKey) {
                         throw Error('Encryption key required');
@@ -59,49 +55,27 @@ function Download(config, bucketId, fileId, options, state) {
                     if (!fileId) {
                         throw Error('File id required');
                     }
-                    _c.label = 1;
+                    _a.label = 1;
                 case 1:
-                    _c.trys.push([1, 10, , 11]);
-                    File_1 = new FileObject_1.FileObject(config, bucketId, fileId);
-                    handleStateChanges(File_1, state, options);
-                    return [4 /*yield*/, File_1.GetFileInfo()];
+                    _a.trys.push([1, 5, , 6]);
+                    file = new FileObject_1.FileObject(config, bucketId, fileId);
+                    handleStateChanges(file, state, options);
+                    return [4 /*yield*/, file.getInfo()];
                 case 2:
-                    _c.sent();
-                    return [4 /*yield*/, File_1.GetFileMirrors()];
+                    _a.sent();
+                    return [4 /*yield*/, file.getMirrors()];
                 case 3:
-                    _c.sent();
-                    handleProgress(File_1, options);
-                    return [4 /*yield*/, File_1.download()];
+                    _a.sent();
+                    handleProgress(file, options);
+                    return [4 /*yield*/, file.download()];
                 case 4:
-                    fileStream = _c.sent();
-                    fileChunks_1 = [];
-                    shards = File_1.rawShards.filter(function (shard) { return !shard.parity; }).length;
-                    parities = File_1.rawShards.length - shards;
-                    fileStream.on('data', function (chunk) { fileChunks_1.push(chunk); });
-                    return [4 /*yield*/, promisify_1.promisifyStream(fileStream)];
+                    fileStream = _a.sent();
+                    return [2 /*return*/, options.finishedCallback(null, fileStream.pipe(file.decipher))];
                 case 5:
-                    _c.sent();
-                    fileContent = Buffer.concat(fileChunks_1);
-                    rs = File_1.fileInfo && File_1.fileInfo.erasure && File_1.fileInfo.erasure.type === 'reedsolomon';
-                    shardsStatus = File_1.rawShards.map(function (shard) { return shard.healthy; });
-                    corruptShards = shardsStatus.filter(function (status) { return !status; }).length;
-                    fileSize = File_1.final_length;
-                    if (!(corruptShards > 0)) return [3 /*break*/, 8];
-                    if (!rs) return [3 /*break*/, 7];
-                    logger_1.logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
-                    _b = (_a = Buffer).from;
-                    return [4 /*yield*/, rs_wrapper_1.reconstruct(fileContent, shards, parities, shardsStatus)];
-                case 6:
-                    fileContent = _b.apply(_a, [_c.sent()]).slice(0, fileSize);
-                    return [2 /*return*/, options.finishedCallback(null, buffer_1.bufferToStream(fileContent).pipe(File_1.decipher))];
-                case 7: return [2 /*return*/, options.finishedCallback(Error(corruptShards + ' file shard(s) is/are corrupt'), null)];
-                case 8: return [2 /*return*/, options.finishedCallback(null, buffer_1.bufferToStream(fileContent.slice(0, fileSize)).pipe(File_1.decipher))];
-                case 9: return [3 /*break*/, 11];
-                case 10:
-                    err_1 = _c.sent();
+                    err_1 = _a.sent();
                     options.finishedCallback(err_1, null);
-                    return [3 /*break*/, 11];
-                case 11: return [2 /*return*/];
+                    return [3 /*break*/, 6];
+                case 6: return [2 /*return*/];
             }
         });
     });

@@ -5,6 +5,7 @@ export declare class FunnelStream extends Transform {
     private buffer;
     private bufferOffset;
     private lastChunkLength;
+    private bytesCounter;
     constructor(limit?: number);
     private bufferStillHasData;
     private bufferIsEmpty;

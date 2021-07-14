@@ -22,6 +22,7 @@ var FunnelStream = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.bufferOffset = 0;
         _this.lastChunkLength = 0;
+        _this.bytesCounter = 0;
         _this.limit = limit;
         _this.buffer = Buffer.alloc(limit);
         return _this;
@@ -30,15 +31,17 @@ var FunnelStream = /** @class */ (function (_super) {
         return this.bufferOffset != 0;
     };
     FunnelStream.prototype.bufferIsEmpty = function () {
-        return this.bufferOffset == 0;
+        return this.bufferOffset === 0;
     };
     FunnelStream.prototype.pushToReadable = function (b) {
+        this.bytesCounter += b.length;
         this.push(b);
     };
     FunnelStream.prototype.pushBuffer = function () {
         this.pushToReadable(this.buffer);
     };
     FunnelStream.prototype._transform = function (chunk, enc, done) {
+        // console.log('chunk length', chunk.length);
         var _this = this;
         if (this.bufferStillHasData()) {
             var bytesToPush_1 = (this.limit - this.bufferOffset);
@@ -51,7 +54,7 @@ var FunnelStream = /** @class */ (function (_super) {
                 completeBuffer();
                 this.pushBuffer();
                 resetOffset();
-                chunk = chunk.slice(0, chunk.length - bytesToPush_1);
+                chunk = chunk.slice(bytesToPush_1, chunk.length);
             }
             else {
                 addToBuffer();
@@ -82,7 +85,7 @@ var FunnelStream = /** @class */ (function (_super) {
     };
     FunnelStream.prototype._flush = function (done) {
         if (this.bufferStillHasData()) {
-            this.pushToReadable(this.buffer.slice(0, this.lastChunkLength));
+            this.pushToReadable(this.buffer.slice(0, this.bufferOffset));
         }
         done();
     };
