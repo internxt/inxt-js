@@ -177,7 +177,25 @@ export class FileObjectUpload extends EventEmitter {
     });
 
     return new Promise((resolve, reject) => {
-      this.cipher.pipe(uploader)
+      // this.cipher.pipe(uploader)
+      //   .on('error', (err: Error) => {
+      //     reject(wrap('Farmer request error', err));
+      //   })
+      //   .on('end', () => {
+      //     // console.log('All uploads finished');
+
+      //     resolve(uploader.getShardsMeta());
+      //   });
+      this.cipher.on('data', (chunk: Buffer) => {
+        uploader.write(chunk);
+      });
+
+      this.cipher.on('end', () => {
+        uploader.end();
+      });
+
+      uploader
+        .on('data', () => {})
         .on('error', (err: Error) => {
           reject(wrap('Farmer request error', err));
         })
@@ -196,38 +214,7 @@ export class FileObjectUpload extends EventEmitter {
       throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
     }
 
-    // return await this.sequentialUpload(callback);
-
-    let shardIndex = 0;
-
-    const uploads: Promise<ShardMeta>[] = [];
-    this.cipher.on('data', (shard: Buffer) => {
-      uploads.push(this.uploadShard(shard, shard.length, this.frameId, shardIndex++, 3, false));
-    });
-
-    await promisifyStream(this.cipher);
-
-    const fileSize = this.getSize();
-
-    this.logger.debug('Shards obtained %s, shardSize %s',
-      Math.ceil(fileSize / utils.determineShardSize(fileSize)),
-      utils.determineShardSize(fileSize)
-    );
-
-    let currentBytesUploaded = 0;
-    const uploadResponses = await Promise.all(
-      uploads.map(async (request) => {
-        const shardMeta = await request;
-
-        currentBytesUploaded = updateProgress(fileSize, currentBytesUploaded, shardMeta.size, callback);
-
-        return shardMeta;
-      })
-    ).catch((err) => {
-      throw wrap('Farmer request error', err);
-    });
-
-    return uploadResponses;
+    return await this.sequentialUpload(callback);
   }
 
   async uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
