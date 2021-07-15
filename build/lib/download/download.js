@@ -55,10 +55,7 @@ function download(config, bucketId, fileId, options, state) {
                 case 2:
                     _a.sent();
                     handleProgress(file, options);
-                    return [4 /*yield*/, file.download()];
-                case 3:
-                    _a.sent();
-                    return [2 /*return*/, file.decrypt()];
+                    return [2 /*return*/, file.download()];
             }
         });
     });

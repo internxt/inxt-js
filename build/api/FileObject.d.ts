@@ -21,14 +21,14 @@ export declare class FileObject extends EventEmitter {
     decipher: DecryptStream;
     private aborted;
     private downloads;
+    private downloader;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     checkIfIsAborted(): void;
     getInfo(): Promise<FileInfo | undefined>;
     getMirrors(): Promise<void>;
     StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
-    download(): Promise<void>;
-    decrypt(): Readable;
+    download(): Readable;
     abort(): void;
     isAborted(): boolean;
 }

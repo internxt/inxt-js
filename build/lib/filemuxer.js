@@ -41,6 +41,19 @@ var FileMuxerError = /** @class */ (function (_super) {
     return FileMuxerError;
 }(Error));
 exports.FileMuxerError = FileMuxerError;
+var TestTransform = /** @class */ (function (_super) {
+    __extends(TestTransform, _super);
+    function TestTransform() {
+        return _super.call(this) || this;
+    }
+    TestTransform.prototype._transform = function (chunk) {
+        this.push(chunk);
+    };
+    TestTransform.prototype._flush = function (cb) {
+        cb();
+    };
+    return TestTransform;
+}(stream_1.Transform));
 var ShardFailedIntegrityCheckError = /** @class */ (function (_super) {
     __extends(ShardFailedIntegrityCheckError, _super);
     function ShardFailedIntegrityCheckError(content) {
@@ -137,7 +150,7 @@ var FileMuxer = /** @class */ (function (_super) {
         var _this = this;
         assert_1.default(typeof readable.pipe === 'function', 'Invalid input stream supplied');
         assert_1.default(this.added < this.shards, 'Inputs exceed defined number of shards');
-        var input = new stream_1.PassThrough();
+        var input = new TestTransform();
         this.once(constants_1.DOWNLOAD_CANCELLED, function () {
             readable.destroy(Error(constants_1.DOWNLOAD_CANCELLED_ERROR));
             input.destroy();
@@ -146,8 +159,10 @@ var FileMuxer = /** @class */ (function (_super) {
             input.pause();
             input.push(data);
         });
-        readable.on('end', function () { input.end(); });
         input.once('end', function () {
+            if (id && id === 1) {
+                console.log('emitting end on passthrough for shard %s', hash.toString('hex'));
+            }
             var inputHash = crypto_2.ripemd160(_this.hasher.digest());
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
@@ -158,10 +173,13 @@ var FileMuxer = /** @class */ (function (_super) {
                 _this.emit('error', Error('Shard failed integrity check'));
                 // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
             }
-            else {
-                // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
-            }
             _this.emit('drain', input);
+        });
+        readable.on('end', function () {
+            if (id && id === 1) {
+                console.log('emitting end for shard %s', hash.toString('hex'));
+            }
+            input.end();
         });
         readable.on('error', function (err) {
             _this.emit('error', err);

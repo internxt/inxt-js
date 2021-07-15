@@ -56,7 +56,6 @@ exports.FileObject = void 0;
 var crypto_1 = require("crypto");
 var events_1 = require("events");
 var async_1 = require("async");
-var multistream_1 = __importDefault(require("multistream"));
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var filemuxer_1 = __importDefault(require("../lib/filemuxer"));
 var crypto_2 = require("../lib/crypto");
@@ -65,7 +64,6 @@ var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var events_2 = require("../lib/events");
 var logger_1 = require("../lib/utils/logger");
-var buffer_1 = require("../lib/utils/buffer");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
 var FileObject = /** @class */ (function (_super) {
@@ -84,6 +82,7 @@ var FileObject = /** @class */ (function (_super) {
         _this.fileId = fileId;
         _this.fileKey = Buffer.alloc(0);
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.downloader = new filemuxer_1.default({ shards: 1, length: 1 });
         _this.once(constants_1.DOWNLOAD_CANCELLED, _this.abort.bind(_this));
         // DOWNLOAD_CANCELLED attach one listener per concurrent download
         _this.setMaxListeners(100);
@@ -196,6 +195,7 @@ var FileObject = /** @class */ (function (_super) {
         var _this = this;
         if (excluded === void 0) { excluded = []; }
         this.checkIfIsAborted();
+        logger_1.logger.info('Downloading shard %s from farmer %s', shard.index, shard.farmer.nodeID);
         var exchangeReport = new reports_1.ExchangeReport(this.config);
         return new Promise(function (resolve, reject) {
             var _a;
@@ -262,16 +262,23 @@ var FileObject = /** @class */ (function (_super) {
                     switch (_a.label) {
                         case 0:
                             _a.trys.push([0, 5, , 6]);
-                            if (!(!err && result)) return [3 /*break*/, 1];
-                            return [2 /*return*/, resolve(result)];
+                            if (!!err) return [3 /*break*/, 1];
+                            if (result) {
+                                resolve(result);
+                            }
+                            else {
+                                reject(error_1.wrap('Empty result from downloading shard', new Error('')));
+                            }
+                            return [3 /*break*/, 4];
                         case 1:
-                            logger_1.logger.warn('It seems that shard %s download went wrong. Retrying', shard.index);
+                            logger_1.logger.warn('It seems that shard %s download from farmer %s went wrong. Replacing pointer', shard.index, shard.farmer.nodeID);
+                            console.log('ORIGINAL ERROR', err);
                             excluded.push(shard.farmer.nodeID);
                             return [4 /*yield*/, fileinfo_1.GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)];
                         case 2:
                             newShard = _a.sent();
                             if (!newShard[0].farmer) {
-                                return [2 /*return*/, reject(Error('File missing shard error'))];
+                                return [2 /*return*/, reject(error_1.wrap('File missing shard error', err))];
                             }
                             return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(newShard[0], excluded)];
                         case 3:
@@ -288,48 +295,31 @@ var FileObject = /** @class */ (function (_super) {
         });
     };
     FileObject.prototype.download = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        if (!this.fileInfo) {
-                            throw new Error('Undefined fileInfo');
-                        }
-                        return [4 /*yield*/, async_1.eachLimit(this.rawShards, 2, function (shard, nextItem) {
-                                _this.checkIfIsAborted();
-                                if (shard.healthy === false) {
-                                    throw new Error('Bridge request pointer error');
-                                }
-                                logger_1.logger.info('Downloading shard %s', shard.index);
-                                _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
-                                    logger_1.logger.info('Shard %s downloaded OK', shard.index);
-                                    _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
-                                    _this.downloads.push({ content: buffer_1.bufferToStream(shardBuffer), index: shard.index });
-                                    shard.healthy = true;
-                                    nextItem();
-                                }).catch(function (err) {
-                                    nextItem(err);
-                                });
-                            })];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    FileObject.prototype.decrypt = function () {
         var _this = this;
         if (!this.fileInfo) {
             throw new Error('Undefined fileInfo');
         }
+        this.downloader = new filemuxer_1.default({ shards: this.rawShards.length, length: this.fileInfo.size });
         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
             .on(events_2.DECRYPT.PROGRESS, function (msg) { _this.emit(events_2.DECRYPT.PROGRESS, msg); })
             .on('error', function (err) { _this.emit(events_2.DECRYPT.ERROR, err); });
-        // sort downloads by shard index
-        this.downloads.sort(function (sA, sB) { return sA.index - sB.index; });
-        return new multistream_1.default(this.downloads.map(function (s) { return s.content; })).pipe(this.decipher);
+        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
+            _this.checkIfIsAborted();
+            if (shard.healthy === false) {
+                throw new Error('Bridge request pointer error');
+            }
+            _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
+                logger_1.logger.info('Shard %s downloaded OK', shard.index);
+                _this.emit(events_2.DOWNLOAD.PROGRESS, shardBuffer.length);
+                _this.decipher.write(shardBuffer);
+                nextItem();
+            }).catch(function (err) {
+                nextItem(error_1.wrap('Download error', err));
+            });
+        }, function () {
+            _this.decipher.end();
+        });
+        return this.decipher;
     };
     FileObject.prototype.abort = function () {
         logger_1.logger.info('Aborting file upload');
