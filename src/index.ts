@@ -1,10 +1,10 @@
 import BlobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createReadStream, statSync } from 'fs';
+import { createReadStream, createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
 import { upload } from './lib/upload';
-import { Download } from './lib/download';
+import { download } from './lib/download';
 import { EncryptFilename } from './lib/crypto';
 
 import { FileMeta } from "./api/FileObjectUpload";
@@ -167,7 +167,7 @@ export class Environment {
       return downloadState;
     }
 
-    Download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), downloadState);
+    download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), downloadState);
 
     return downloadState;
   }
@@ -278,26 +278,6 @@ export class Environment {
     state.stop();
   }
 
-  resolveFile(bucketId: string, fileId: string, options: DesktopDownloadFileOptions): ActionState {
-    const downloadState = new ActionState(ActionTypes.Download);
-
-    if (!this.config.encryptionKey) {
-      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!bucketId) {
-      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    Download(this.config, bucketId, fileId, DesktopDownloadOptionsAdapter(options), downloadState);
-
-    return downloadState;
-  }
-
   /**
    * Downloads a file, returns state object
    * @param bucketId Bucket id where file is
@@ -305,29 +285,42 @@ export class Environment {
    * @param filePath File path where the file maybe already is
    * @param options Options for resolve file case
    */
-  // resolveFile(bucketId: string, fileId: string, filePath: string, options: ResolveFileOptions): void {
-  //   if (!options.overwritte && fs.existsSync(filePath)) {
-  //     return options.finishedCallback(new Error('File already exists'))
-  //   }
+  resolveFile(bucketId: string, fileId: string, filePath: string, options: DesktopDownloadFileOptions): ActionState {
+    const downloadState = new ActionState(ActionTypes.Download);
 
-  //   const fileStream = fs.createWriteStream(filePath)
+    if (!this.config.encryptionKey) {
+      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED));
 
-  //   Download(this.config, bucketId, fileId, options).then(stream => {
-  //     console.log('START DUMPING FILE')
-  //     const dump = stream.pipe(fileStream)
-  //     dump.on('error', (err) => {
-  //       console.log('DUMP FILE error', err.message)
-  //       options.finishedCallback(err)
-  //     })
-  //     dump.on('end', (err) => {
-  //       console.log('DUMP FILE END')
-  //       options.finishedCallback(err)
-  //     })
-  //   })
+      return downloadState;
+    }
 
-  //   /* TODO: Returns state object */
-  //   return
-  // }
+    if (!bucketId) {
+      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED));
+
+      return downloadState;
+    }
+
+    if (!fileId) {
+      options.finishedCallback(Error('File id not provided'));
+
+      return downloadState;
+    }
+
+    download(this.config, bucketId, fileId, options, downloadState)
+      .then((fileStream) => {
+        fileStream.pipe(createWriteStream(filePath))
+          .on('error', (err) => {
+            options.finishedCallback(err);
+          })
+          .on('close', () => {
+            options.finishedCallback(null);
+          });
+      }).catch((err) => {
+        options.finishedCallback(err);
+      });
+
+    return downloadState;
+  }
 
   /**
    * Cancels the download

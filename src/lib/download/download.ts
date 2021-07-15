@@ -1,61 +1,24 @@
-import { Transform } from 'stream';
-import { reconstruct } from 'rs-wrapper';
+import { Readable, Transform } from 'stream';
 
 import { DownloadFileOptions, EnvironmentConfig } from '../..';
 import { FileObject } from '../../api/FileObject';
 import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events';
-import { logger } from '../utils/logger';
-import { bufferToStream } from '../utils/buffer';
-import { promisifyStream } from '../utils/promisify';
 import { ActionState } from '../../api/ActionState';
 import { DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from '../../api/constants';
 
-export async function Download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<void> {
-  if (!config.encryptionKey) { throw Error('Encryption key required'); }
-  if (!bucketId) { throw Error('Bucket id required'); }
-  if (!fileId) { throw Error('File id required'); }
+export async function download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<Readable> {
+  const file = new FileObject(config, bucketId, fileId);
 
-  try {
-    const File = new FileObject(config, bucketId, fileId);
+  handleStateChanges(file, state, options);
 
-    handleStateChanges(File, state, options);
+  await file.getInfo();
+  await file.getMirrors();
 
-    await File.GetFileInfo();
-    await File.GetFileMirrors();
+  handleProgress(file, options);
 
-    handleProgress(File, options);
+  await file.download();
 
-    const fileStream = await File.download();
-
-    const fileChunks: Buffer[] = [];
-    const shards = File.rawShards.filter(shard => !shard.parity).length;
-    const parities = File.rawShards.length - shards;
-
-    fileStream.on('data', (chunk: Buffer) => { fileChunks.push(chunk); });
-    await promisifyStream(fileStream);
-
-    let fileContent = Buffer.concat(fileChunks);
-    const rs = File.fileInfo && File.fileInfo.erasure && File.fileInfo.erasure.type === 'reedsolomon';
-    const shardsStatus = File.rawShards.map(shard => shard.healthy!);
-    const corruptShards = shardsStatus.filter(status => !status).length;
-    const fileSize = File.final_length;
-
-    if (corruptShards > 0) {
-      if (rs) {
-        logger.info('Some shard(s) is/are corrupt and rs is available. Recovering');
-
-        fileContent = Buffer.from(await reconstruct(fileContent, shards, parities, shardsStatus)).slice(0, fileSize);
-
-        return options.finishedCallback(null, bufferToStream(fileContent).pipe(File.decipher));
-      }
-
-      return options.finishedCallback(Error(corruptShards + ' file shard(s) is/are corrupt'), null);
-    } else {
-      return options.finishedCallback(null, bufferToStream(fileContent.slice(0, fileSize)).pipe(File.decipher));
-    }
-  } catch (err) {
-    options.finishedCallback(err, null);
-  }
+  return file.decrypt();
 }
 
 // TODO: use propagate lib
@@ -75,7 +38,8 @@ function attachFileObjectListeners(f: FileObject, notified: Transform) {
 }
 
 function handleProgress(fl: FileObject, options: DownloadFileOptions) {
-  let totalBytesDownloaded = 0, totalBytesDecrypted = 0;
+  let totalBytesDownloaded = 0;
+  let totalBytesDecrypted = 0;
   let progress = 0;
   const totalBytes = fl.rawShards.length > 0 ?
     fl.rawShards.reduce((a, b) => ({ size: a.size + b.size }), { size: 0 }).size :
@@ -86,11 +50,11 @@ function handleProgress(fl: FileObject, options: DownloadFileOptions) {
   }
 
   function getDownloadProgress() {
-    return (totalBytesDownloaded / totalBytes) * 100;
+    return (totalBytesDownloaded / totalBytes);
   }
 
   function getDecryptionProgress() {
-    return (totalBytesDecrypted / totalBytes) * 100;
+    return (totalBytesDecrypted / totalBytes);
   }
 
   fl.on(DOWNLOAD.PROGRESS, (addedBytes: number) => {

@@ -4,7 +4,7 @@ import { DecryptionProgressCallback, DownloadFileOptions, DownloadFinishedCallba
 import { logger } from "../../lib/utils/logger";
 import { DOWNLOAD_CANCELLED } from "../constants";
 
-export type DesktopDownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
+export type DesktopDownloadFinishedCallback = (err: Error | null) => void;
 
 export interface DesktopDownloadFileOptions {
     progressCallback: DownloadProgressCallback;
@@ -27,19 +27,17 @@ export const DownloadOptionsAdapter = (options: DesktopDownloadFileOptions): Dow
             if (err.message === DOWNLOAD_CANCELLED) {
                 logger.info('Download cancelled');
 
-                return options.finishedCallback(null, null);
+                return options.finishedCallback(null);
             }
             logger.error('Error downloading file due to %s', err.message);
             logger.error(err);
 
-            return options.finishedCallback(err, null);
+            return options.finishedCallback(err);
         }
 
         if (!fileStream) {
-            return options.finishedCallback(Error('File stream is null'), null);
+            return options.finishedCallback(Error('File stream is null'));
         }
-
-        options.finishedCallback(err, fileStream);
     };
 
     return {
