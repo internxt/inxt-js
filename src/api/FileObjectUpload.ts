@@ -177,17 +177,9 @@ export class FileObjectUpload extends EventEmitter {
     });
 
     return new Promise((resolve, reject) => {
-      // this.cipher.pipe(uploader)
-      //   .on('error', (err: Error) => {
-      //     reject(wrap('Farmer request error', err));
-      //   })
-      //   .on('end', () => {
-      //     // console.log('All uploads finished');
-
-      //     resolve(uploader.getShardsMeta());
-      //   });
       this.cipher.on('data', (chunk: Buffer) => {
         uploader.write(chunk);
+        this.cipher.pause();
       });
 
       this.cipher.on('end', () => {
@@ -195,7 +187,9 @@ export class FileObjectUpload extends EventEmitter {
       });
 
       uploader
-        .on('data', () => {})
+        .on('shard-uploaded', () => {
+          this.cipher.resume();
+        })
         .on('error', (err: Error) => {
           reject(wrap('Farmer request error', err));
         })

@@ -40,7 +40,7 @@ export class UploaderStream extends Transform {
                 this.uploads.push(shardMeta);
                 this.emit('upload-progress', chunk.length);
 
-                // console.log('Shard with index %s uploaded', this.indexCounter - 1);
+                this.emit('shard-uploaded');
                 cb(null, null);
             })
             .catch((err) => {
