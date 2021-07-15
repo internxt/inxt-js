@@ -21,7 +21,6 @@ export declare class FileObject extends EventEmitter {
     decipher: DecryptStream;
     private aborted;
     private downloads;
-    private downloader;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
     checkIfIsAborted(): void;
     getInfo(): Promise<FileInfo | undefined>;

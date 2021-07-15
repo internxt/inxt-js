@@ -16,9 +16,7 @@ export async function download(config: EnvironmentConfig, bucketId: string, file
 
   handleProgress(file, options);
 
-  await file.download();
-
-  return file.decrypt();
+  return file.download();
 }
 
 // TODO: use propagate lib

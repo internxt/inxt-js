@@ -16,7 +16,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DecryptStream = void 0;
 var crypto_1 = require("crypto");
 var stream_1 = require("stream");
-var crypto_2 = require("./crypto");
 var events_1 = require("./events");
 var DecryptStream = /** @class */ (function (_super) {
     __extends(DecryptStream, _super);
@@ -26,7 +25,6 @@ var DecryptStream = /** @class */ (function (_super) {
         return _this;
     }
     DecryptStream.prototype._transform = function (chunk, enc, cb) {
-        console.log('DECRYPTER: Received chunk of %s, hash %s', chunk.length, crypto_2.ripemd160(crypto_2.sha256(chunk)).toString('hex'));
         this.decipher.write(chunk);
         this.emit(events_1.DECRYPT.PROGRESS, chunk.byteLength);
         cb(null, this.decipher.read());

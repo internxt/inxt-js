@@ -82,7 +82,6 @@ var FileObject = /** @class */ (function (_super) {
         _this.fileId = fileId;
         _this.fileKey = Buffer.alloc(0);
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
-        _this.downloader = new filemuxer_1.default({ shards: 1, length: 1 });
         _this.once(constants_1.DOWNLOAD_CANCELLED, _this.abort.bind(_this));
         // DOWNLOAD_CANCELLED attach one listener per concurrent download
         _this.setMaxListeners(100);
@@ -299,7 +298,6 @@ var FileObject = /** @class */ (function (_super) {
         if (!this.fileInfo) {
             throw new Error('Undefined fileInfo');
         }
-        this.downloader = new filemuxer_1.default({ shards: this.rawShards.length, length: this.fileInfo.size });
         this.decipher = new decryptstream_1.default(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
             .on(events_2.DECRYPT.PROGRESS, function (msg) { _this.emit(events_2.DECRYPT.PROGRESS, msg); })
             .on('error', function (err) { _this.emit(events_2.DECRYPT.ERROR, err); });

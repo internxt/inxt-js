@@ -1,8 +1,7 @@
 import { randomBytes } from 'crypto';
-import { PassThrough, Readable } from 'stream';
+import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit, retry } from 'async';
-import MultiStream from 'multistream';
 
 import DecryptStream from "../lib/decryptstream";
 import FileMuxer from "../lib/filemuxer";
@@ -14,9 +13,7 @@ import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
 import { ExchangeReport } from './reports';
 import { DECRYPT, DOWNLOAD, FILEMUXER } from '../lib/events';
-import { utils } from 'rs-wrapper';
 import { logger } from '../lib/utils/logger';
-import { bufferToStream } from '../lib/utils/buffer';
 import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from './constants';
 import { wrap } from '../lib/utils/error';
 
@@ -163,6 +160,8 @@ export class FileObject extends EventEmitter {
   TryDownloadShardWithFileMuxer(shard: Shard, excluded: string[] = []): Promise<Buffer> {
     this.checkIfIsAborted();
 
+    logger.info('Downloading shard %s from farmer %s', shard.index, shard.farmer.nodeID);
+
     const exchangeReport = new ExchangeReport(this.config);
 
     return new Promise((resolve, reject) => {
@@ -261,40 +260,7 @@ export class FileObject extends EventEmitter {
     });
   }
 
-  download(): Promise<void> {
-    if (!this.fileInfo) {
-      throw new Error('Undefined fileInfo');
-    }
-
-    return eachLimit(this.rawShards, 2, (shard, nextItem) => {
-      this.checkIfIsAborted();
-
-      if (shard.healthy === false) {
-        throw new Error('Bridge request pointer error');
-      }
-
-      logger.info('Downloading shard %s from farmer %s', shard.index, shard.farmer.nodeID);
-
-      this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer) => {
-        logger.info('Shard %s downloaded OK', shard.index);
-        this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
-
-        this.downloads.push({ content: bufferToStream(shardBuffer), index: shard.index, beingDecrypted: false });
-        shard.healthy = true;
-
-        console.log('then %s', shard.index);
-
-        nextItem();
-      }).catch((err) => {
-        console.log('ERRRORRRR', err);
-        console.log('catch %s', shard.index);
-
-        nextItem(wrap('Download error', err));
-      });
-    });
-  }
-
-  decrypt(): Readable {
+  download(): Readable {
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo');
     }
@@ -303,27 +269,28 @@ export class FileObject extends EventEmitter {
       .on(DECRYPT.PROGRESS, (msg) => { this.emit(DECRYPT.PROGRESS, msg); })
       .on('error', (err) => { this.emit(DECRYPT.ERROR, err); });
 
-    // let shardsDownloadedCounter = 0;
-    // let downloadDownloadStream = new PassThrough();
+    eachLimit(this.rawShards, 1, (shard, nextItem) => {
+      this.checkIfIsAborted();
 
-    // setInterval(() => {
-    //   if (this.rawShards.length > shardsDownloadedCounter) {
-    //     const downloadsReady = this.downloads.filter((download) => {
-    //       if (!download.beingDecrypted) {
-    //         download.beingDecrypted = true;
+      if (shard.healthy === false) {
+        throw new Error('Bridge request pointer error');
+      }
 
-    //         return true;
-    //       }
-    //     });
+      this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer) => {
+        logger.info('Shard %s downloaded OK', shard.index);
+        this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
 
-    //     downloadsReady.sort((sA, sB) => sA.index - sB.index);
-    //   }
-    // }, 1000);
+        this.decipher.write(shardBuffer);
 
-    // sort downloads by shard index
-    this.downloads.sort((sA, sB) => sA.index - sB.index);
+        nextItem();
+      }).catch((err) => {
+        nextItem(wrap('Download error', err));
+      });
+    }, () => {
+      this.decipher.end();
+    });
 
-    return new MultiStream(this.downloads.map(s => s.content)).pipe(this.decipher);
+    return this.decipher;
   }
 
   abort(): void {
