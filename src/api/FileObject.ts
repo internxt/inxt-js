@@ -61,7 +61,7 @@ export class FileObject extends EventEmitter {
 
   checkIfIsAborted() {
     if (this.isAborted()) {
-      throw new Error('Upload aborted');
+      throw new Error('Download aborted');
     }
   }
 
