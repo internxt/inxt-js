@@ -1,4 +1,4 @@
-export const DEFAULT_INXT_MIRRORS = 10;
+export const DEFAULT_INXT_MIRRORS = 6;
 
 /* EVENTS */
 export const DOWNLOAD_CANCELLED = 'DOWNLOAD CANCELLED';
