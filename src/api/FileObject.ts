@@ -1,3 +1,4 @@
+import * as Winston from 'winston';
 import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
@@ -91,70 +92,49 @@ export class FileObject extends EventEmitter {
 
     logger.info('Retrieving file mirrors...');
 
-    this.rawShards = await GetFileMirrors(this.config, this.bucketId, this.fileId);
+    // Discard mirrors for shards with parities (ECs)
+    this.rawShards = (await GetFileMirrors(this.config, this.bucketId, this.fileId)).filter(shard => !shard.parity);
 
     await eachLimit(this.rawShards, 1, (shard: Shard, nextShard) => {
       let attempts = 0;
 
-      if (!shard.farmer || !shard.farmer.nodeID || !shard.farmer.port || !shard.farmer.address) {
-        logger.warn('Pointer for shard %s failed, retrieving a new one', shard.index);
+      const farmerIsOk = shard.farmer && shard.farmer.nodeID && shard.farmer.port && shard.farmer.address;
 
-        // try download from 10 mirrors
-        doUntil((next: (err: Error | null, result: Shard | null) => void) => {
-          ReplacePointer(this.config, this.bucketId, this.fileId, shard.index, []).then((newShard) => {
-            next(null, newShard[0]);
-          }).catch((err) => {
-            next(err, null);
-          }).finally(() => {
-            attempts++;
-          });
-        }, (result: Shard | null, next: any) => {
-          const validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address;
-
-          return next(null, validPointer || attempts >= DEFAULT_INXT_MIRRORS);
-        }).then((result: any) => {
-          logger.info('Pointer replaced for shard %s', shard.index);
-
-          result.farmer.address = result.farmer.address.trim();
-
-          this.rawShards[shard.index] = result;
-        }).catch(() => {
-          logger.error('Pointer not found for shard %s, marking it as unhealthy', shard.index);
-
-          shard.healthy = false;
-        }).finally(() => {
-          nextShard(null);
-        });
-      } else {
+      if (farmerIsOk) {
         shard.farmer.address = shard.farmer.address.trim();
 
-        nextShard(null);
+        return nextShard(null);
       }
+
+      logger.warn('Pointer for shard %s failed, retrieving a new one', shard.index);
+
+      doUntil((next: (err: Error | null, result: Shard | null) => void) => {
+        ReplacePointer(this.config, this.bucketId, this.fileId, shard.index, []).then((newShard) => {
+          next(null, newShard[0]);
+        }).catch((err) => {
+          next(err, null);
+        }).finally(() => {
+          attempts++;
+        });
+      }, (result: Shard | null, next: any) => {
+        const validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address;
+
+        return next(null, validPointer || attempts >= DEFAULT_INXT_MIRRORS);
+      }).then((result: any) => {
+        logger.info('Pointer replaced for shard %s', shard.index);
+
+        result.farmer.address = result.farmer.address.trim();
+
+        this.rawShards[shard.index] = result;
+
+        nextShard(null);
+      }).catch((err) => {
+        nextShard(wrap('Bridge request pointer error', err));
+      });
     });
 
     this.length = this.rawShards.reduce((a, b) => { return { size: a.size + b.size }; }, { size: 0 }).size;
     this.final_length = this.rawShards.filter(x => x.parity === false).reduce((a, b) => { return { size: a.size + b.size }; }, { size: 0 }).size;
-  }
-
-  StartDownloadShard(index: number): FileMuxer {
-    this.checkIfIsAborted();
-
-    if (!this.fileInfo) {
-      throw new Error('Undefined fileInfo');
-    }
-
-    const shardIndex = this.rawShards.map(x => x.index).indexOf(index);
-    const shard = this.rawShards[shardIndex];
-
-    const fileMuxer = new FileMuxer({ shards: 1, length: shard.size });
-
-    const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
-
-    shardObject.StartDownloadShard().then((reqStream: Readable) => {
-      fileMuxer.addInputSource(reqStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
-    });
-
-    return fileMuxer;
   }
 
   TryDownloadShardWithFileMuxer(shard: Shard, excluded: string[] = []): Promise<Buffer> {
