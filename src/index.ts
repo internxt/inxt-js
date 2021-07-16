@@ -70,6 +70,10 @@ interface StoreFileParams extends UploadFileOptions {
   debug?: DebugCallback;
 }
 
+interface ResolveFileParams extends DownloadFileOptions {
+  debug?: DebugCallback;
+}
+
 export class Environment {
   config: EnvironmentConfig;
   logger: Winston.Logger;
@@ -167,7 +171,7 @@ export class Environment {
       return downloadState;
     }
 
-    download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), downloadState);
+    download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), this.logger, downloadState);
 
     return downloadState;
   }
@@ -285,38 +289,44 @@ export class Environment {
    * @param filePath File path where the file maybe already is
    * @param options Options for resolve file case
    */
-  resolveFile(bucketId: string, fileId: string, filePath: string, options: DesktopDownloadFileOptions): ActionState {
+  resolveFile(bucketId: string, fileId: string, filepath: string, params: ResolveFileParams): ActionState {
     const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
-      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED));
+      params.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
 
       return downloadState;
     }
 
     if (!bucketId) {
-      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED));
+      params.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
 
       return downloadState;
     }
 
     if (!fileId) {
-      options.finishedCallback(Error('File id not provided'));
+      params.finishedCallback(Error('File id not provided'), null);
 
       return downloadState;
     }
 
-    download(this.config, bucketId, fileId, options, downloadState)
+    // TODO: Check if file exists on provided file path
+
+    if (params.debug) {
+      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
+    }
+
+    download(this.config, bucketId, fileId, params, this.logger, downloadState)
       .then((fileStream) => {
-        fileStream.pipe(createWriteStream(filePath))
+        fileStream.pipe(createWriteStream(filepath))
           .on('error', (err) => {
-            options.finishedCallback(err);
+            params.finishedCallback(err, null);
           })
-          .on('close', () => {
-            options.finishedCallback(null);
+          .on('finish', () => {
+            params.finishedCallback(null, null);
           });
       }).catch((err) => {
-        options.finishedCallback(err);
+        params.finishedCallback(err, null);
       });
 
     return downloadState;
