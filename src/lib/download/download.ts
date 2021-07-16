@@ -1,13 +1,15 @@
+import * as Winston from 'winston';
+
 import { Readable, Transform } from 'stream';
 
 import { DownloadFileOptions, EnvironmentConfig } from '../..';
-import { FileObject } from '../../api/FileObject';
 import { FILEMUXER, DOWNLOAD, DECRYPT, FILEOBJECT } from '../events';
+import { FileObject } from '../../api/FileObject';
 import { ActionState } from '../../api/ActionState';
 import { DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from '../../api/constants';
 
-export async function download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, state: ActionState): Promise<Readable> {
-  const file = new FileObject(config, bucketId, fileId);
+export async function download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, debug: Winston.Logger, state: ActionState): Promise<Readable> {
+  const file = new FileObject(config, bucketId, fileId, debug);
 
   handleStateChanges(file, state, options);
 
