@@ -276,12 +276,8 @@ export class FileObject extends EventEmitter {
   }
 
   abort(): void {
-    logger.info('Aborting file upload');
+    this.debug.info('Aborting file upload');
     this.aborted = true;
-
-    this.downloads.forEach(download => {
-      download.content.destroy();
-    });
   }
 
   isAborted(): boolean {
