@@ -13,16 +13,11 @@ import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror, ReplacePointer } 
 import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
 import { ExchangeReport } from './reports';
-import { DECRYPT, DOWNLOAD, FILEMUXER } from '../lib/events';
+import { Decrypt, Download, FILEMUXER } from '../lib/events';
 import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from './constants';
 import { wrap } from '../lib/utils/error';
-
-interface DownloadStream {
-  content: Readable;
-  index: number;
-  beingDecrypted: boolean;
-}
+import { drainStream } from '../lib/utils/stream';
 
 export class FileObject extends EventEmitter {
   shards: ShardObject[] = [];
@@ -219,7 +214,6 @@ export class FileObject extends EventEmitter {
             }
           } else {
             logger.warn('It seems that shard %s download from farmer %s went wrong. Replacing pointer', shard.index, shard.farmer.nodeID);
-            console.log('ORIGINAL ERROR', err);
 
             excluded.push(shard.farmer.nodeID);
 
@@ -246,8 +240,12 @@ export class FileObject extends EventEmitter {
     }
 
     this.decipher = new DecryptStream(this.fileKey.slice(0, 32), Buffer.from(this.fileInfo.index, 'hex').slice(0, 16))
-      .on(DECRYPT.PROGRESS, (msg) => { this.emit(DECRYPT.PROGRESS, msg); })
-      .on('error', (err) => { this.emit(DECRYPT.ERROR, err); });
+      .on(Decrypt.Progress, (msg) => {
+        this.emit(Decrypt.Progress, msg);
+      })
+      .on('error', (err) => {
+        this.emit(Decrypt.Error, err);
+      });
 
     eachLimit(this.rawShards, 1, (shard, nextItem) => {
       this.checkIfIsAborted();
@@ -258,13 +256,17 @@ export class FileObject extends EventEmitter {
 
       this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer) => {
         logger.info('Shard %s downloaded OK', shard.index);
-        this.emit(DOWNLOAD.PROGRESS, shardBuffer.length);
 
-        this.decipher.write(shardBuffer);
+        this.emit(Download.Progress, shardBuffer.length);
 
+        if (!this.decipher.write(shardBuffer)) {
+          // backpressuring to avoid congestion for excessive buffering
+          return drainStream(this.decipher);
+        }
+      }).then(() => {
         nextItem();
       }).catch((err) => {
-        nextItem(wrap('Download error', err));
+        nextItem(wrap('Download shard error', err));
       });
     }, () => {
       this.decipher.end();

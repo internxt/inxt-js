@@ -4,6 +4,12 @@ export enum DOWNLOAD {
     END = 'download-end'
 }
 
+export enum Download {
+    Progress = 'download-progress',
+    Error = 'download-error',
+    End = 'download-end'
+}
+
 export enum UPLOAD {
     PROGRESS = 'upload-progress',
     ERROR = 'upload-error',
@@ -14,6 +20,12 @@ export enum DECRYPT {
     PROGRESS = 'decrypt-progress',
     ERROR = 'decrypt-error',
     END = 'decrypt-end'
+}
+
+export enum Decrypt {
+    Progress = 'decrypt-progress',
+    Error = 'decrypt-error',
+    End = 'decrypt-end'
 }
 
 export enum ENCRYPT {
