@@ -42,14 +42,14 @@ export class FileObject extends EventEmitter {
   decipher: DecryptStream;
 
   private aborted = false;
+  private debug: Winston.Logger;
 
-  private downloads: DownloadStream[] = [];
-
-  constructor(config: EnvironmentConfig, bucketId: string, fileId: string) {
+  constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger) {
     super();
     this.config = config;
     this.bucketId = bucketId;
     this.fileId = fileId;
+    this.debug = debug;
     this.fileKey = Buffer.alloc(0);
     this.decipher = new DecryptStream(randomBytes(32), randomBytes(16));
 
