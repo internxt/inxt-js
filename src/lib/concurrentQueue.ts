@@ -6,6 +6,10 @@ export class ConcurrentQueue<K> {
   private queue: QueueObject<K>;
 
   constructor(concurrency = 1, totalTasks = 1, task: (content: K) => Promise<void>) {
+    if (concurrency > totalTasks) {
+      throw new Error('ConcurrentQueue error: Concurrency can not be greater than total tasks to perform');
+    }
+
     this.totalTasks = totalTasks;
     this.queue = queue(async (content: K, cb: ErrorCallback<Error>) => {
       task(content).then(() => {

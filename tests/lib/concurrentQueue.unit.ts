@@ -19,6 +19,14 @@ const defConcurrency = 1;
 let queue: ConcurrentQueue<TestContent> = new ConcurrentQueue<TestContent>(defConcurrency, defConcurrency, incrementCounter);
 
 describe('# lib/concurrentQueue tests', () => {
+  describe('constructor()', () => {
+    it('Should throw if concurrency > total tasks to perform', () => {
+      expect(() => {
+        new ConcurrentQueue<TestContent>(defConcurrency, 0, incrementCounter);
+      }).to.throw;
+    });
+  });
+
   describe('end()', () => {
     it('Should end after all tasks end (concurrency = 1 = totalTasks)', function (done) {
         const concurrency = 1;
@@ -107,5 +115,5 @@ describe('# lib/concurrentQueue tests', () => {
           done();
         });
     });
-  })
+  });
 });
