@@ -8,7 +8,13 @@ import { utils } from 'rs-wrapper';
  * @returns Concurrency number
  */
 export function determineConcurrency(desiredRamUsage: number, fileSize: number): number {
-    const shardSize = utils.determineShardSize(fileSize);
+    const shardSize = determineShardSize(fileSize);
 
     return Math.floor(desiredRamUsage / shardSize);
+}
+
+export function determineShardSize(fileSize: number) {
+    const fiftyMb = 50 * 1024 * 1024;
+
+    return Math.min(fiftyMb, utils.determineShardSize(fileSize));
 }
