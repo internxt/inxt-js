@@ -14,11 +14,11 @@ import { ContractNegotiated } from '../lib/contracts';
 
 import { ExchangeReport } from "./reports";
 import { Shard } from "./shard";
-import { promisifyStream } from '../lib/utils/promisify';
 import { wrap } from '../lib/utils/error';
 import { UPLOAD_CANCELLED } from './constants';
-import { UploaderStream } from '../lib/upload/uploader';
+import { UploaderQueue } from '../lib/upload/uploader';
 import { logger } from '../lib/utils/logger';
+import { determineConcurrency } from '../lib/utils';
 
 export interface FileMeta {
   size: number;
@@ -32,6 +32,7 @@ export class FileObjectUpload extends EventEmitter {
   private requests: api.INXTRequest[] = [];
   private id = '';
   private aborted = false;
+  shardMetas: ShardMeta[] = [];
   private logger: Winston.Logger;
 
   bucketId: string;
@@ -169,40 +170,95 @@ export class FileObjectUpload extends EventEmitter {
     return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
   }
 
-  private sequentialUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
-    const uploader = new UploaderStream(1, this, utils.determineShardSize(this.fileMeta.size));
+  // private sequentialUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+  //   const uploader = new UploaderStream(1, this, utils.determineShardSize(this.fileMeta.size));
+
+  //   let currentBytesUploaded = 0;
+  //   uploader.on('upload-progress', (bytesUploaded: number) => {
+  //     currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
+  //   });
+
+  //   return new Promise((resolve, reject) => {
+  //     this.cipher.on('data', (chunk: Buffer) => {
+  //       uploader.write(chunk);
+  //       this.cipher.pause();
+  //     });
+
+  //     this.cipher.on('error', (err) => {
+  //       uploader.emit('error', err);
+  //     });
+
+  //     this.cipher.on('end', () => {
+  //       uploader.end();
+  //     });
+
+  //     uploader
+  //       .on('shard-uploaded', () => {
+  //         this.cipher.resume();
+  //       })
+  //       .on('error', (err: Error) => {
+  //         reject(wrap('Farmer request error', err));
+  //       })
+  //       .on('end', () => {
+  //         resolve(uploader.getShardsMeta());
+  //       });
+  //   });
+  // }
+
+  private parallelUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    const ramUsage = 200 * 1024 * 1024; // 200Mb
+    const nShards = Math.ceil(this.fileMeta.size / utils.determineShardSize(this.fileMeta.size));
+    const concurrency = determineConcurrency(ramUsage, this.fileMeta.size);
+
+    logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
+
+    const uploader = new UploaderQueue(concurrency, nShards, this);
 
     let currentBytesUploaded = 0;
     uploader.on('upload-progress', (bytesUploaded: number) => {
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
     });
 
+    let concurrentDownloads = 0;
+    let shardIndex = 0;
+
     return new Promise((resolve, reject) => {
-      this.cipher.on('data', (chunk: Buffer) => {
-        uploader.write(chunk);
-        this.cipher.pause();
+      uploader
+        .on('error', (err: Error) => {
+          reject(wrap('Farmer request error', err));
+        })
+        .on('end', () => {
+          resolve(this.shardMetas);
+        });
+
+      this.cipher.on('end', () => {
+        uploader.end();
       });
 
       this.cipher.on('error', (err) => {
         uploader.emit('error', err);
       });
 
-      this.cipher.on('end', () => {
-        uploader.end();
-      });
+      this.cipher.on('data', (chunk: Buffer) => {
+        concurrentDownloads++;
 
-      uploader
-        .on('shard-uploaded', () => {
-          this.cipher.resume();
-        })
-        .on('error', (err: Error) => {
-          reject(wrap('Farmer request error', err));
-        })
-        .on('end', () => {
-          // console.log('All uploads finished');
+        console.log('PUSHING TASK TO UPLOADER, shard %s', shardIndex);
 
-          resolve(uploader.getShardsMeta());
+        if (concurrentDownloads === concurrency) {
+          console.log('PAUSING CIPHER, concurrency %s', concurrentDownloads);
+          this.cipher.pause();
+        }
+
+        uploader.push({
+          content: chunk,
+          index: shardIndex++,
+          finishCb: () => {
+            concurrentDownloads--;
+            this.cipher.resume();
+            console.log('RESUMING CIPHER, concurrency %s', concurrentDownloads);
+          }
         });
+      });
     });
   }
 
@@ -213,7 +269,9 @@ export class FileObjectUpload extends EventEmitter {
       throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
     }
 
-    return this.sequentialUpload(callback);
+    return this.parallelUpload(callback);
+
+    // return this.sequentialUpload(callback);
   }
 
   async uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
