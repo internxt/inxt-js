@@ -1,6 +1,6 @@
 import BlobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createReadStream, createWriteStream, statSync } from 'fs';
+import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
 import * as Winston from 'winston';
 
 import { upload } from './lib/upload';
@@ -12,7 +12,7 @@ import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/const
 import { ActionState, ActionTypes } from './api/ActionState';
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
-import { Logger } from './lib/utils/logger';
+import { logger, Logger } from './lib/utils/logger';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -255,19 +255,23 @@ export class Environment {
       return uploadState;
     }
 
+    if (params.debug) {
+      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
+    }
+
     EncryptFilename(this.config.encryptionKey, bucketId, filepath)
       .then((name: string) => {
-        // TODO: Get file from file path provided instead of expecting a Readable
-        if (params.debug) {
-          this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-        }
-        this.logger.debug('Filename %s encrypted is %s', filepath, name);
+        logger.debug('Filename %s encrypted is %s', filepath, name);
 
         const fileMeta: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
 
-        upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
-      })
-      .catch((err: Error) => {
+        return upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
+      }).then(() => {
+        this.logger.info('Upload Success!');
+      }).catch((err: Error) => {
+        if (err.message.includes('Upload aborted')) {
+          return params.finishedCallback(new Error('Process killed by user'), null);
+        }
         params.finishedCallback(err, null);
       });
 
@@ -310,8 +314,6 @@ export class Environment {
       return downloadState;
     }
 
-    // TODO: Check if file exists on provided file path
-
     if (params.debug) {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
     }
@@ -323,6 +325,8 @@ export class Environment {
             params.finishedCallback(err, null);
           })
           .on('finish', () => {
+            this.logger.info('Download success!');
+
             params.finishedCallback(null, null);
           });
       }).catch((err) => {
