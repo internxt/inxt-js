@@ -182,6 +182,10 @@ export class FileObjectUpload extends EventEmitter {
         this.cipher.pause();
       });
 
+      this.cipher.on('error', (err) => {
+        uploader.emit('error', err);
+      });
+
       this.cipher.on('end', () => {
         uploader.end();
       });
