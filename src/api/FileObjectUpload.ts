@@ -183,44 +183,14 @@ export class FileObjectUpload extends EventEmitter {
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
     });
 
-    let concurrentDownloads = 0;
-    let shardIndex = 0;
+    this.cipher.pipe(uploader.getUpstream());
 
     return new Promise((resolve, reject) => {
-      uploader
-        .on('error', (err: Error) => {
-          reject(wrap('Farmer request error', err));
-        })
-        .on('end', () => {
-          resolve(this.shardMetas);
-        });
-
-      this.cipher.on('end', () => {
-        uploader.end();
+      uploader.on('end', () => {
+        resolve(this.shardMetas);
       });
 
-      this.cipher.on('error', (err) => {
-        uploader.emit('error', err);
-      });
-
-      this.cipher.on('data', (chunk: Buffer) => {
-        concurrentDownloads++;
-
-        if (concurrentDownloads === concurrency) {
-          this.cipher.pause();
-        }
-
-        uploader.push({
-          content: chunk,
-          index: shardIndex++,
-          finishCb: () => {
-            concurrentDownloads--;
-            if (this.cipher.isPaused()) {
-              this.cipher.resume();
-            }
-          }
-        });
-      });
+      uploader.on('error', reject);
     });
   }
 

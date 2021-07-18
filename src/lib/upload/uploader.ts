@@ -1,7 +1,9 @@
-import { EventEmitter } from "stream";
+import { EventEmitter, PassThrough } from "stream";
 
 import { FileObjectUpload } from "../../api/FileObjectUpload";
 import { ConcurrentQueue } from "../concurrentQueue";
+import { wrap } from "../utils/error";
+
 export interface UploadRequest {
   content: Buffer;
   index: number;
@@ -10,9 +12,21 @@ export interface UploadRequest {
 
 export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
   private eventEmitter: EventEmitter = new EventEmitter();
+  private passthrough: PassThrough = new PassThrough();
+  private shardIndex = 0;
+  private concurrentUploads = 0;
+  private concurrency = 0;
 
   constructor(parallelUploads = 1, expectedUploads = 1, fileObject: FileObjectUpload) {
     super(parallelUploads, expectedUploads, UploaderQueue.upload(fileObject));
+
+    this.concurrency = parallelUploads;
+
+    this.passthrough.on('data', this.handleData.bind(this));
+    this.passthrough.on('end', this.end.bind(this));
+    this.passthrough.on('error', (err) => {
+      this.emit('error', wrap('Farmer request error', err));
+    });
   }
 
   private static upload(fileObject: FileObjectUpload) {
@@ -27,6 +41,27 @@ export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
           }
         });
     };
+  }
+
+  getUpstream(): PassThrough {
+    return this.passthrough;
+  }
+
+  handleData(chunk: Buffer) {
+    this.concurrentUploads++;
+
+    if (this.concurrentUploads === this.concurrency) {
+      this.passthrough.pause();
+    }
+
+    const finishCb = () => {
+      this.concurrentUploads--;
+      if (this.passthrough.isPaused()) {
+        this.passthrough.resume();
+      }
+    };
+
+    this.push({ content: chunk, index: this.shardIndex++, finishCb });
   }
 
   emit(event: string, ...args: any[]) {
