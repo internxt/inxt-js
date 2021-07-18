@@ -13,6 +13,11 @@ export function determineConcurrency(desiredRamUsage: number, fileSize: number):
     return Math.floor(desiredRamUsage / shardSize);
 }
 
+/**
+ * Determines the best shard size for a provided file size
+ * @param fileSize Size of the file to be sharded
+ * @returns Shard size
+ */
 export function determineShardSize(fileSize: number) {
     const fiftyMb = 50 * 1024 * 1024;
 
