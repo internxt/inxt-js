@@ -17,17 +17,17 @@ export declare class INXTRequest {
     private cancel;
     private method;
     private config;
-    private targetUrl;
+    targetUrl: string;
     private useProxy;
     private streaming;
     constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, useProxy?: boolean);
-    start<K>(params: AxiosRequestConfig): Promise<K>;
+    start<K>(params?: AxiosRequestConfig): Promise<K>;
     stream<K>(content: Readable | Writable, options?: https.RequestOptions): Promise<K>;
     abort(): void;
     isCancelled(err: Error): boolean;
 }
 export declare function streamRequest(targetUrl: string, nodeID: string, useProxy?: boolean, timeoutSeconds?: number): Promise<Readable>;
-interface GetBucketByIdResponse {
+export interface GetBucketByIdResponse {
     user: string;
     encryptionKey: string;
     publicPermissions: string[];
@@ -47,7 +47,7 @@ interface GetBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export declare function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<GetBucketByIdResponse | void>;
+export declare function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): INXTRequest;
 interface GetFileByIdResponse {
     id: string;
 }
@@ -74,7 +74,7 @@ export interface FrameStaging {
  * @param config App config
  * @param params
  */
-export declare function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise<FrameStaging>;
+export declare function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): INXTRequest;
 export interface CreateEntryFromFrameBody {
     frame: string;
     filename: string;

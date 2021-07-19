@@ -300,8 +300,7 @@ function getBucketById(config, bucketId, params) {
         }
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'get', targetUrl, finalParams, false)
-        .then(function (res) { return res.data; });
+    return new INXTRequest(config, Methods.Get, targetUrl, false);
 }
 exports.getBucketById = getBucketById;
 /**
@@ -339,8 +338,7 @@ function createFrame(config, params) {
         }
     };
     var finalParams = __assign(__assign({}, defParams), params);
-    return request(config, 'post', targetUrl, finalParams, false)
-        .then(function (res) { return res.data; });
+    return new INXTRequest(config, Methods.Post, targetUrl, false);
 }
 exports.createFrame = createFrame;
 /**
@@ -362,7 +360,12 @@ function createEntryFromFrame(config, bucketId, body, params) {
     };
     var finalParams = __assign(__assign({}, defParams), params);
     return request(config, 'post', targetUrl, finalParams, false)
-        .then(function (res) { return res.data; });
+        .then(function (res) { return res.data; })
+        .catch(function (err) {
+        if (err.response && err.response.data.error.includes('duplicate key') && parseInt(err.response.status, 10) === 500) {
+            throw new Error('File already exists');
+        }
+    });
 }
 exports.createEntryFromFrame = createEntryFromFrame;
 /**

@@ -148,15 +148,16 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.checkBucketExistence = function () {
         return __awaiter(this, void 0, void 0, function () {
+            var req;
             var _this = this;
             return __generator(this, function (_a) {
                 this.checkIfIsAborted();
-                // if bucket not exists, bridge returns an error
-                return [2 /*return*/, api.getBucketById(this.config, this.bucketId).then(function (res) {
+                req = api.getBucketById(this.config, this.bucketId);
+                this.requests.push(req);
+                return [2 /*return*/, req.start().then(function () {
                         logger_1.logger.info('Bucket %s exists', _this.bucketId);
-                        return res ? true : false;
-                    })
-                        .catch(function (err) {
+                        return true;
+                    }).catch(function (err) {
                         throw error_1.wrap('Bucket existence check error', err);
                     })];
             });
@@ -165,7 +166,9 @@ var FileObjectUpload = /** @class */ (function (_super) {
     FileObjectUpload.prototype.stage = function () {
         var _this = this;
         this.checkIfIsAborted();
-        return api.createFrame(this.config).then(function (frame) {
+        var req = api.createFrame(this.config);
+        this.requests.push(req);
+        return req.start().then(function (frame) {
             if (!frame || !frame.id) {
                 throw new Error('Frame response is empty');
             }
@@ -179,7 +182,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.checkIfIsAborted();
         return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
             .catch(function (err) {
-            throw error_1.wrap('Bucket entry creation error', err);
+            throw error_1.wrap('Saving file in network error', err);
         });
     };
     FileObjectUpload.prototype.negotiateContract = function (frameId, shardMeta) {
