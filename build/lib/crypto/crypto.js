@@ -55,7 +55,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Aes256gcmEncrypter = exports.Aes256ctrEncrypter = exports.Aes256ctrDecrypter = exports.EncryptMetaBuffer = exports.EncryptMeta = exports.DecryptFileName = exports.EncryptFilename = exports.GenerateFileKey = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
+exports.GetFileDeterministicKey = exports.GenerateFileBucketKey = exports.GenerateFileKey = exports.Aes256gcmEncrypter = exports.Aes256ctrEncrypter = exports.Aes256ctrDecrypter = exports.EncryptMetaBuffer = exports.EncryptMeta = exports.DecryptFileName = exports.EncryptFilename = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
 var crypto = __importStar(require("crypto"));
 var bip39_1 = require("bip39");
 var constants_1 = require("./constants");
@@ -98,20 +98,10 @@ function GenerateBucketKey(mnemonic, bucketId) {
     });
 }
 exports.GenerateBucketKey = GenerateBucketKey;
-function GenerateFileKey(mnemonic, bucketId, index) {
-    return __awaiter(this, void 0, void 0, function () {
-        var bucketKey;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, GenerateBucketKey(mnemonic, bucketId)];
-                case 1:
-                    bucketKey = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(bucketKey.slice(0, 32), index.toString('hex')).slice(0, 32)];
-            }
-        });
-    });
-}
-exports.GenerateFileKey = GenerateFileKey;
+// export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer): Promise<Buffer> {
+//   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
+//   return GetDeterministicKey(bucketKey.slice(0, 32), index.toString('hex')).slice(0, 32);
+// }
 function EncryptFilename(mnemonic, bucketId, filename) {
     return __awaiter(this, void 0, void 0, function () {
         var bucketKey, GenerateEncryptionKey, GenerateEncryptionIv, encryptionKey, encryptionIv;
@@ -197,3 +187,38 @@ function Aes256gcmEncrypter(key, iv) {
     return crypto.createCipheriv('aes-256-gcm', key, iv);
 }
 exports.Aes256gcmEncrypter = Aes256gcmEncrypter;
+// ENCRYPTION FOR FILE KEY
+function GenerateFileKey(mnemonic, bucketId, index) {
+    return __awaiter(this, void 0, void 0, function () {
+        var bucketKey;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, GenerateFileBucketKey(mnemonic, bucketId)];
+                case 1:
+                    bucketKey = _a.sent();
+                    return [2 /*return*/, GetFileDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
+            }
+        });
+    });
+}
+exports.GenerateFileKey = GenerateFileKey;
+function GenerateFileBucketKey(mnemonic, bucketId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var seed;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, bip39_1.mnemonicToSeed(mnemonic)];
+                case 1:
+                    seed = _a.sent();
+                    return [2 /*return*/, GetFileDeterministicKey(seed, Buffer.from(bucketId, 'hex'))];
+            }
+        });
+    });
+}
+exports.GenerateFileBucketKey = GenerateFileBucketKey;
+function GetFileDeterministicKey(key, data) {
+    var hash = crypto.createHash('sha512');
+    hash.update(key).update(data);
+    return hash.digest();
+}
+exports.GetFileDeterministicKey = GetFileDeterministicKey;
