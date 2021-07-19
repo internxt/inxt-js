@@ -160,8 +160,6 @@ var Environment = /** @class */ (function () {
         }
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filepath)
             .then(function (name) {
-            console.log('name ENCRYPTED %s', name);
-            return;
             logger_1.logger.debug('Filename %s encrypted is %s', filepath, name);
             var fileMeta = { content: fs_1.createReadStream(filepath), name: name, size: fileStat.size };
             return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
