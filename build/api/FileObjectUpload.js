@@ -227,8 +227,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
         logger_1.logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
         var uploader = new uploader_1.UploaderQueue(concurrency, nShards, this);
         var currentBytesUploaded = 0;
-        uploader.on('upload-progress', function (bytesUploaded) {
-            console.log('TOTAL SIZE %s, %s, %s', _this.getSize(), currentBytesUploaded, bytesUploaded);
+        uploader.on('upload-progress', function (_a) {
+            var bytesUploaded = _a[0];
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
         this.cipher.pipe(uploader.getUpstream());
@@ -333,13 +333,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
 }(stream_1.EventEmitter));
 exports.FileObjectUpload = FileObjectUpload;
 function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
-    console.log('NEW -CURRENT BYTES %s', currentBytesUploaded);
-    console.log('NEW -BYTEs', newBytesUploaded);
     var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
     var progressCounter = newCurrentBytes / totalBytes;
-    console.log('TOTAL BYTES %s', totalBytes);
-    console.log('NEW CURRENT BYTES %s', newCurrentBytes);
-    console.log('PROGRESS COUNTER %s', progressCounter);
     progress(progressCounter, newCurrentBytes, totalBytes);
     return newCurrentBytes;
 }
