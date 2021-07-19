@@ -208,7 +208,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         });
     };
     FileObjectUpload.prototype.GenerateHmac = function (shardMetas) {
-        var hmac = crypto_2.sha512HmacBuffer(this.fileEncryptionKey);
+        var hmac = crypto_2.sha512HmacBuffer(this.fileEncryptionKey.toString('hex'));
         for (var _i = 0, shardMetas_1 = shardMetas; _i < shardMetas_1.length; _i++) {
             var shardMeta = shardMetas_1[_i];
             hmac.update(Buffer.from(shardMeta.hash, 'hex'));
@@ -228,6 +228,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         var uploader = new uploader_1.UploaderQueue(concurrency, nShards, this);
         var currentBytesUploaded = 0;
         uploader.on('upload-progress', function (bytesUploaded) {
+            console.log('TOTAL SIZE %s, %s, %s', _this.getSize(), currentBytesUploaded, bytesUploaded);
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
         this.cipher.pipe(uploader.getUpstream());
@@ -332,8 +333,13 @@ var FileObjectUpload = /** @class */ (function (_super) {
 }(stream_1.EventEmitter));
 exports.FileObjectUpload = FileObjectUpload;
 function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
+    console.log('NEW -CURRENT BYTES %s', currentBytesUploaded);
+    console.log('NEW -BYTEs', newBytesUploaded);
     var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
     var progressCounter = newCurrentBytes / totalBytes;
+    console.log('TOTAL BYTES %s', totalBytes);
+    console.log('NEW CURRENT BYTES %s', newCurrentBytes);
+    console.log('PROGRESS COUNTER %s', progressCounter);
     progress(progressCounter, newCurrentBytes, totalBytes);
     return newCurrentBytes;
 }

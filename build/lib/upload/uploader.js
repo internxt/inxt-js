@@ -60,6 +60,7 @@ var UploaderQueue = /** @class */ (function (_super) {
         }
         var finishCb = function () {
             _this.concurrentUploads--;
+            _this.emit('upload-progress', chunk.length);
             if (_this.passthrough.isPaused()) {
                 _this.passthrough.resume();
             }

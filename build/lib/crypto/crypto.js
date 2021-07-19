@@ -72,7 +72,7 @@ function sha512(input) {
 }
 exports.sha512 = sha512;
 function sha512HmacBuffer(key) {
-    return crypto.createHmac('sha512', key);
+    return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
 }
 exports.sha512HmacBuffer = sha512HmacBuffer;
 function ripemd160(input) {
@@ -80,9 +80,8 @@ function ripemd160(input) {
 }
 exports.ripemd160 = ripemd160;
 function GetDeterministicKey(key, data) {
-    var hash = crypto.createHash('sha512');
-    hash.update(key).update(data);
-    return hash.digest();
+    var sha512input = key + data;
+    return crypto.createHash('sha512').update(Buffer.from(sha512input, 'hex')).digest('hex').slice(0, 64);
 }
 exports.GetDeterministicKey = GetDeterministicKey;
 function GenerateBucketKey(mnemonic, bucketId) {
@@ -92,8 +91,8 @@ function GenerateBucketKey(mnemonic, bucketId) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, bip39_1.mnemonicToSeed(mnemonic)];
                 case 1:
-                    seed = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'))];
+                    seed = (_a.sent()).toString('hex');
+                    return [2 /*return*/, GetDeterministicKey(seed, bucketId)];
             }
         });
     });
@@ -107,7 +106,7 @@ function GenerateFileKey(mnemonic, bucketId, index) {
                 case 0: return [4 /*yield*/, GenerateBucketKey(mnemonic, bucketId)];
                 case 1:
                     bucketKey = _a.sent();
-                    return [2 /*return*/, GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
+                    return [2 /*return*/, Buffer.from(GetDeterministicKey(bucketKey.slice(0, 32), index.toString('hex')).slice(0, 32), 'hex')];
             }
         });
     });
@@ -128,10 +127,7 @@ function EncryptFilename(mnemonic, bucketId, filename) {
                     };
                     GenerateEncryptionIv = function () {
                         var hasher = sha512HmacBuffer(bucketKey);
-                        if (bucketId === constants_1.BUCKET_NAME_MAGIC) {
-                            hasher.update(bucketId);
-                        }
-                        hasher.update(filename);
+                        hasher.update(bucketId).update(filename);
                         return hasher.digest().slice(0, 32);
                     };
                     encryptionKey = GenerateEncryptionKey();
@@ -149,7 +145,7 @@ function DecryptFileName(mnemonic, bucketId, encryptedName) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, GenerateBucketKey(mnemonic, bucketId)];
                 case 1:
-                    bucketKey = (_a.sent()).toString('hex');
+                    bucketKey = _a.sent();
                     if (!bucketKey) {
                         throw Error('Bucket key missing');
                     }
