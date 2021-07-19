@@ -303,7 +303,12 @@ export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string
   const finalParams = { ...defParams, ...params };
 
   return request(config, 'post', targetUrl, finalParams, false)
-    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data);
+    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
+    .catch((err) => {
+      if (err.response && err.response.data.error.includes('duplicate key') && parseInt(err.response.status, 10) === 500) {
+        throw new Error('File already exists');
+      }
+    });
 }
 
 interface AddShardToFrameBody {

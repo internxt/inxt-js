@@ -120,7 +120,7 @@ export class FileObjectUpload extends EventEmitter {
 
     return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
       .catch((err) => {
-        throw wrap('Bucket entry creation error', err);
+        throw wrap('Saving file in network error', err);
       });
   }
 
