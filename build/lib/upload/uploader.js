@@ -13,46 +13,85 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UploaderStream = void 0;
+exports.UploaderQueue = void 0;
 var stream_1 = require("stream");
-var UploaderStream = /** @class */ (function (_super) {
-    __extends(UploaderStream, _super);
-    function UploaderStream(parallelUploads, fileObject, shardSize, maxConcurrentBytes, options) {
+var concurrentQueue_1 = require("../concurrentQueue");
+var error_1 = require("../utils/error");
+var UploaderQueue = /** @class */ (function (_super) {
+    __extends(UploaderQueue, _super);
+    function UploaderQueue(parallelUploads, expectedUploads, fileObject) {
         if (parallelUploads === void 0) { parallelUploads = 1; }
-        var _this = _super.call(this, options) || this;
-        _this.indexCounter = 0;
-        _this.pendingShards = [];
-        _this.limitOffset = 0;
-        _this.uploads = [];
-        _this.parallelUploads = parallelUploads;
-        _this.fileObject = fileObject;
-        _this.maxConcurrentBytes = maxConcurrentBytes || shardSize;
+        if (expectedUploads === void 0) { expectedUploads = 1; }
+        var _this = _super.call(this, parallelUploads, expectedUploads, UploaderQueue.upload(fileObject)) || this;
+        _this.eventEmitter = new stream_1.EventEmitter();
+        _this.passthrough = new stream_1.PassThrough();
+        _this.shardIndex = 0;
+        _this.concurrentUploads = 0;
+        _this.concurrency = 0;
+        _this.concurrency = parallelUploads;
+        _this.passthrough.on('data', _this.handleData.bind(_this));
+        _this.passthrough.on('end', _this.end.bind(_this));
+        _this.passthrough.on('error', function (err) {
+            _this.emit('error', error_1.wrap('Farmer request error', err));
+        });
         return _this;
     }
-    UploaderStream.prototype.getShardsMeta = function () {
-        return this.uploads;
+    UploaderQueue.upload = function (fileObject) {
+        return function (req) {
+            return fileObject.uploadShard(req.content, req.content.length, fileObject.frameId, req.index, 3, false)
+                .then(function (shardMeta) {
+                fileObject.shardMetas.push(shardMeta);
+            })
+                .finally(function () {
+                if (req.finishCb) {
+                    req.finishCb();
+                }
+            });
+        };
     };
-    UploaderStream.prototype._transform = function (chunk, enc, cb) {
+    UploaderQueue.prototype.getUpstream = function () {
+        return this.passthrough;
+    };
+    UploaderQueue.prototype.handleData = function (chunk) {
         var _this = this;
-        if (this.parallelUploads > 1) {
-            // TODO
-            return cb(null, null);
+        this.concurrentUploads++;
+        if (this.concurrentUploads === this.concurrency) {
+            this.passthrough.pause();
         }
-        // console.log('Uploading shard %s chunkSize %s', this.indexCounter, chunk.length);
-        this.fileObject.uploadShard(chunk, chunk.length, this.fileObject.frameId, this.indexCounter++, 3, false)
-            .then(function (shardMeta) {
-            _this.uploads.push(shardMeta);
-            _this.emit('upload-progress', chunk.length);
-            // console.log('Shard with index %s uploaded', this.indexCounter - 1);
-            cb(null, null);
-        })
-            .catch(function (err) {
-            cb(err, null);
+        var finishCb = function () {
+            _this.concurrentUploads--;
+            if (_this.passthrough.isPaused()) {
+                _this.passthrough.resume();
+            }
+        };
+        this.push({ content: chunk, index: this.shardIndex++, finishCb: finishCb });
+    };
+    UploaderQueue.prototype.emit = function (event) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        this.eventEmitter.emit(event, args);
+    };
+    UploaderQueue.prototype.getListenerCount = function (event) {
+        return this.eventEmitter.listenerCount(event);
+    };
+    UploaderQueue.prototype.getListeners = function (event) {
+        return this.eventEmitter.listeners(event);
+    };
+    UploaderQueue.prototype.on = function (event, listener) {
+        this.eventEmitter.on(event, listener);
+        return this;
+    };
+    UploaderQueue.prototype.end = function (cb) {
+        var _this = this;
+        _super.prototype.end.call(this, function () {
+            if (cb) {
+                cb();
+            }
+            _this.emit('end');
         });
     };
-    UploaderStream.prototype._flush = function (cb) {
-        cb();
-    };
-    return UploaderStream;
-}(stream_1.Transform));
-exports.UploaderStream = UploaderStream;
+    return UploaderQueue;
+}(concurrentQueue_1.ConcurrentQueue));
+exports.UploaderQueue = UploaderQueue;

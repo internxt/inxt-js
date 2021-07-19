@@ -93,7 +93,7 @@ var Environment = /** @class */ (function () {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
-        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), downloadState);
+        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), this.logger, downloadState);
         return downloadState;
     };
     /**
@@ -155,17 +155,20 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
             return uploadState;
         }
+        if (params.debug) {
+            this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
+        }
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filepath)
             .then(function (name) {
-            // TODO: Get file from file path provided instead of expecting a Readable
-            if (params.debug) {
-                _this.logger = logger_1.Logger.getDebugger(_this.config.logLevel || 1, params.debug);
-            }
-            _this.logger.debug('Filename %s encrypted is %s', filepath, name);
+            logger_1.logger.debug('Filename %s encrypted is %s', filepath, name);
             var fileMeta = { content: fs_1.createReadStream(filepath), name: name, size: fileStat.size };
-            upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
-        })
-            .catch(function (err) {
+            return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
+        }).then(function () {
+            _this.logger.info('Upload Success!');
+        }).catch(function (err) {
+            if (err.message.includes('Upload aborted')) {
+                return params.finishedCallback(new Error('Process killed by user'), null);
+            }
             params.finishedCallback(err, null);
         });
         return uploadState;
@@ -184,31 +187,36 @@ var Environment = /** @class */ (function () {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    Environment.prototype.resolveFile = function (bucketId, fileId, filePath, options) {
+    Environment.prototype.resolveFile = function (bucketId, fileId, filepath, params) {
+        var _this = this;
         var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
         if (!this.config.encryptionKey) {
-            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED));
+            params.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
             return downloadState;
         }
         if (!bucketId) {
-            options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED));
+            params.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
         if (!fileId) {
-            options.finishedCallback(Error('File id not provided'));
+            params.finishedCallback(Error('File id not provided'), null);
             return downloadState;
         }
-        download_1.download(this.config, bucketId, fileId, options, downloadState)
+        if (params.debug) {
+            this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
+        }
+        download_1.download(this.config, bucketId, fileId, params, this.logger, downloadState)
             .then(function (fileStream) {
-            fileStream.pipe(fs_1.createWriteStream(filePath))
+            fileStream.pipe(fs_1.createWriteStream(filepath))
                 .on('error', function (err) {
-                options.finishedCallback(err);
+                params.finishedCallback(err, null);
             })
-                .on('close', function () {
-                options.finishedCallback(null);
+                .on('finish', function () {
+                _this.logger.info('Download success!');
+                params.finishedCallback(null, null);
             });
         }).catch(function (err) {
-            options.finishedCallback(err);
+            params.finishedCallback(err, null);
         });
         return downloadState;
     };

@@ -1,17 +1,28 @@
 /// <reference types="node" />
-import { Readable } from 'stream';
-interface PendingDownload {
+import { PassThrough, Readable } from 'stream';
+import { FileObject } from '../../api/FileObject';
+import { Shard } from '../../api/shard';
+import { ConcurrentQueue } from '../concurrentQueue';
+export interface DownloadRequest {
     index: number;
-    content: Readable;
+    shard: Shard;
+    finishCb?: (result?: any) => void;
 }
-export declare class QueueStream {
-    private pendingDownloads;
-    private downloadsNumber;
-    private streamsQueue;
-    private internalStream;
-    constructor(downloadsNumber: number, concurrency?: number);
-    attach(download: PendingDownload | PendingDownload[]): void;
-    getContent(): Readable;
-    end(): void;
+export declare class DownloadQueue extends ConcurrentQueue<DownloadRequest> {
+    private eventEmitter;
+    private passthrough;
+    private pendingShards;
+    private fileObject;
+    constructor(parallelDownloads: number | undefined, expectedDownloads: number | undefined, fileObject: FileObject);
+    private download;
+    getDownstream(): PassThrough;
+    start(shards: Shard[]): void;
+    handleData(shardContent: Readable, shard: Shard): void;
+    private emptyPendingShards;
+    cleanup(): void;
+    emit(event: string, ...args: any[]): void;
+    getListenerCount(event: string): number;
+    getListeners(event: string): Function[];
+    on(event: string, listener: (...args: any[]) => void): DownloadQueue;
+    end(cb?: () => void): void;
 }
-export {};

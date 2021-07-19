@@ -10,4 +10,4 @@ import { FileMeta } from "../../api/FileObjectUpload";
  * @param progress upload progress callback
  * @param finish finish progress callback
  */
-export declare function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, params: UploadFileOptions, logger: Winston.Logger, actionState: ActionState): Promise<void>;
+export declare function upload(config: EnvironmentConfig, bucketId: string, fileMeta: FileMeta, params: UploadFileOptions, debug: Winston.Logger, actionState: ActionState): Promise<void>;

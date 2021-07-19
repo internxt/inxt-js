@@ -83,7 +83,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateBucketEntry = exports.FileObjectUpload = void 0;
-var rs_wrapper_1 = require("rs-wrapper");
 var stream_1 = require("stream");
 var crypto_1 = require("crypto");
 var api = __importStar(require("../services/request"));
@@ -95,6 +94,8 @@ var reports_1 = require("./reports");
 var error_1 = require("../lib/utils/error");
 var constants_1 = require("./constants");
 var uploader_1 = require("../lib/upload/uploader");
+var logger_1 = require("../lib/utils/logger");
+var utils_1 = require("../lib/utils");
 var FileObjectUpload = /** @class */ (function (_super) {
     __extends(FileObjectUpload, _super);
     function FileObjectUpload(config, fileMeta, bucketId, logger) {
@@ -102,13 +103,14 @@ var FileObjectUpload = /** @class */ (function (_super) {
         _this.requests = [];
         _this.id = '';
         _this.aborted = false;
+        _this.shardMetas = [];
         _this.encrypted = false;
         _this.config = config;
         _this.index = Buffer.alloc(0);
         _this.fileMeta = fileMeta;
         _this.bucketId = bucketId;
         _this.frameId = '';
-        _this.funnel = new funnelStream_1.FunnelStream(rs_wrapper_1.utils.determineShardSize(fileMeta.size));
+        _this.funnel = new funnelStream_1.FunnelStream(utils_1.determineShardSize(fileMeta.size));
         _this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         _this.fileEncryptionKey = crypto_1.randomBytes(32);
         _this.logger = logger;
@@ -151,7 +153,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 this.checkIfIsAborted();
                 // if bucket not exists, bridge returns an error
                 return [2 /*return*/, api.getBucketById(this.config, this.bucketId).then(function (res) {
-                        _this.logger.info('Bucket %s exists', _this.bucketId);
+                        logger_1.logger.info('Bucket %s exists', _this.bucketId);
                         return res ? true : false;
                     })
                         .catch(function (err) {
@@ -168,7 +170,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 throw new Error('Frame response is empty');
             }
             _this.frameId = frame.id;
-            _this.logger.info('Staged a file with frame %s', _this.frameId);
+            logger_1.logger.info('Staged a file with frame %s', _this.frameId);
         }).catch(function (err) {
             throw error_1.wrap('Bridge frame creation error', err);
         });
@@ -214,53 +216,31 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.encrypted = true;
         return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
     };
-    FileObjectUpload.prototype.sequentialUpload = function (callback) {
+    FileObjectUpload.prototype.parallelUpload = function (callback) {
         var _this = this;
-        var uploader = new uploader_1.UploaderStream(1, this, rs_wrapper_1.utils.determineShardSize(this.fileMeta.size));
+        var ramUsage = 200 * 1024 * 1024; // 200Mb
+        var nShards = Math.ceil(this.fileMeta.size / utils_1.determineShardSize(this.fileMeta.size));
+        var concurrency = Math.min(utils_1.determineConcurrency(ramUsage, this.fileMeta.size), nShards);
+        logger_1.logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
+        var uploader = new uploader_1.UploaderQueue(concurrency, nShards, this);
         var currentBytesUploaded = 0;
         uploader.on('upload-progress', function (bytesUploaded) {
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
+        this.cipher.pipe(uploader.getUpstream());
         return new Promise(function (resolve, reject) {
-            // this.cipher.pipe(uploader)
-            //   .on('error', (err: Error) => {
-            //     reject(wrap('Farmer request error', err));
-            //   })
-            //   .on('end', () => {
-            //     // console.log('All uploads finished');
-            //     resolve(uploader.getShardsMeta());
-            //   });
-            _this.cipher.on('data', function (chunk) {
-                uploader.write(chunk);
+            uploader.on('end', function () {
+                resolve(_this.shardMetas);
             });
-            _this.cipher.on('end', function () {
-                uploader.end();
-            });
-            uploader
-                .on('data', function () { })
-                .on('error', function (err) {
-                reject(error_1.wrap('Farmer request error', err));
-            })
-                .on('end', function () {
-                // console.log('All uploads finished');
-                resolve(uploader.getShardsMeta());
-            });
+            uploader.on('error', reject);
         });
     };
     FileObjectUpload.prototype.upload = function (callback) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.checkIfIsAborted();
-                        if (!this.encrypted) {
-                            throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
-                        }
-                        return [4 /*yield*/, this.sequentialUpload(callback)];
-                    case 1: return [2 /*return*/, _a.sent()];
-                }
-            });
-        });
+        this.checkIfIsAborted();
+        if (!this.encrypted) {
+            throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
+        }
+        return this.parallelUpload(callback);
     };
     FileObjectUpload.prototype.uploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
         return __awaiter(this, void 0, void 0, function () {
@@ -269,7 +249,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-                        this.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
+                        logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 4, , 8]);
@@ -282,7 +262,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                         token = negotiatedContract.token;
                         operation = negotiatedContract.operation;
                         farmer = __assign(__assign({}, negotiatedContract.farmer), { lastSeen: new Date() });
-                        this.logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s', shardMeta.hash, shardMeta.index, shardMeta.size, token);
+                        logger_1.logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s', shardMeta.hash, shardMeta.index, shardMeta.size, token);
                         hash = shardMeta.hash;
                         shard = { index: index, replaceCount: 0, hash: hash, size: shardSize, parity: parity, token: token, farmer: farmer, operation: operation };
                         exchangeReport = new reports_1.ExchangeReport(this.config);
@@ -294,7 +274,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                             exchangeReport.UploadError();
                         }
                         else {
-                            this.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
+                            logger_1.logger.debug('Node %s accepted shard %s', shard.farmer.nodeID, shard.hash);
                             exchangeReport.UploadOk();
                         }
                         exchangeReport.params.exchangeEnd = new Date();
@@ -305,7 +285,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                     case 4:
                         err_1 = _a.sent();
                         if (!(attemps > 1 && !this.aborted)) return [3 /*break*/, 6];
-                        this.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_1.message);
+                        logger_1.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err_1.message);
                         return [4 /*yield*/, this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity)];
                     case 5:
                         _a.sent();
@@ -313,7 +293,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                     case 6: return [2 /*return*/, Promise.reject(error_1.wrap('Upload shard error', err_1))];
                     case 7: return [3 /*break*/, 8];
                     case 8:
-                        this.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
+                        logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
                         return [2 /*return*/, shardMeta];
                 }
             });
@@ -333,7 +313,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         });
     };
     FileObjectUpload.prototype.abort = function () {
-        this.logger.info('Aborting file upload');
+        logger_1.logger.info('Aborting file upload');
         this.aborted = true;
         this.requests.forEach(function (r) { return r.abort(); });
         this.funnel.unpipe(this.cipher);

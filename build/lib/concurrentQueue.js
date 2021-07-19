@@ -36,51 +36,72 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.upload = void 0;
-var constants_1 = require("../../api/constants");
-var FileObjectUpload_1 = require("../../api/FileObjectUpload");
-var logger_1 = require("../utils/logger");
-/**
- * Uploads a file to the network
- * @param config Environment config
- * @param bucketId id whose bucket is going to store the file
- * @param fileMeta file metadata
- * @param progress upload progress callback
- * @param finish finish progress callback
- */
-function upload(config, bucketId, fileMeta, params, debug, actionState) {
-    return __awaiter(this, void 0, void 0, function () {
-        var file, uploadResponses;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    file = new FileObjectUpload_1.FileObjectUpload(config, fileMeta, bucketId, debug);
-                    actionState.on(constants_1.UPLOAD_CANCELLED, function () {
-                        file.emit(constants_1.UPLOAD_CANCELLED);
-                    });
-                    return [4 /*yield*/, file.init()];
-                case 1:
-                    _a.sent();
-                    return [4 /*yield*/, file.checkBucketExistence()];
-                case 2:
-                    _a.sent();
-                    return [4 /*yield*/, file.stage()];
-                case 3:
-                    _a.sent();
-                    file.encrypt();
-                    return [4 /*yield*/, file.upload(params.progressCallback)];
-                case 4:
-                    uploadResponses = _a.sent();
-                    logger_1.logger.debug('Upload finished. Creating bucket entry...');
-                    return [4 /*yield*/, file.createBucketEntry(uploadResponses)];
-                case 5:
-                    _a.sent();
-                    logger_1.logger.info('Uploaded file with id %s', file.getId());
-                    params.progressCallback(1, file.getSize(), file.getSize());
-                    params.finishedCallback(null, file.getId());
+exports.ConcurrentQueue = void 0;
+var async_1 = require("async");
+var ConcurrentQueue = /** @class */ (function () {
+    function ConcurrentQueue(concurrency, totalTasks, task) {
+        var _this = this;
+        if (concurrency === void 0) { concurrency = 1; }
+        if (totalTasks === void 0) { totalTasks = 1; }
+        this.finishedTasks = 0;
+        if (concurrency > totalTasks) {
+            throw new Error('ConcurrentQueue error: Concurrency can not be greater than total tasks to perform');
+        }
+        this.totalTasks = totalTasks;
+        this.concurrency = concurrency;
+        if (task) {
+            this.queue = async_1.queue(function (content, cb) { return __awaiter(_this, void 0, void 0, function () {
+                var _this = this;
+                return __generator(this, function (_a) {
+                    task(content).then(function () {
+                        _this.finishedTasks++;
+                        cb();
+                    }).catch(cb);
                     return [2 /*return*/];
-            }
-        });
-    });
-}
-exports.upload = upload;
+                });
+            }); }, concurrency);
+        }
+        else {
+            this.queue = async_1.queue(function () { }, 1);
+        }
+    }
+    ConcurrentQueue.prototype.setQueueTask = function (task) {
+        var _this = this;
+        this.queue = async_1.queue(function (content, cb) { return __awaiter(_this, void 0, void 0, function () {
+            var _this = this;
+            return __generator(this, function (_a) {
+                task(content).then(function () {
+                    _this.finishedTasks++;
+                    cb();
+                }).catch(cb);
+                return [2 /*return*/];
+            });
+        }); }, this.concurrency);
+    };
+    ConcurrentQueue.prototype.push = function (content) {
+        return this.queue.push(content);
+    };
+    ConcurrentQueue.prototype.end = function (cb) {
+        var _this = this;
+        if (cb) {
+            var intervalId_1 = setInterval(function () {
+                if (_this.totalTasks === _this.finishedTasks) {
+                    clearInterval(intervalId_1);
+                    cb();
+                }
+            }, 500);
+        }
+        else {
+            return new Promise(function (r) {
+                var intervalId = setInterval(function () {
+                    if (_this.totalTasks === _this.finishedTasks) {
+                        clearInterval(intervalId);
+                        r();
+                    }
+                }, 500);
+            });
+        }
+    };
+    return ConcurrentQueue;
+}());
+exports.ConcurrentQueue = ConcurrentQueue;

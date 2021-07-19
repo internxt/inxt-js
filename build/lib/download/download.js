@@ -37,16 +37,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.download = void 0;
-var FileObject_1 = require("../../api/FileObject");
 var events_1 = require("../events");
+var FileObject_1 = require("../../api/FileObject");
 var constants_1 = require("../../api/constants");
-function download(config, bucketId, fileId, options, state) {
+function download(config, bucketId, fileId, options, debug, state) {
     return __awaiter(this, void 0, void 0, function () {
         var file;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    file = new FileObject_1.FileObject(config, bucketId, fileId);
+                    file = new FileObject_1.FileObject(config, bucketId, fileId, debug);
                     handleStateChanges(file, state, options);
                     return [4 /*yield*/, file.getInfo()];
                 case 1:

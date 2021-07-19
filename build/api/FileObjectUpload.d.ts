@@ -19,6 +19,7 @@ export declare class FileObjectUpload extends EventEmitter {
     private requests;
     private id;
     private aborted;
+    shardMetas: ShardMeta[];
     private logger;
     bucketId: string;
     frameId: string;
@@ -39,7 +40,7 @@ export declare class FileObjectUpload extends EventEmitter {
     NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean>;
     GenerateHmac(shardMetas: ShardMeta[]): string;
     encrypt(): EncryptStream;
-    private sequentialUpload;
+    private parallelUpload;
     upload(callback: UploadProgressCallback): Promise<ShardMeta[]>;
     uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta>;
     createBucketEntry(shardMetas: ShardMeta[]): Promise<void>;

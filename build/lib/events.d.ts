@@ -3,6 +3,11 @@ export declare enum DOWNLOAD {
     ERROR = "download-error",
     END = "download-end"
 }
+export declare enum Download {
+    Progress = "download-progress",
+    Error = "download-error",
+    End = "download-end"
+}
 export declare enum UPLOAD {
     PROGRESS = "upload-progress",
     ERROR = "upload-error",
@@ -12,6 +17,11 @@ export declare enum DECRYPT {
     PROGRESS = "decrypt-progress",
     ERROR = "decrypt-error",
     END = "decrypt-end"
+}
+export declare enum Decrypt {
+    Progress = "decrypt-progress",
+    Error = "decrypt-error",
+    End = "decrypt-end"
 }
 export declare enum ENCRYPT {
     PROGRESS = "encrypt-progress",

@@ -1,4 +1,4 @@
-export declare const DEFAULT_INXT_MIRRORS = 10;
+export declare const DEFAULT_INXT_MIRRORS = 6;
 export declare const DOWNLOAD_CANCELLED = "DOWNLOAD CANCELLED";
 export declare const UPLOAD_CANCELLED = "UPLOAD CANCELLED";
 export declare const ENCRYPTION_KEY_NOT_PROVIDED = "Encryption key was not provided";

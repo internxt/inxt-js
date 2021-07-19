@@ -3,7 +3,6 @@ import { Readable } from 'stream';
 import * as Winston from 'winston';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
-import { DesktopDownloadFileOptions } from './api/adapters/Desktop';
 export declare type OnlyErrorCallback = (err: Error | null) => void;
 export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 export declare type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
@@ -40,6 +39,9 @@ interface UploadFileParams {
     finishedCallback: UploadFinishCallback;
 }
 interface StoreFileParams extends UploadFileOptions {
+    debug?: DebugCallback;
+}
+interface ResolveFileParams extends DownloadFileOptions {
     debug?: DebugCallback;
 }
 export declare class Environment {
@@ -113,7 +115,7 @@ export declare class Environment {
      * @param filePath File path where the file maybe already is
      * @param options Options for resolve file case
      */
-    resolveFile(bucketId: string, fileId: string, filePath: string, options: DesktopDownloadFileOptions): ActionState;
+    resolveFile(bucketId: string, fileId: string, filepath: string, params: ResolveFileParams): ActionState;
     /**
      * Cancels the download
      * @param state Download file state at the moment

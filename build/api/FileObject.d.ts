@@ -1,8 +1,8 @@
 /// <reference types="node" />
+import * as Winston from 'winston';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import DecryptStream from "../lib/decryptstream";
-import FileMuxer from "../lib/filemuxer";
 import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";
 import { EnvironmentConfig } from "..";
@@ -20,12 +20,11 @@ export declare class FileObject extends EventEmitter {
     totalSizeWithECs: number;
     decipher: DecryptStream;
     private aborted;
-    private downloads;
-    constructor(config: EnvironmentConfig, bucketId: string, fileId: string);
+    private debug;
+    constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger);
     checkIfIsAborted(): void;
     getInfo(): Promise<FileInfo | undefined>;
     getMirrors(): Promise<void>;
-    StartDownloadShard(index: number): FileMuxer;
     TryDownloadShardWithFileMuxer(shard: Shard, excluded?: string[]): Promise<Buffer>;
     download(): Readable;
     abort(): void;
