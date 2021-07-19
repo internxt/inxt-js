@@ -5,7 +5,7 @@ export declare function sha256HashBuffer(): crypto.Hash;
 export declare function sha512(input: Buffer): Buffer;
 export declare function sha512HmacBuffer(key: string): crypto.Hmac;
 export declare function ripemd160(input: Buffer | string): Buffer;
-export declare function GetDeterministicKey(key: string, data: string): string;
+export declare function GetDeterministicKey(key: string, data: string): Buffer;
 export declare function GenerateBucketKey(mnemonic: string, bucketId: string): Promise<string>;
 export declare function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer): Promise<Buffer>;
 export declare function EncryptFilename(mnemonic: string, bucketId: string, filename: string): Promise<string>;
