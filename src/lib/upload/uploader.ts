@@ -56,6 +56,8 @@ export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
 
     const finishCb = () => {
       this.concurrentUploads--;
+      this.emit('upload-progress', chunk.length);
+
       if (this.passthrough.isPaused()) {
         this.passthrough.resume();
       }

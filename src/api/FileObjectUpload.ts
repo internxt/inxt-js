@@ -179,7 +179,7 @@ export class FileObjectUpload extends EventEmitter {
     const uploader = new UploaderQueue(concurrency, nShards, this);
 
     let currentBytesUploaded = 0;
-    uploader.on('upload-progress', (bytesUploaded: number) => {
+    uploader.on('upload-progress', ([bytesUploaded]) => {
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
     });
 
