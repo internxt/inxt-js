@@ -154,9 +154,10 @@ export class FileObjectUpload extends EventEmitter {
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {
+    const shardMetasCopy = [...shardMetas].sort((sA, sB) => sA.index - sB.index);
     const hmac = sha512HmacBuffer(this.fileEncryptionKey);
 
-    for (const shardMeta of shardMetas) {
+    for (const shardMeta of shardMetasCopy) {
       hmac.update(Buffer.from(shardMeta.hash, 'hex'));
     }
 
