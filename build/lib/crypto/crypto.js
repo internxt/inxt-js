@@ -55,7 +55,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetFileDeterministicKey = exports.GenerateFileBucketKey = exports.GenerateFileKey = exports.Aes256gcmEncrypter = exports.Aes256ctrEncrypter = exports.Aes256ctrDecrypter = exports.EncryptMetaBuffer = exports.EncryptMeta = exports.DecryptFileName = exports.EncryptFilename = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
+exports.GetFileDeterministicKey = exports.GenerateFileBucketKey = exports.GenerateFileKey = exports.Aes256gcmEncrypter = exports.Aes256ctrEncrypter = exports.Aes256ctrDecrypter = exports.EncryptMetaBuffer = exports.EncryptMeta = exports.DecryptFileName = exports.EncryptFilename = exports.GenerateBucketKey = exports.GetDeterministicKey = exports.ripemd160 = exports.sha512HmacBufferFromHex = exports.sha512HmacBuffer = exports.sha512 = exports.sha256HashBuffer = exports.sha256 = void 0;
 var crypto = __importStar(require("crypto"));
 var bip39_1 = require("bip39");
 var constants_1 = require("./constants");
@@ -72,9 +72,13 @@ function sha512(input) {
 }
 exports.sha512 = sha512;
 function sha512HmacBuffer(key) {
-    return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
+    return crypto.createHmac('sha512', key);
 }
 exports.sha512HmacBuffer = sha512HmacBuffer;
+function sha512HmacBufferFromHex(key) {
+    return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
+}
+exports.sha512HmacBufferFromHex = sha512HmacBufferFromHex;
 function ripemd160(input) {
     return crypto.createHash('ripemd160').update(input).digest();
 }
@@ -111,12 +115,12 @@ function EncryptFilename(mnemonic, bucketId, filename) {
                 case 1:
                     bucketKey = _a.sent();
                     GenerateEncryptionKey = function () {
-                        var hasher = sha512HmacBuffer(bucketKey);
+                        var hasher = sha512HmacBufferFromHex(bucketKey);
                         hasher.update(Buffer.from(constants_1.BUCKET_META_MAGIC));
                         return hasher.digest().slice(0, 32);
                     };
                     GenerateEncryptionIv = function () {
-                        var hasher = sha512HmacBuffer(bucketKey);
+                        var hasher = sha512HmacBufferFromHex(bucketKey);
                         hasher.update(bucketId).update(filename);
                         return hasher.digest().slice(0, 32);
                     };
@@ -196,6 +200,7 @@ function GenerateFileKey(mnemonic, bucketId, index) {
                 case 0: return [4 /*yield*/, GenerateFileBucketKey(mnemonic, bucketId)];
                 case 1:
                     bucketKey = _a.sent();
+                    console.log('BUCKET KEY', bucketKey.toString('hex'));
                     return [2 /*return*/, GetFileDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
             }
         });
