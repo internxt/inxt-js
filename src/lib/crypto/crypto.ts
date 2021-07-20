@@ -15,32 +15,31 @@ export function sha512(input: Buffer): Buffer {
   return crypto.createHash('sha512').update(input).digest();
 }
 
-export function sha512HmacBuffer(key: Buffer | string): crypto.Hmac {
-  return crypto.createHmac('sha512', key);
+export function sha512HmacBuffer(key: string): crypto.Hmac {
+  return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
 }
 
 export function ripemd160(input: Buffer | string): Buffer {
   return crypto.createHash('ripemd160').update(input).digest();
 }
 
-export function GetDeterministicKey(key: Buffer | string, data: Buffer | string): Buffer {
-  const hash = crypto.createHash('sha512');
-  hash.update(key).update(data);
+export function GetDeterministicKey(key: string, data: string): Buffer {
+  const sha512input = key + data;
 
-  return hash.digest();
+  return crypto.createHash('sha512').update(Buffer.from(sha512input, 'hex')).digest();
 }
 
-export async function GenerateBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
-  const seed = await mnemonicToSeed(mnemonic);
+export async function GenerateBucketKey(mnemonic: string, bucketId: string): Promise<string> {
+  const seed = (await mnemonicToSeed(mnemonic)).toString('hex');
 
-  return GetDeterministicKey(seed, Buffer.from(bucketId, 'hex'));
+  return GetDeterministicKey(seed, bucketId).toString('hex').slice(0, 64);
 }
 
-export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer | string): Promise<Buffer> {
-  const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
+// export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer): Promise<Buffer> {
+//   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
 
-  return GetDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32);
-}
+//   return GetDeterministicKey(bucketKey.slice(0, 32), index.toString('hex')).slice(0, 32);
+// }
 
 export async function EncryptFilename(mnemonic: string, bucketId: string, filename: string): Promise<string> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
@@ -55,11 +54,7 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
   const GenerateEncryptionIv = () => {
     const hasher = sha512HmacBuffer(bucketKey);
 
-    if (bucketId === BUCKET_NAME_MAGIC) {
-      hasher.update(bucketId);
-    }
-
-    hasher.update(filename);
+    hasher.update(bucketId).update(filename);
 
     return hasher.digest().slice(0, 32);
   };
@@ -71,7 +66,7 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
 }
 
 export async function DecryptFileName(mnemonic: string, bucketId: string, encryptedName: string) {
-  const bucketKey = (await GenerateBucketKey(mnemonic, bucketId)).toString('hex');
+  const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
 
   if (!bucketKey) {
     throw Error('Bucket key missing');
@@ -127,4 +122,24 @@ export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipher {
 
 export function Aes256gcmEncrypter(key: Buffer, iv: Buffer): crypto.CipherGCM {
   return crypto.createCipheriv('aes-256-gcm', key, iv);
+}
+
+// ENCRYPTION FOR FILE KEY
+export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer | string): Promise<Buffer> {
+  const bucketKey = await GenerateFileBucketKey(mnemonic, bucketId);
+
+  return GetFileDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32);
+}
+
+export async function GenerateFileBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
+  const seed = await mnemonicToSeed(mnemonic);
+
+  return GetFileDeterministicKey(seed, Buffer.from(bucketId, 'hex'));
+}
+
+export function GetFileDeterministicKey(key: Buffer | string, data: Buffer | string): Buffer {
+  const hash = crypto.createHash('sha512');
+  hash.update(key).update(data);
+
+  return hash.digest();
 }

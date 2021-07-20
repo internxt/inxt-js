@@ -13,6 +13,7 @@ var constants_1 = require("./api/constants");
 var ActionState_1 = require("./api/ActionState");
 var Web_1 = require("./api/adapters/Web");
 var logger_1 = require("./lib/utils/logger");
+var path_1 = require("path");
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -158,9 +159,10 @@ var Environment = /** @class */ (function () {
         if (params.debug) {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filepath)
+        var filename = path_1.basename(filepath);
+        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
-            logger_1.logger.debug('Filename %s encrypted is %s', filepath, name);
+            logger_1.logger.debug('Filename %s encrypted is %s', filename, name);
             var fileMeta = { content: fs_1.createReadStream(filepath), name: name, size: fileStat.size };
             return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
         }).then(function () {
