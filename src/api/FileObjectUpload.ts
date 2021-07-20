@@ -148,7 +148,10 @@ export class FileObjectUpload extends EventEmitter {
 
     return request.start<api.SendShardToNodeResponse>({ data: encryptedShard })
       .then(() => false)
-      .catch((err) => {
+      .catch((err: AxiosError) => {
+        if (err.response && err.response.status < 400) {
+          return true;
+        }
         throw wrap('Farmer request error', err);
       });
   }
