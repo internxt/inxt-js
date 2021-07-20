@@ -15,7 +15,11 @@ export function sha512(input: Buffer): Buffer {
   return crypto.createHash('sha512').update(input).digest();
 }
 
-export function sha512HmacBuffer(key: string): crypto.Hmac {
+export function sha512HmacBuffer(key: Buffer | string): crypto.Hmac {
+  return crypto.createHmac('sha512', key);
+}
+
+export function sha512HmacBufferFromHex(key: string): crypto.Hmac {
   return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
 }
 
@@ -45,14 +49,14 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
 
   const GenerateEncryptionKey = () => {
-    const hasher = sha512HmacBuffer(bucketKey);
+    const hasher = sha512HmacBufferFromHex(bucketKey);
     hasher.update(Buffer.from(BUCKET_META_MAGIC));
 
     return hasher.digest().slice(0, 32);
   };
 
   const GenerateEncryptionIv = () => {
-    const hasher = sha512HmacBuffer(bucketKey);
+    const hasher = sha512HmacBufferFromHex(bucketKey);
 
     hasher.update(bucketId).update(filename);
 
