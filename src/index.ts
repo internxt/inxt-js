@@ -13,6 +13,7 @@ import { ActionState, ActionTypes } from './api/ActionState';
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
 import { logger, Logger } from './lib/utils/logger';
+import { basename } from 'path';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -259,9 +260,11 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
     }
 
-    EncryptFilename(this.config.encryptionKey, bucketId, filepath)
+    const filename = basename(filepath);
+
+    EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
-        logger.debug('Filename %s encrypted is %s', filepath, name);
+        logger.debug('Filename %s encrypted is %s', filename, name);
 
         const fileMeta: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
 
