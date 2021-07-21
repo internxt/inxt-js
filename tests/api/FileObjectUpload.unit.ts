@@ -128,4 +128,38 @@ describe('# FileObjectUpload tests', () => {
       );
     });
   });
+
+  describe('encrypt()', () => {
+    it('Should mark file object as encrypted', () => {
+      fileObject.encrypt();
+
+      expect(fileObject.encrypted).to.be.true;
+    });
+
+    it('Should pipe file content to cipher through funnel', (done) => {
+      const filecontent = 'eeee';
+      const filecontentStream = Readable.from(filecontent);
+      fileObject = new FileObjectUpload({
+        bridgePass: '',
+        bridgeUser: '',
+        bridgeUrl: ''
+      }, {
+        content: filecontentStream,
+        name: '',
+        size: 1
+      }, 'fakeBucketId', logger);
+
+      fileObject.encrypt();
+      fileObject.cipher.on('data', () => {});
+      fileObject.cipher.on('end', () => {
+        done();
+      });
+    });
+  });
+
+  describe('uploadShard()', () => {
+    it('Should call the correct endpoint', () => {
+
+    });
+  });
 });
