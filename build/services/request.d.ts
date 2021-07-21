@@ -9,7 +9,8 @@ import { ContractNegotiated } from '../lib/contracts';
 import { Shard } from '../api/shard';
 declare enum Methods {
     Get = "GET",
-    Post = "POST"
+    Post = "POST",
+    Put = "PUT"
 }
 export declare function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean): Promise<AxiosResponse<JSON>>;
 export declare class INXTRequest {
@@ -22,7 +23,7 @@ export declare class INXTRequest {
     private streaming;
     constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, useProxy?: boolean);
     start<K>(params?: AxiosRequestConfig): Promise<K>;
-    stream<K>(content: Readable | Writable, options?: https.RequestOptions): Promise<K>;
+    stream<K>(content: Readable | Writable, size: number, options?: https.RequestOptions): Promise<AxiosResponse<K>>;
     abort(): void;
     isCancelled(err: Error): boolean;
 }

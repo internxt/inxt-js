@@ -66,10 +66,10 @@ var DownloadQueue = /** @class */ (function (_super) {
         _this.concurrency = parallelDownloads;
         _this.fileObject = fileObject;
         _this.setQueueTask(_this.download().bind(_this));
-        setInterval(function () {
-            console.log('PENDING SHARDS', _this.pendingShards.map(function (s) { return s.shard.index; }));
-        }, 3000);
         return _this;
+        // setInterval(() => {
+        //   console.log('PENDING SHARDS', this.pendingShards.map((s) => s.shard.index));
+        // }, 3000);
     }
     DownloadQueue.prototype.download = function () {
         var _this = this;
@@ -89,7 +89,7 @@ var DownloadQueue = /** @class */ (function (_super) {
         var _this = this;
         var shardsCopy = shards;
         this.on('next-pack', function () {
-            console.log('INCOMING NEXT-PACK', shardsCopy.slice(0, _this.concurrency).map(function (s) { return s.index; }));
+            // console.log('INCOMING NEXT-PACK', shardsCopy.slice(0, this.concurrency).map(s => s.index));
             shardsCopy.splice(0, _this.concurrency).forEach(function (shard) {
                 _this.push({ index: shard.index, shard: shard });
             });
@@ -97,8 +97,8 @@ var DownloadQueue = /** @class */ (function (_super) {
         this.emit('next-pack');
     };
     DownloadQueue.prototype.handleData = function (shardContent, shard) {
+        // console.log('HANDLING DATA FOR SHARD %s', shard.index);
         var _this = this;
-        console.log('HANDLING DATA FOR SHARD %s', shard.index);
         this.pendingShards.push({ content: shardContent, shard: shard });
         // buffering content until pack is full
         if (this.pendingShards.length < this.concurrency) {
@@ -123,7 +123,7 @@ var DownloadQueue = /** @class */ (function (_super) {
                                     pendingShard.content.pipe(_this.passthrough, { end: false })
                                         .once('error', next);
                                     pendingShard.content.once('end', function () {
-                                        console.log('WRITE END FOR SHARD %s, going for next', pendingShard.shard.index);
+                                        // console.log('WRITE END FOR SHARD %s, going for next', pendingShard.shard.index);
                                         next();
                                     });
                                     pendingShard.content = null; // free memory explictly

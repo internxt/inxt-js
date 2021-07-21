@@ -88,7 +88,7 @@ function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
                     exchangeReport.params.exchangeEnd = new Date();
                     exchangeReport.params.farmerId = shard.farmer.nodeID;
                     if (!(finalShardHash === shard.hash)) return [3 /*break*/, 3];
-                    console.log('Hash %s is OK', finalShardHash);
+                    // console.log('Hash %s is OK', finalShardHash);
                     exchangeReport.DownloadOk();
                     // exchangeReport.sendReport()
                     return [2 /*return*/, outputStream];

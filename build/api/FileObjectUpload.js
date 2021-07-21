@@ -203,22 +203,22 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.checkIfIsAborted();
         var request = api.sendShardToNode(this.config, shard);
         this.requests.push(request);
-        // return request.stream<api.SendShardToNodeResponse>(Readable.from(encryptedShard))
-        //   .then(() => false)
-        //   .catch((err) => {
-        //     throw wrap('Farmer request error', err);
-        //   });
         return request.start({ data: encryptedShard })
             .then(function () { return false; })
             .catch(function (err) {
-            console.log('error uploading file to node', err);
-            console.log('Response exists???', err && err.response ? true : false);
             if (err.response && err.response.status < 400) {
-                console.log('err.response.status', err.response.status < 400);
                 return true;
             }
             throw error_1.wrap('Farmer request error', err);
         });
+        // return request.stream<api.SendShardToNodeResponse>(bufferToStream(encryptedShard), shard.size)
+        //   .then(() => false)
+        //   .catch((err) => {
+        //     if (err.response && err.response.status < 400) {
+        //       return true;
+        //     }
+        //     throw wrap('Farmer request error', err);
+        //   });
     };
     FileObjectUpload.prototype.GenerateHmac = function (shardMetas) {
         var shardMetasCopy = __spreadArrays(shardMetas).sort(function (sA, sB) { return sA.index - sB.index; });
@@ -251,12 +251,12 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.cipher.pipe(uploader.getUpstream());
         return new Promise(function (resolve, reject) {
             uploader.once('end', function () {
-                console.log('UPLOADER END');
+                // console.log('UPLOADER END');
                 resolve(_this.shardMetas);
             });
             uploader.once('error', function (_a) {
                 var err = _a[0];
-                console.log('UPLOADER ERROR');
+                // console.log('UPLOADER ERROR');
                 reject(err);
             });
         });
@@ -275,7 +275,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-                        console.log('Shard %s hash %s', index, shardMeta.hash);
+                        // console.log('Shard %s hash %s', index, shardMeta.hash);
                         logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
                         _a.label = 1;
                     case 1:
@@ -358,13 +358,13 @@ exports.FileObjectUpload = FileObjectUpload;
 function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
     var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
     var progressCounter = newCurrentBytes / totalBytes;
-    console.log('NEW PROGRESS', {
-        currentBytesUploaded: currentBytesUploaded,
-        newBytesUploaded: newBytesUploaded,
-        progressCounter: progressCounter,
-        newCurrentBytes: newCurrentBytes,
-        totalBytes: totalBytes
-    });
+    // console.log('NEW PROGRESS', {
+    //   currentBytesUploaded,
+    //   newBytesUploaded,
+    //   progressCounter,
+    //   newCurrentBytes,
+    //   totalBytes
+    // });
     progress(progressCounter, newCurrentBytes, totalBytes);
     return newCurrentBytes;
 }
@@ -375,7 +375,7 @@ function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
         index: fileObject.index.toString('hex'),
         hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
     };
-    console.log('FINAL HMAC', bucketEntry.hmac);
+    // console.log('FINAL HMAC', bucketEntry.hmac);
     if (rs) {
         bucketEntry.erasure = { type: "reedsolomon" };
     }

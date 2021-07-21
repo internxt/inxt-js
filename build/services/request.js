@@ -77,11 +77,13 @@ var http_1 = require("http");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
+var progress_stream_1 = __importDefault(require("progress-stream"));
 var INXT_API_URL = process.env.INXT_API_URL;
 var Methods;
 (function (Methods) {
     Methods["Get"] = "GET";
     Methods["Post"] = "POST";
+    Methods["Put"] = "PUT";
 })(Methods || (Methods = {}));
 // abstract class Client<K> {
 //   abstract request(config: EnvironmentConfig, method: Methods, url: string, params: any, useProxy: boolean): Promise<K>;
@@ -166,9 +168,9 @@ var INXTRequest = /** @class */ (function () {
         this.req = request(this.config, this.method, this.targetUrl, __assign(__assign({}, params), { cancelToken: cancelToken }), this.useProxy).then(function (res) { return res.data; });
         return this.req;
     };
-    INXTRequest.prototype.stream = function (content, options) {
+    INXTRequest.prototype.stream = function (content, size, options) {
         return __awaiter(this, void 0, void 0, function () {
-            var proxy, targetUrl, uriParts, stream_2, stream;
+            var proxy, targetUrl, uriParts, stream_2, progressStream;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -181,7 +183,9 @@ var INXTRequest = /** @class */ (function () {
                     case 2:
                         targetUrl = "" + (proxy && proxy.url ? proxy.url + '/' : '') + this.targetUrl;
                         uriParts = url.parse(targetUrl);
-                        this.req = https.request(__assign(__assign({}, options), { method: this.method, protocol: uriParts.protocol, hostname: uriParts.hostname, port: uriParts.port, path: uriParts.path }));
+                        this.req = https.request(__assign(__assign({}, options), { method: this.method, protocol: uriParts.protocol, hostname: uriParts.hostname, port: uriParts.port, path: uriParts.path, headers: {
+                                'Content-Length': size
+                            } }));
                         if (this.method === Methods.Get && content instanceof stream_1.Writable) {
                             stream_2 = this.req.pipe(content);
                             return [2 /*return*/, new Promise(function (resolve, reject) {
@@ -192,18 +196,19 @@ var INXTRequest = /** @class */ (function () {
                                     });
                                 })];
                         }
-                        stream = content.pipe(this.req);
-                        return [2 /*return*/, new Promise(function (resolve, reject) {
-                                var chunks = '';
-                                stream.on('data', function (chunk) { chunks += chunk; });
-                                stream.on('end', function () {
-                                    proxy === null || proxy === void 0 ? void 0 : proxy.free();
-                                    console.log('END', JSON.parse(chunks));
-                                    resolve(JSON.parse(chunks));
-                                });
-                                stream.on('abort', reject);
-                                stream.on('error', reject);
-                                stream.on('timeout', reject);
+                        progressStream = progress_stream_1.default({
+                            length: size,
+                            time: 100 // ms
+                        });
+                        return [2 /*return*/, axios_1.default.post(targetUrl, content.pipe(progressStream), {
+                                maxContentLength: Infinity,
+                                headers: {
+                                    'Content-Type': 'application/octet-stream',
+                                    'Content-Length': size
+                                }
+                            }).then(function (res) {
+                                proxy === null || proxy === void 0 ? void 0 : proxy.free();
+                                return res;
                             })];
                 }
             });
@@ -248,7 +253,6 @@ function streamRequest(targetUrl, nodeID, useProxy, timeoutSeconds) {
                     reqUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
                 case 2:
-                    console.log('Stream req (using proxy %s) to %s', useProxy, reqUrl);
                     uriParts = url.parse(reqUrl);
                     downloader = null;
                     return [2 /*return*/, new stream_1.Readable({

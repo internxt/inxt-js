@@ -200,7 +200,6 @@ function GenerateFileKey(mnemonic, bucketId, index) {
                 case 0: return [4 /*yield*/, GenerateFileBucketKey(mnemonic, bucketId)];
                 case 1:
                     bucketKey = _a.sent();
-                    console.log('BUCKET KEY', bucketKey.toString('hex'));
                     return [2 /*return*/, GetFileDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32)];
             }
         });
