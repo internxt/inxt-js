@@ -18,6 +18,7 @@ import { UPLOAD_CANCELLED } from './constants';
 import { UploaderQueue } from '../lib/upload/uploader';
 import { logger } from '../lib/utils/logger';
 import { determineConcurrency, determineShardSize } from '../lib/utils';
+import { AxiosError } from 'axios';
 
 export interface FileMeta {
   size: number;
@@ -88,13 +89,14 @@ export class FileObjectUpload extends EventEmitter {
   async checkBucketExistence(): Promise<boolean> {
     this.checkIfIsAborted();
 
-    // if bucket not exists, bridge returns an error
-    return api.getBucketById(this.config, this.bucketId).then((res) => {
+    const req = api.getBucketById(this.config, this.bucketId);
+    this.requests.push(req);
+
+    return req.start().then(() => {
       logger.info('Bucket %s exists', this.bucketId);
 
-      return res ? true : false;
-    })
-    .catch((err) => {
+      return true;
+    }).catch((err) => {
       throw wrap('Bucket existence check error', err);
     });
   }
@@ -102,7 +104,10 @@ export class FileObjectUpload extends EventEmitter {
   stage(): Promise<void> {
     this.checkIfIsAborted();
 
-    return api.createFrame(this.config).then((frame) => {
+    const req = api.createFrame(this.config);
+    this.requests.push(req);
+
+    return req.start<api.FrameStaging>().then((frame) => {
       if (!frame || !frame.id) {
         throw new Error('Frame response is empty');
       }
@@ -187,14 +192,20 @@ export class FileObjectUpload extends EventEmitter {
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
     });
 
+    this.on(UPLOAD_CANCELLED, () => {
+      uploader.emit('error', Error('Upload aborted'));
+    });
+
     this.cipher.pipe(uploader.getUpstream());
 
     return new Promise((resolve, reject) => {
-      uploader.on('end', () => {
+      uploader.once('end', () => {
         resolve(this.shardMetas);
       });
 
-      uploader.on('error', reject);
+      uploader.once('error', ([err]) => {
+        reject(err);
+      });
     });
   }
 
