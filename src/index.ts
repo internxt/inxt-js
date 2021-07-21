@@ -272,7 +272,7 @@ export class Environment {
       }).then(() => {
         this.logger.info('Upload Success!');
       }).catch((err: Error) => {
-        if (err.message.includes('Upload aborted')) {
+        if (err && err.message && err.message.includes('Upload aborted')) {
           return params.finishedCallback(new Error('Process killed by user'), null);
         }
         params.finishedCallback(err, null);
