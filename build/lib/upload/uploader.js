@@ -84,6 +84,10 @@ var UploaderQueue = /** @class */ (function (_super) {
         this.eventEmitter.on(event, listener);
         return this;
     };
+    UploaderQueue.prototype.once = function (event, listener) {
+        this.eventEmitter.once(event, listener);
+        return this;
+    };
     UploaderQueue.prototype.end = function (cb) {
         var _this = this;
         _super.prototype.end.call(this, function () {

@@ -168,7 +168,8 @@ var Environment = /** @class */ (function () {
         }).then(function () {
             _this.logger.info('Upload Success!');
         }).catch(function (err) {
-            if (err.message.includes('Upload aborted')) {
+            console.log('ERROR RECEIVED', err.message);
+            if (err && err.message && err.message.includes('Upload aborted')) {
                 return params.finishedCallback(new Error('Process killed by user'), null);
             }
             params.finishedCallback(err, null);

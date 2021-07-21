@@ -21,5 +21,6 @@ export declare class UploaderQueue extends ConcurrentQueue<UploadRequest> {
     getListenerCount(event: string): number;
     getListeners(event: string): Function[];
     on(event: string, listener: (...args: any[]) => void): UploaderQueue;
+    once(event: string, listener: (...args: any[]) => void): UploaderQueue;
     end(cb?: () => void): void;
 }

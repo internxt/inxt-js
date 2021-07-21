@@ -142,15 +142,11 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         this.checkIfIsAborted();
-                        this.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab', 'hex');
-                        console.log('* INDEX', this.index.toString('hex'));
-                        console.log('MNEMONIC USED', this.config.encryptionKey);
-                        console.log('BUCKET ID', this.bucketId);
+                        this.index = crypto_1.randomBytes(32);
                         _a = this;
                         return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index)];
                     case 1:
                         _a.fileEncryptionKey = _b.sent();
-                        console.log('FILE KEY', this.fileEncryptionKey.toString('hex'));
                         this.cipher = new encryptStream_1.default(this.fileEncryptionKey, this.index.slice(0, 16));
                         return [2 /*return*/, this];
                 }
@@ -246,12 +242,18 @@ var FileObjectUpload = /** @class */ (function (_super) {
             var bytesUploaded = _a[0];
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
         });
+        this.on(constants_1.UPLOAD_CANCELLED, function () {
+            uploader.emit('error', Error('Upload aborted'));
+        });
         this.cipher.pipe(uploader.getUpstream());
         return new Promise(function (resolve, reject) {
-            uploader.on('end', function () {
+            uploader.once('end', function () {
                 resolve(_this.shardMetas);
             });
-            uploader.on('error', reject);
+            uploader.once('error', function (_a) {
+                var err = _a[0];
+                reject(err);
+            });
         });
     };
     FileObjectUpload.prototype.upload = function (callback) {
