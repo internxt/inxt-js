@@ -84,6 +84,12 @@ export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
     return this;
   }
 
+  once(event: string, listener: (...args: any[]) => void): UploaderQueue {
+    this.eventEmitter.once(event, listener);
+
+    return this;
+  }
+
   end(cb?: () => void) {
     super.end(() => {
       if (cb) {
