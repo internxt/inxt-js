@@ -211,7 +211,10 @@ var FileObjectUpload = /** @class */ (function (_super) {
         return request.start({ data: encryptedShard })
             .then(function () { return false; })
             .catch(function (err) {
+            console.log('error uploading file to node', err);
+            console.log('Response exists???', err && err.response ? true : false);
             if (err.response && err.response.status < 400) {
+                console.log('err.response.status', err.response.status < 400);
                 return true;
             }
             throw error_1.wrap('Farmer request error', err);
@@ -248,10 +251,12 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.cipher.pipe(uploader.getUpstream());
         return new Promise(function (resolve, reject) {
             uploader.once('end', function () {
+                console.log('UPLOADER END');
                 resolve(_this.shardMetas);
             });
             uploader.once('error', function (_a) {
                 var err = _a[0];
+                console.log('UPLOADER ERROR');
                 reject(err);
             });
         });
@@ -353,6 +358,13 @@ exports.FileObjectUpload = FileObjectUpload;
 function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
     var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
     var progressCounter = newCurrentBytes / totalBytes;
+    console.log('NEW PROGRESS', {
+        currentBytesUploaded: currentBytesUploaded,
+        newBytesUploaded: newBytesUploaded,
+        progressCounter: progressCounter,
+        newCurrentBytes: newCurrentBytes,
+        totalBytes: totalBytes
+    });
     progress(progressCounter, newCurrentBytes, totalBytes);
     return newCurrentBytes;
 }
