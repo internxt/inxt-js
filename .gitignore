@@ -11,3 +11,8 @@ lab/files
 
 # VSC
 .vscode/
+
+*.mp4
+*.txt
+*.zip
+*.dat
