@@ -9,7 +9,7 @@ import { logger } from '../../src/lib/utils/logger';
 import EncryptStream from '../../src/lib/encryptStream';
 import { createCipheriv, randomBytes } from 'crypto';
 import { ripemd160, sha256 } from '../../src/lib/crypto';
-import { getContractNegotiated, spawn as startFarmer } from '../mocks';
+import { getContractNegotiated, spawnFarmer as startFarmer } from '../mocks';
 import { getSilentLogger } from '../mocks';
 import { Bridge, Methods } from '../../src/services/api';
 import { INXTRequest } from '../../src/services/request';

@@ -114,7 +114,7 @@ type CloseServerFunction = () => Promise<unknown>;
 const startApp = () => new Promise(r => startServer(() => r(null)));
 const closeApp = () => new Promise(r => closeServer(() => r(null)));
 
-export async function spawn(): Promise<CloseServerFunction> {
+export async function spawnFarmer(): Promise<CloseServerFunction> {
   await startApp();
 
   return closeApp;
