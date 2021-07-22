@@ -1,16 +1,27 @@
-import { expect } from 'chai';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+
+import { createSandbox } from 'sinon';
 import { Readable } from 'stream';
 
 import { FileObjectUpload } from '../../src/api/FileObjectUpload';
-import { EnvironmentConfig } from '../../src';
 import { logger } from '../../src/lib/utils/logger';
 import EncryptStream from '../../src/lib/encryptStream';
+import { createCipheriv, randomBytes } from 'crypto';
+import { ripemd160, sha256 } from '../../src/lib/crypto';
+import { getContractNegotiated, spawn as startFarmer } from '../mocks';
+import { getSilentLogger } from '../mocks';
+import { Bridge, Methods } from '../../src/services/api';
+import { INXTRequest } from '../../src/services/request';
+
+const { expect } = chai;
+chai.use(chaiAsPromised);
 
 function initializeFileObject() {
   return new FileObjectUpload({
     bridgePass: '',
     bridgeUser: '',
-    bridgeUrl: ''
+    bridgeUrl: 'https://api.internxt.com'
   }, {
     content: Readable.from(''),
     name: '',
@@ -25,6 +36,8 @@ beforeEach(() => {
 });
 
 describe('# FileObjectUpload tests', () => {
+  const sandbox = createSandbox();
+
   describe('GenerateHmac()', () => {
     it('Should generate the hmac from shard hashes when shard hashes are ordered', () => {
       const shardsHashes = [
@@ -121,11 +134,42 @@ describe('# FileObjectUpload tests', () => {
 
   describe('upload()', () => {
     it('Should throw if encrypt() is not called before', () => {
-      fileObject = initializeFileObject();
-
       expect(() => { fileObject.upload(() => {}); }).to.throw(
         'Tried to upload a file not encrypted. Use .encrypt() before upload()'
       );
+    });
+
+    it('Should send shards without errors', (done) => {
+      const randomContentBuf = randomBytes(1 * 1024 * 1024);
+      const randomContent = Readable.from(randomContentBuf); // 1Mb
+
+      const config = { bridgePass: '', bridgeUser: '', bridgeUrl: 'https://api.internxt.com' };
+      const fileMeta = { content: randomContent, name: '', size: 1 };
+      const bridge = new Bridge(config);
+
+      new FileObjectUpload(config, fileMeta, 'fakeBucketId', getSilentLogger(), bridge).init().then((fileObject) => {
+        const cipher = createCipheriv('aes-256-ctr', fileObject.fileEncryptionKey, fileObject.index.slice(0, 16));
+        cipher.write(randomContentBuf);
+        const encryptedContent = cipher.read();
+        const expectedHash = ripemd160(sha256(encryptedContent)).toString('hex');
+
+        sandbox.stub(bridge, 'sendShardToNode').returns(new INXTRequest(config, Methods.Post, 'http://localhost:54321/shards/' + expectedHash, false));
+        sandbox.stub(fileObject, 'negotiateContract').returns(new Promise((r) => r(getContractNegotiated())));
+
+        fileObject.encrypt();
+
+        let stopFarmer;
+
+        startFarmer().then((stop) => {
+          stopFarmer = stop;
+
+          return fileObject.upload(() => null);
+        }).then(() => {
+          stopFarmer();
+        }).finally(() => { 
+          done();
+        });
+      });      
     });
   });
 
@@ -142,7 +186,7 @@ describe('# FileObjectUpload tests', () => {
       fileObject = new FileObjectUpload({
         bridgePass: '',
         bridgeUser: '',
-        bridgeUrl: ''
+        bridgeUrl: 'https://api.internxt.com'
       }, {
         content: filecontentStream,
         name: '',
