@@ -58,28 +58,30 @@ export class INXTRequest {
   private req: Promise<any> | ClientRequest | undefined;
   private cancel: CancelFunction;
 
-  private method: Methods;
+  method: Methods;
   private config: EnvironmentConfig;
-  private targetUrl: string;
+  targetUrl: string;
   private useProxy: boolean;
+  params: AxiosRequestConfig;
 
   private streaming = false;
 
-  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, useProxy?: boolean) {
+  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean) {
     this.method = method;
     this.config = config;
     this.targetUrl = targetUrl;
     this.useProxy = useProxy ?? false;
+    this.params = params;
 
     this.cancel = () => null;
   }
 
-  start<K>(params: AxiosRequestConfig): Promise<K> {
+  start<K>(): Promise<K> {
     // TODO: Abstract from axios
     const source = axios.CancelToken.source();
     const cancelToken = source.token;
 
-    this.req = request(this.config, this.method, this.targetUrl, { ...params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
+    this.req = request(this.config, this.method, this.targetUrl, { ...this.params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
 
     return this.req;
   }
@@ -149,7 +151,7 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
   });
 }
 
-interface GetBucketByIdResponse {
+export interface GetBucketByIdResponse {
   user: string;
   encryptionKey: string;
   publicPermissions: string[];
@@ -170,7 +172,7 @@ interface GetBucketByIdResponse {
  * @param jwt JSON Web Token
  * @param params
  */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): Promise<GetBucketByIdResponse | void> {
+export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): INXTRequest {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
   const targetUrl = `${URL}/buckets/${bucketId}`;
   const defParams: AxiosRequestConfig = {
@@ -180,9 +182,8 @@ export function getBucketById(config: EnvironmentConfig, bucketId: string, param
   };
 
   const finalParams = { ...defParams, ...params };
-
-  return request(config, 'get', targetUrl, finalParams, false)
-    .then<GetBucketByIdResponse>((res: AxiosResponse) => res.data);
+ 
+  return new INXTRequest(config, Methods.Get, targetUrl, finalParams, false);
 }
 
 interface GetFileByIdResponse {
@@ -232,7 +233,7 @@ export interface FrameStaging {
  * @param config App config
  * @param params
  */
-export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): Promise <FrameStaging> {
+export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): INXTRequest {
   const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
   const targetUrl = `${URL}/frames`;
   const defParams: AxiosRequestConfig = {
@@ -243,8 +244,7 @@ export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConf
 
   const finalParams = { ...defParams, ...params };
 
-  return request(config, 'post', targetUrl, finalParams, false)
-    .then<FrameStaging>((res: AxiosResponse) => res.data);
+  return new INXTRequest(config, Methods.Post, targetUrl, finalParams, false);
 }
 
 export interface CreateEntryFromFrameBody {
@@ -373,5 +373,5 @@ export interface SendShardToNodeResponse {
 export function sendShardToNode(config: EnvironmentConfig, shard: Shard): INXTRequest {
   const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
-  return new INXTRequest(config, Methods.Post, targetUrl, true);
+  return new INXTRequest(config, Methods.Post, targetUrl, {}, true);
 }

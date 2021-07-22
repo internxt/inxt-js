@@ -19,6 +19,7 @@ import { UploaderQueue } from '../lib/upload/uploader';
 import { logger } from '../lib/utils/logger';
 import { determineConcurrency, determineShardSize } from '../lib/utils';
 import { AxiosError } from 'axios';
+import { Bridge, InxtApiI } from '../services/api';
 
 export interface FileMeta {
   size: number;
@@ -32,6 +33,7 @@ export class FileObjectUpload extends EventEmitter {
   private requests: api.INXTRequest[] = [];
   private id = '';
   private aborted = false;
+  private api: InxtApiI;
   shardMetas: ShardMeta[] = [];
   private logger: Winston.Logger;
 
@@ -44,7 +46,7 @@ export class FileObjectUpload extends EventEmitter {
   funnel: FunnelStream;
   fileEncryptionKey: Buffer;
 
-  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger) {
+  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger, api?: InxtApiI) {
     super();
 
     this.config = config;
@@ -55,6 +57,7 @@ export class FileObjectUpload extends EventEmitter {
     this.funnel = new FunnelStream(determineShardSize(fileMeta.size));
     this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
     this.fileEncryptionKey = randomBytes(32);
+    this.api = api ?? new Bridge(this.config);
 
     this.logger = logger;
 
@@ -89,7 +92,7 @@ export class FileObjectUpload extends EventEmitter {
   async checkBucketExistence(): Promise<boolean> {
     this.checkIfIsAborted();
 
-    const req = api.getBucketById(this.config, this.bucketId);
+    const req = this.api.getBucketById(this.bucketId);
     this.requests.push(req);
 
     return req.start().then(() => {
@@ -104,7 +107,7 @@ export class FileObjectUpload extends EventEmitter {
   stage(): Promise<void> {
     this.checkIfIsAborted();
 
-    const req = api.createFrame(this.config);
+    const req = this.api.createFrame();
     this.requests.push(req);
 
     return req.start<api.FrameStaging>().then((frame) => {
@@ -123,7 +126,10 @@ export class FileObjectUpload extends EventEmitter {
   SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
     this.checkIfIsAborted();
 
-    return api.createEntryFromFrame(this.config, this.bucketId, bucketEntry)
+    const req = this.api.createEntryFromFrame(this.bucketId, bucketEntry);
+    this.requests.push(req);
+
+    return req.start<api.CreateEntryFromFrameResponse>()
       .catch((err) => {
         throw wrap('Saving file in network error', err);
       });
@@ -132,7 +138,10 @@ export class FileObjectUpload extends EventEmitter {
   negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
     this.checkIfIsAborted();
 
-    return api.addShardToFrame(this.config, frameId, shardMeta)
+    const req = this.api.addShardToFrame(frameId, shardMeta);
+    this.requests.push(req);
+
+    return req.start<ContractNegotiated>()
       .catch((err) => {
         throw wrap('Contract negotiation error', err);
       });
@@ -141,17 +150,10 @@ export class FileObjectUpload extends EventEmitter {
   NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
     this.checkIfIsAborted();
 
-    const request = api.sendShardToNode(this.config, shard);
+    const req = this.api.sendShardToNode(shard, encryptedShard);
+    this.requests.push(req);
 
-    this.requests.push(request);
-
-    // return request.stream<api.SendShardToNodeResponse>(Readable.from(encryptedShard))
-    //   .then(() => false)
-    //   .catch((err) => {
-    //     throw wrap('Farmer request error', err);
-    //   });
-
-    return request.start<api.SendShardToNodeResponse>({ data: encryptedShard })
+    return req.start<api.SendShardToNodeResponse>()
       .then(() => false)
       .catch((err: AxiosError) => {
         if (err.response && err.response.status < 400) {
@@ -159,6 +161,15 @@ export class FileObjectUpload extends EventEmitter {
         }
         throw wrap('Farmer request error', err);
       });
+
+    // return request.stream<api.SendShardToNodeResponse>(bufferToStream(encryptedShard), shard.size)
+    //   .then(() => false)
+    //   .catch((err) => {
+    //     if (err.response && err.response.status < 400) {
+    //       return true;
+    //     }
+    //     throw wrap('Farmer request error', err);
+    //   });
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {

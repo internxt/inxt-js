@@ -2,9 +2,8 @@ import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { EnvironmentConfig } from "..";
 import { ExchangeReport } from "../api/reports";
 import { Shard } from "../api/shard";
-import { ContractNegotiated } from "../lib/contracts";
 import { ShardMeta } from "../lib/shardMeta";
-import { INXTRequest, request } from "./request";
+import { INXTRequest } from "./request";
 
 export enum Methods {
   Get = 'GET',
@@ -106,11 +105,11 @@ export interface InxtApiI {
   createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest;
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-  sendShardToNode(shard: Shard): INXTRequest;
+  sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
-  return new INXTRequest(config, Methods.Get, '', false);
+  return new INXTRequest(config, Methods.Get, '', {}, false);
 }
 
 class InxtApi implements InxtApiI {
@@ -146,7 +145,7 @@ class InxtApi implements InxtApiI {
     return exchangeReport.sendReport();
   }
 
-  sendShardToNode(shard: Shard): INXTRequest {
+  sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 }
@@ -177,7 +176,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Get, targetUrl, false);
+    return new INXTRequest(this.config, Methods.Get, targetUrl, finalParams, false);
   }
 
   getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest {
@@ -190,7 +189,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Get, targetUrl, false);
+    return new INXTRequest(this.config, Methods.Get, targetUrl, finalParams, false);
   }
 
   createFrame(params?: AxiosRequestConfig): INXTRequest {
@@ -203,7 +202,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Post, targetUrl, false);
+    return new INXTRequest(this.config, Methods.Post, targetUrl, finalParams, false);
   }
 
   createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest {
@@ -217,7 +216,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Post, targetUrl, false);
+    return new INXTRequest(this.config, Methods.Post, targetUrl, finalParams, false);
   }
 
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest {
@@ -231,16 +230,16 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Put, targetUrl, false);
+    return new INXTRequest(this.config, Methods.Put, targetUrl, finalParams, false);
   }
 
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
     return exchangeReport.sendReport();
   }
 
-  sendShardToNode(shard: Shard): INXTRequest {
+  sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
     const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
-    return new INXTRequest(this.config, Methods.Post, targetUrl, true);
+    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
   }
 }
