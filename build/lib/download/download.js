@@ -61,18 +61,6 @@ function download(config, bucketId, fileId, options, debug, state) {
     });
 }
 exports.download = download;
-// TODO: use propagate lib
-function attachFileObjectListeners(f, notified) {
-    // propagate events to notified
-    f.on(events_1.FILEMUXER.PROGRESS, function (msg) { return notified.emit(events_1.FILEMUXER.PROGRESS, msg); });
-    // TODO: Handle filemuxer errors
-    f.on(events_1.FILEMUXER.ERROR, function (err) { return notified.emit(events_1.FILEMUXER.ERROR, err); });
-    // TODO: Handle fileObject errors
-    f.on('error', function (err) { return notified.emit(events_1.FILEOBJECT.ERROR, err); });
-    // f.on('end', () => notified.emit(FILEOBJECT.END))
-    // f.decipher.on('end', () => notified.emit(DECRYPT.END))
-    f.decipher.once('error', function (err) { return notified.emit(events_1.DECRYPT.ERROR, err); });
-}
 function handleProgress(fl, options) {
     var _a;
     var totalBytesDownloaded = 0;
