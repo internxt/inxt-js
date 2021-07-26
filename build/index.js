@@ -14,6 +14,7 @@ var ActionState_1 = require("./api/ActionState");
 var Web_1 = require("./api/adapters/Web");
 var logger_1 = require("./lib/utils/logger");
 var path_1 = require("path");
+var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -94,7 +95,14 @@ var Environment = /** @class */ (function () {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
-        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), this.logger, downloadState);
+        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), this.logger, downloadState)
+            .then(function (downloadStream) {
+            return stream_to_blob_1.default(downloadStream, 'application/octet-stream');
+        }).then(function (blob) {
+            options.finishedCallback(null, blob);
+        }).catch(function (err) {
+            options.finishedCallback(err, null);
+        });
         return downloadState;
     };
     /**
