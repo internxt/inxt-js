@@ -1,28 +1,13 @@
 import * as url from 'url';
 import * as https from 'https';
-import { PassThrough, Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { EnvironmentConfig } from '..';
 import { sha256 } from '../lib/crypto';
-import { ExchangeReport } from '../api/reports';
-
-import { ShardMeta } from '../lib/shardMeta';
-import { ContractNegotiated } from '../lib/contracts';
-import * as dotenv from 'dotenv';
-import { Shard } from '../api/shard';
 import { getProxy, ProxyManager } from './proxy';
-import { logger } from '../lib/utils/logger';
-dotenv.config({ path: '/home/inxt/inxt-js/.env' });
 
-const INXT_API_URL = process.env.INXT_API_URL;
-const PROXY = 'https://api.internxt.com:8081';
-
-enum Methods {
-  Get = 'GET',
-  Post = 'POST'
-}
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
   let proxy: ProxyManager;
@@ -51,50 +36,6 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
   });
 }
 
-// TODO: Should be of a concrete type?
-type CancelFunction = Function;
-
-export class INXTRequest {
-  private req: Promise<any> | ClientRequest | undefined;
-  private cancel: CancelFunction;
-
-  method: Methods;
-  private config: EnvironmentConfig;
-  targetUrl: string;
-  private useProxy: boolean;
-  params: AxiosRequestConfig;
-
-  private streaming = false;
-
-  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean) {
-    this.method = method;
-    this.config = config;
-    this.targetUrl = targetUrl;
-    this.useProxy = useProxy ?? false;
-    this.params = params;
-
-    this.cancel = () => null;
-  }
-
-  start<K>(): Promise<K> {
-    // TODO: Abstract from axios
-    const source = axios.CancelToken.source();
-    const cancelToken = source.token;
-
-    this.req = request(this.config, this.method, this.targetUrl, { ...this.params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
-
-    return this.req;
-  }
-
-  abort() {
-    this.cancel();
-  }
-
-  isCancelled(err: Error): boolean {
-    return axios.isCancel(err);
-  }
-}
-
 export async function streamRequest(targetUrl: string, nodeID: string, useProxy = true, timeoutSeconds?: number): Promise<Readable> {
   let proxy: ProxyManager;
   let reqUrl = targetUrl;
@@ -103,8 +44,6 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
     proxy = await getProxy();
     reqUrl = `${proxy.url}/${targetUrl}`;
   }
-
-  logger.info('Stream req (using proxy %s) to %s', useProxy, reqUrl);
 
   const uriParts = url.parse(reqUrl);
   let downloader: ClientRequest | null = null;
@@ -149,229 +88,4 @@ export async function streamRequest(targetUrl: string, nodeID: string, useProxy 
       }
     }
   });
-}
-
-export interface GetBucketByIdResponse {
-  user: string;
-  encryptionKey: string;
-  publicPermissions: string[];
-  created: string;
-  name: string;
-  pubkeys: string[];
-  status: 'Active' | 'Inactive';
-  transfer: number;
-  storage: number;
-  id: string;
-}
-
-/**
- * Checks if a bucket exists given its id
- * @param config App config
- * @param bucketId
- * @param token
- * @param jwt JSON Web Token
- * @param params
- */
-export function getBucketById(config: EnvironmentConfig, bucketId: string, params?: AxiosRequestConfig): INXTRequest {
-  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${URL}/buckets/${bucketId}`;
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    }
-  };
-
-  const finalParams = { ...defParams, ...params };
- 
-  return new INXTRequest(config, Methods.Get, targetUrl, finalParams, false);
-}
-
-interface GetFileByIdResponse {
-  /* file-id */
-  id: string;
-}
-
-/**
- * Checks if a file exists given its id and a bucketId
- * @param config App config
- * @param bucketId
- * @param fileId
- * @param jwt JSON Web Token
- * @param params
- */
-export function getFileById(config: EnvironmentConfig, bucketId: string, fileId: string, params?: AxiosRequestConfig): Promise<GetFileByIdResponse | void> {
-  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${URL}/buckets/${bucketId}/file-ids/${fileId}`;
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    }
-  };
-
-  const finalParams = { ...defParams, ...params };
-
-  return request(config, 'get', targetUrl, finalParams, false)
-    .then<GetFileByIdResponse>((res: AxiosResponse) => res.data);
-}
-
-export interface FrameStaging {
-  /* frame id */
-  id: string;
-  /* user email */
-  user: string;
-  shards: [];
-  storageSize: number;
-  /* frame size */
-  size: number;
-  locked: boolean;
-  /* created timestamp stringified */
-  created: string;
-}
-
-/**
- * Creates a file staging frame
- * @param config App config
- * @param params
- */
-export function createFrame(config: EnvironmentConfig, params?: AxiosRequestConfig): INXTRequest {
-  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${URL}/frames`;
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    }
-  };
-
-  const finalParams = { ...defParams, ...params };
-
-  return new INXTRequest(config, Methods.Post, targetUrl, finalParams, false);
-}
-
-export interface CreateEntryFromFrameBody {
-  frame: string;
-  filename: string;
-  index: string;
-  hmac: {
-    type: string,
-    value: string
-  };
-  erasure?: {
-    type: string
-  };
-}
-
-export interface CreateEntryFromFrameResponse {
-  /* bucket entry id */
-  id: string;
-  index: string;
-  /* frame id */
-  frame: string;
-  /* bucket id */
-  bucket: string;
-  mimetype: string;
-  name: string;
-  renewal: string;
-  created: string;
-  hmac: {
-    value: string,
-    type: string
-  };
-  erasure: {
-    type: string
-  };
-  size: number;
-}
-
-/**
- * Creates a bucket entry from the given frame object
- * @param {EnvironmentConfig} config App config
- * @param {string} bucketId
- * @param {CreateEntryFromFrameBody} body
- * @param {string} jwt JSON Web Token
- * @param {AxiosRequestConfig} params
- */
-export function createEntryFromFrame(config: EnvironmentConfig, bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): Promise <CreateEntryFromFrameResponse | void> {
-  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${URL}/buckets/${bucketId}/files`;
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    },
-    data: body
-  };
-
-  const finalParams = { ...defParams, ...params };
-
-  return request(config, 'post', targetUrl, finalParams, false)
-    .then<CreateEntryFromFrameResponse>((res: AxiosResponse) => res.data)
-    .catch((err) => {
-      if (err.response && err.response.data.error.includes('duplicate key') && parseInt(err.response.status, 10) === 500) {
-        throw new Error('File already exists');
-      }
-    });
-}
-
-interface AddShardToFrameBody {
-  /* shard hash */
-  hash: string;
-  /* shard size */
-  size: number;
-  /* shard index */
-  index: number;
-  /* if exists a shard parity for this shard */
-  parity: boolean;
-  /* shard challenges */
-  challenges: string[];
-  tree: string[];
-  /* nodes excluded from being the shard's node */
-  exclude: string[];
-}
-
-/**
- * Negotiates a storage contract and adds the shard to the frame
- * @param {EnvironmentConfig} config App config
- * @param {string} frameId
- * @param {AddShardToFrameBody} body
- * @param {string} jwt JSON Web Token
- * @param {AxiosRequestConfig} params
- */
-export function addShardToFrame(config: EnvironmentConfig, frameId: string, body: ShardMeta, params?: AxiosRequestConfig): Promise <ContractNegotiated | void> {
-  const URL = config.bridgeUrl ? config.bridgeUrl : INXT_API_URL;
-  const targetUrl = `${URL}/frames/${frameId}`;
-  const defParams: AxiosRequestConfig = {
-    headers: {
-      'Content-Type': 'application/octet-stream',
-    },
-    data: { ...body, challenges: body.challenges_as_str }
-  };
-
-  const finalParams = { ...defParams, ...params };
-
-  return request(config, 'put', targetUrl, finalParams, false)
-    .then<ContractNegotiated>((res: AxiosResponse) => res.data);
-}
-
-/**
- * Sends an upload exchange report
- * @param config App config
- * @param body
- */
-export function sendUploadExchangeReport(config: EnvironmentConfig, exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
-  return exchangeReport.sendReport();
-}
-
-export interface SendShardToNodeResponse {
-  result: string;
-}
-
-/**
- * Stores a shard in a node
- * @param config App config
- * @param shard Interface that has the contact info
- * @param content Buffer with shard content
- */
-export function sendShardToNode(config: EnvironmentConfig, shard: Shard): INXTRequest {
-  const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
-
-  return new INXTRequest(config, Methods.Post, targetUrl, {}, true);
 }
