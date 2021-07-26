@@ -2,8 +2,8 @@ import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { EnvironmentConfig } from "..";
 import { ExchangeReport } from "../api/reports";
 import { Shard } from "../api/shard";
+import { INXTRequest } from "../lib";
 import { ShardMeta } from "../lib/shardMeta";
-import { INXTRequest } from "./request";
 
 export enum Methods {
   Get = 'GET',
