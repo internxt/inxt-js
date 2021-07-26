@@ -3,7 +3,6 @@ import { randomBytes } from 'crypto';
 import * as Winston from 'winston';
 
 import { EnvironmentConfig, UploadProgressCallback } from '..';
-import * as api from '../services/request';
 
 import EncryptStream from '../lib/encryptStream';
 import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
@@ -18,8 +17,8 @@ import { UPLOAD_CANCELLED } from './constants';
 import { UploaderQueue } from '../lib/upload/uploader';
 import { logger } from '../lib/utils/logger';
 import { determineConcurrency, determineShardSize } from '../lib/utils';
-import { AxiosError } from 'axios';
-import { Bridge, InxtApiI } from '../services/api';
+import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI, SendShardToNodeResponse } from '../services/api';
+import { INXTRequest } from '../lib';
 
 export interface FileMeta {
   size: number;
@@ -30,7 +29,7 @@ export interface FileMeta {
 export class FileObjectUpload extends EventEmitter {
   private config: EnvironmentConfig;
   private fileMeta: FileMeta;
-  private requests: api.INXTRequest[] = [];
+  private requests: INXTRequest[] = [];
   private id = '';
   private aborted = false;
   private api: InxtApiI;
@@ -110,7 +109,7 @@ export class FileObjectUpload extends EventEmitter {
     const req = this.api.createFrame();
     this.requests.push(req);
 
-    return req.start<api.FrameStaging>().then((frame) => {
+    return req.start<FrameStaging>().then((frame) => {
       if (!frame || !frame.id) {
         throw new Error('Frame response is empty');
       }
@@ -123,13 +122,13 @@ export class FileObjectUpload extends EventEmitter {
     });
   }
 
-  SaveFileInNetwork(bucketEntry: api.CreateEntryFromFrameBody): Promise<void | api.CreateEntryFromFrameResponse> {
+  SaveFileInNetwork(bucketEntry: CreateEntryFromFrameBody): Promise<void | CreateEntryFromFrameResponse> {
     this.checkIfIsAborted();
 
     const req = this.api.createEntryFromFrame(this.bucketId, bucketEntry);
     this.requests.push(req);
 
-    return req.start<api.CreateEntryFromFrameResponse>()
+    return req.start<CreateEntryFromFrameResponse>()
       .catch((err) => {
         throw wrap('Saving file in network error', err);
       });
@@ -153,23 +152,14 @@ export class FileObjectUpload extends EventEmitter {
     const req = this.api.sendShardToNode(shard, encryptedShard);
     this.requests.push(req);
 
-    return req.start<api.SendShardToNodeResponse>()
+    return req.start<SendShardToNodeResponse>()
       .then(() => false)
-      .catch((err: AxiosError) => {
+      .catch((err) => {
         if (err.response && err.response.status < 400) {
           return true;
         }
         throw wrap('Farmer request error', err);
       });
-
-    // return request.stream<api.SendShardToNodeResponse>(bufferToStream(encryptedShard), shard.size)
-    //   .then(() => false)
-    //   .catch((err) => {
-    //     if (err.response && err.response.status < 400) {
-    //       return true;
-    //     }
-    //     throw wrap('Farmer request error', err);
-    //   });
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {
@@ -327,13 +317,15 @@ function updateProgress(totalBytes: number, currentBytesUploaded: number, newByt
   return newCurrentBytes;
 }
 
-export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): api.CreateEntryFromFrameBody {
-  const bucketEntry: api.CreateEntryFromFrameBody = {
+export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
+  const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename: fileMeta.name,
     index: fileObject.index.toString('hex'),
     hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
   };
+
+  // console.log('FINAL HMAC', bucketEntry.hmac);
 
   if (rs) {
     bucketEntry.erasure = { type: "reedsolomon" };
