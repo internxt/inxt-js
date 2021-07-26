@@ -286,6 +286,7 @@ var FileObject = /** @class */ (function (_super) {
             _this.emit(events_2.Decrypt.Progress, msg);
         })
             .on('error', function (err) {
+            console.log('DECRYPTION ERROR', err);
             _this.emit(events_2.Decrypt.Error, err);
         });
         async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
@@ -296,15 +297,18 @@ var FileObject = /** @class */ (function (_super) {
             _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
                 logger_1.logger.info('Shard %s downloaded OK', shard.index);
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
-                var drainListener = function () {
-                    console.log('Backpressuring streams');
-                    nextItem();
-                    _this.decipher.removeListener('drain', drainListener);
-                };
-                _this.decipher.once('drain', drainListener);
-                if (_this.decipher.write(shardBuffer)) {
-                    nextItem();
-                }
+                _this.decipher.write(shardBuffer);
+                nextItem();
+                // const drainListener = () => {
+                //   console.log('Backpressuring streams');
+                //   nextItem();
+                //   this.decipher.removeListener('drain', drainListener);
+                // };
+                // this.decipher.once('drain', drainListener);
+                // if (this.decipher.write(shardBuffer)) {
+                //   console.log('CAN CONTINUE WITH NEXT ITEM');
+                //   nextItem();
+                // }
             }).catch(function (err) {
                 nextItem(error_1.wrap('Download shard error', err));
             });
