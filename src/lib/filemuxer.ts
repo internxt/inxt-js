@@ -172,7 +172,7 @@ class FileMuxer extends Readable {
       if (Buffer.compare(inputHash, hash) !== 0) {
         // Send exchange report FAILED_INTEGRITY
         // const actualHash = hash.toString('hex');
-        console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
+        // console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
         this.emit('error', Error('Shard failed integrity check'));
         // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
       } else {
