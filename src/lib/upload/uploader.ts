@@ -15,7 +15,7 @@ export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
   private passthrough: PassThrough = new PassThrough();
   private shardIndex = 0;
   private concurrentUploads = 0;
-  private concurrency = 0;
+  concurrency = 0;
 
   constructor(parallelUploads = 1, expectedUploads = 1, fileObject: FileObjectUpload) {
     super(parallelUploads, expectedUploads, UploaderQueue.upload(fileObject));

@@ -40,6 +40,7 @@
     "typescript": "^3.9.6"
   },
   "dependencies": {
+    "@types/progress-stream": "^2.0.2",
     "async": "^3.2.0",
     "axios": "^0.19.2",
     "bip39": "^3.0.2",
@@ -49,7 +50,7 @@
     "memory-blob-store": "^5.0.1",
     "multistream": "^4.1.0",
     "mux-demux": "^3.7.9",
-    "rs-wrapper": "jalbertogonzalez/rs-wrapper",
+    "progress-stream": "^2.0.0",
     "stream-to-blob": "^2.0.1",
     "streamsaver": "^2.0.4",
     "winston": "^3.3.3"

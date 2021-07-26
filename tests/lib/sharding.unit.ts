@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { createWriteStream } from 'fs';
-import { PassThrough, Readable } from 'stream';
-import { utils } from 'rs-wrapper';
+import { Readable } from 'stream';
+import { determineShardSize } from '../../src/lib/utils'
 
 import { Aes256ctrDecrypter, Aes256ctrEncrypter, sha256 } from '../../src/lib/crypto';
 
@@ -15,7 +15,7 @@ describe('# Sharding tests', () => {
     describe('# Should encrypt correctly', () => {
         it('When chunks matches exactly with shard size', function (done) {
             const size = 16000000;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
             const chunks = Math.ceil(size / chunkSize);
 
             const decryptedContent = Buffer.alloc(size).toString();
@@ -49,7 +49,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is lower than shard size', function (done) {
             const size = 15999999;
-            const shardSize = utils.determineShardSize(size);
+            const shardSize = determineShardSize(size);
             const chunks = Math.ceil(size / shardSize);
 
             const decryptedContent = Buffer.alloc(size).toString();
@@ -83,7 +83,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is bigger than shard size', function (done) {
             const size = 16000001;
-            const shardSize = utils.determineShardSize(size);
+            const shardSize = determineShardSize(size);
             const chunks = Math.ceil(size / shardSize);
 
             const decryptedContent = Buffer.alloc(size).toString();
@@ -119,7 +119,7 @@ describe('# Sharding tests', () => {
     describe('# Should slice and encrypt correctly', () => {
         it('When chunks matches exactly with shard size', function (done) {
             const size = 16000000;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContent = Buffer.alloc(size).toString();
 
@@ -147,7 +147,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is lower than shard size', function (done) {
             const size = 15999999;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContent = Buffer.alloc(size).toString();
 
@@ -175,7 +175,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is bigger than shard size', function (done) {
             const size = 16000001;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContent = Buffer.alloc(size).toString();
 
@@ -207,7 +207,7 @@ describe('# Sharding tests', () => {
             this.timeout(40000);
 
             const size = 16000000;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContentBuffer = Buffer.alloc(size);
             decryptedContentBuffer.fill(1);
@@ -242,7 +242,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is lower than shard size', function (done) {
             const size = 15999999;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContent = Buffer.alloc(size).toString();
 
@@ -270,7 +270,7 @@ describe('# Sharding tests', () => {
 
         it('When last chunk size is bigger than shard size', function (done) {
             const size = 16000001;
-            const chunkSize = utils.determineShardSize(size);
+            const chunkSize = determineShardSize(size);
 
             const decryptedContent = Buffer.alloc(size).toString();
 
