@@ -66,7 +66,6 @@ var events_2 = require("../lib/events");
 var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
-var stream_1 = require("../lib/utils/stream");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId, debug) {
@@ -297,16 +296,15 @@ var FileObject = /** @class */ (function (_super) {
             _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
                 logger_1.logger.info('Shard %s downloaded OK', shard.index);
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
-                if (!_this.decipher.write(shardBuffer)) {
-                    console.log('avoiding brackpressure');
-                    // backpressuring to avoid congestion for excessive buffering
-                    return stream_1.drainStream(_this.decipher);
+                var drainListener = function () {
+                    console.log('Backpressuring streams');
+                    nextItem();
+                    _this.decipher.removeListener('drain', drainListener);
+                };
+                _this.decipher.once('drain', drainListener);
+                if (_this.decipher.write(shardBuffer)) {
+                    nextItem();
                 }
-                else {
-                    console.log('backpressuring not required');
-                }
-            }).then(function () {
-                nextItem();
             }).catch(function (err) {
                 nextItem(error_1.wrap('Download shard error', err));
             });
