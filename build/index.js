@@ -11,7 +11,6 @@ var download_1 = require("./lib/download");
 var crypto_1 = require("./lib/crypto");
 var constants_1 = require("./api/constants");
 var ActionState_1 = require("./api/ActionState");
-var Web_1 = require("./api/adapters/Web");
 var logger_1 = require("./lib/utils/logger");
 var path_1 = require("path");
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
@@ -95,7 +94,7 @@ var Environment = /** @class */ (function () {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
-        download_1.download(this.config, bucketId, fileId, Web_1.DownloadOptionsAdapter(options), this.logger, downloadState)
+        download_1.download(this.config, bucketId, fileId, options.progressCallback, this.logger, downloadState)
             .then(function (downloadStream) {
             return stream_to_blob_1.default(downloadStream, 'application/octet-stream');
         }).then(function (blob) {
@@ -215,7 +214,7 @@ var Environment = /** @class */ (function () {
         if (params.debug) {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
-        download_1.download(this.config, bucketId, fileId, params, this.logger, downloadState)
+        download_1.download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
             .then(function (fileStream) {
             fileStream.pipe(fs_1.createWriteStream(filepath))
                 .on('error', function (err) {

@@ -29,7 +29,6 @@ exports.DownloadOptionsAdapter = function (options) {
         }
         console.log('still here');
         stream_to_blob_1.default(fileStream, 'application/octet-stream').then(function (blob) {
-            console.log('BLOB', blob);
             options.finishedCallback(null, blob);
         }).catch(function (blobParsingErr) {
             options.finishedCallback(blobParsingErr, null);

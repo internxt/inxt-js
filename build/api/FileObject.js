@@ -299,16 +299,6 @@ var FileObject = /** @class */ (function (_super) {
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
                 _this.decipher.write(shardBuffer);
                 nextItem();
-                // const drainListener = () => {
-                //   console.log('Backpressuring streams');
-                //   nextItem();
-                //   this.decipher.removeListener('drain', drainListener);
-                // };
-                // this.decipher.once('drain', drainListener);
-                // if (this.decipher.write(shardBuffer)) {
-                //   console.log('CAN CONTINUE WITH NEXT ITEM');
-                //   nextItem();
-                // }
             }).catch(function (err) {
                 nextItem(error_1.wrap('Download shard error', err));
             });

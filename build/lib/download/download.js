@@ -40,31 +40,31 @@ exports.download = void 0;
 var events_1 = require("../events");
 var FileObject_1 = require("../../api/FileObject");
 var constants_1 = require("../../api/constants");
-function download(config, bucketId, fileId, options, debug, state) {
+function download(config, bucketId, fileId, progress, debug, state) {
     return __awaiter(this, void 0, void 0, function () {
         var file;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     file = new FileObject_1.FileObject(config, bucketId, fileId, debug);
-                    handleStateChanges(file, state, options);
+                    state.on(constants_1.DOWNLOAD_CANCELLED, function () {
+                        file.emit(constants_1.DOWNLOAD_CANCELLED);
+                    });
                     return [4 /*yield*/, file.getInfo()];
                 case 1:
                     _a.sent();
                     return [4 /*yield*/, file.getMirrors()];
                 case 2:
                     _a.sent();
-                    handleProgress(file, options);
+                    handleProgress(file, progress);
                     return [2 /*return*/, file.download()];
             }
         });
     });
 }
 exports.download = download;
-function handleProgress(fl, options) {
-    var _a;
+function handleProgress(fl, progressCb) {
     var totalBytesDownloaded = 0;
-    var totalBytesDecrypted = 0;
     var progress = 0;
     var totalBytes = fl.rawShards.length > 0 ?
         fl.rawShards.reduce(function (a, b) { return ({ size: a.size + b.size }); }, { size: 0 }).size :
@@ -75,27 +75,9 @@ function handleProgress(fl, options) {
     function getDownloadProgress() {
         return (totalBytesDownloaded / totalBytes);
     }
-    function getDecryptionProgress() {
-        return (totalBytesDecrypted / totalBytes);
-    }
     fl.on(events_1.DOWNLOAD.PROGRESS, function (addedBytes) {
         totalBytesDownloaded += addedBytes;
         progress = getDownloadProgress();
-        options.progressCallback(progress, totalBytesDownloaded, totalBytes);
-    });
-    var decryptionProgress = (_a = options.decryptionProgressCallback) !== null && _a !== void 0 ? _a : (function () { return null; });
-    fl.on(events_1.DECRYPT.PROGRESS, function (addedBytes) {
-        totalBytesDecrypted += addedBytes;
-        progress = getDecryptionProgress();
-        decryptionProgress(progress, totalBytesDecrypted, totalBytes);
-    });
-}
-function handleStateChanges(file, state, options) {
-    state.on(constants_1.DOWNLOAD_CANCELLED, function () {
-        file.emit(constants_1.DOWNLOAD_CANCELLED);
-        options.finishedCallback(Error(constants_1.DOWNLOAD_CANCELLED_ERROR), null);
-        // prevent more calls to any callback
-        options.progressCallback = function () { };
-        options.finishedCallback = function () { };
+        progressCb(progress, totalBytesDownloaded, totalBytes);
     });
 }
