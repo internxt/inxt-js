@@ -24,16 +24,16 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Bridge = exports.EmptyBridgeUrlError = void 0;
-var request_1 = require("./request");
+exports.Bridge = exports.EmptyBridgeUrlError = exports.Methods = void 0;
+var lib_1 = require("../lib");
 var Methods;
 (function (Methods) {
     Methods["Get"] = "GET";
     Methods["Post"] = "POST";
     Methods["Put"] = "PUT";
-})(Methods || (Methods = {}));
+})(Methods = exports.Methods || (exports.Methods = {}));
 function emptyINXTRequest(config) {
-    return new request_1.INXTRequest(config, Methods.Get, '', false);
+    return new lib_1.INXTRequest(config, Methods.Get, '', {}, false);
 }
 var InxtApi = /** @class */ (function () {
     function InxtApi(config) {
@@ -59,7 +59,7 @@ var InxtApi = /** @class */ (function () {
     InxtApi.prototype.sendUploadExchangeReport = function (exchangeReport) {
         return exchangeReport.sendReport();
     };
-    InxtApi.prototype.sendShardToNode = function (shard) {
+    InxtApi.prototype.sendShardToNode = function (shard, shardContent) {
         return emptyINXTRequest(this.config);
     };
     return InxtApi;
@@ -92,7 +92,7 @@ var Bridge = /** @class */ (function (_super) {
             }
         };
         var finalParams = __assign(__assign({}, defParams), params);
-        return new request_1.INXTRequest(this.config, Methods.Get, targetUrl, false);
+        return new lib_1.INXTRequest(this.config, Methods.Get, targetUrl, finalParams, false);
     };
     Bridge.prototype.getFileById = function (bucketId, fileId, params) {
         var targetUrl = this.url + "/buckets/" + bucketId + "/file-ids/" + fileId;
@@ -102,7 +102,7 @@ var Bridge = /** @class */ (function (_super) {
             }
         };
         var finalParams = __assign(__assign({}, defParams), params);
-        return new request_1.INXTRequest(this.config, Methods.Get, targetUrl, false);
+        return new lib_1.INXTRequest(this.config, Methods.Get, targetUrl, finalParams, false);
     };
     Bridge.prototype.createFrame = function (params) {
         var targetUrl = this.url + "/frames";
@@ -112,7 +112,7 @@ var Bridge = /** @class */ (function (_super) {
             }
         };
         var finalParams = __assign(__assign({}, defParams), params);
-        return new request_1.INXTRequest(this.config, Methods.Post, targetUrl, false);
+        return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, finalParams, false);
     };
     Bridge.prototype.createEntryFromFrame = function (bucketId, body, params) {
         var targetUrl = this.url + "/buckets/" + bucketId + "/files";
@@ -123,7 +123,7 @@ var Bridge = /** @class */ (function (_super) {
             data: body
         };
         var finalParams = __assign(__assign({}, defParams), params);
-        return new request_1.INXTRequest(this.config, Methods.Post, targetUrl, false);
+        return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, finalParams, false);
     };
     Bridge.prototype.addShardToFrame = function (frameId, body, params) {
         var targetUrl = this.url + "/frames/" + frameId;
@@ -134,14 +134,14 @@ var Bridge = /** @class */ (function (_super) {
             data: __assign(__assign({}, body), { challenges: body.challenges_as_str })
         };
         var finalParams = __assign(__assign({}, defParams), params);
-        return new request_1.INXTRequest(this.config, Methods.Put, targetUrl, false);
+        return new lib_1.INXTRequest(this.config, Methods.Put, targetUrl, finalParams, false);
     };
     Bridge.prototype.sendUploadExchangeReport = function (exchangeReport) {
         return exchangeReport.sendReport();
     };
-    Bridge.prototype.sendShardToNode = function (shard) {
+    Bridge.prototype.sendShardToNode = function (shard, shardContent) {
         var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
-        return new request_1.INXTRequest(this.config, Methods.Post, targetUrl, true);
+        return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
     };
     return Bridge;
 }(InxtApi));

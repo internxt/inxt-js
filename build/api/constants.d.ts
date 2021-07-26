@@ -5,3 +5,6 @@ export declare const ENCRYPTION_KEY_NOT_PROVIDED = "Encryption key was not provi
 export declare const BUCKET_ID_NOT_PROVIDED = "Bucket id was not provided";
 export declare const FILE_ID_NOT_PROVIDED = "File id was not provided";
 export declare const DOWNLOAD_CANCELLED_ERROR = "Process killed by user";
+export declare const MIN_SHARD_SIZE = 2097152;
+export declare const MAX_SHARD_SIZE = 4294967296;
+export declare const SHARD_MULTIPLE_BACK = 4;

@@ -88,14 +88,10 @@ function DownloadShard(config, shard, bucketId, fileId, excludedNodes) {
                     exchangeReport.params.exchangeEnd = new Date();
                     exchangeReport.params.farmerId = shard.farmer.nodeID;
                     if (!(finalShardHash === shard.hash)) return [3 /*break*/, 3];
-                    // console.log('Hash %s is OK', finalShardHash);
                     exchangeReport.DownloadOk();
-                    // exchangeReport.sendReport()
                     return [2 /*return*/, outputStream];
                 case 3:
-                    console.error('Hash %s is WRONG', finalShardHash);
                     exchangeReport.DownloadError();
-                    // exchangeReport.sendReport()
                     excludedNodes.push(shard.farmer.nodeID);
                     return [4 /*yield*/, fileinfo_1.GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes)];
                 case 4:

@@ -1,9 +1,15 @@
+/// <reference types="node" />
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { EnvironmentConfig } from "..";
 import { ExchangeReport } from "../api/reports";
 import { Shard } from "../api/shard";
+import { INXTRequest } from "../lib";
 import { ShardMeta } from "../lib/shardMeta";
-import { INXTRequest } from "./request";
+export declare enum Methods {
+    Get = "GET",
+    Post = "POST",
+    Put = "PUT"
+}
 export interface GetBucketByIdResponse {
     user: string;
     encryptionKey: string;
@@ -58,6 +64,9 @@ export interface CreateEntryFromFrameResponse {
     };
     size: number;
 }
+export interface SendShardToNodeResponse {
+    result: string;
+}
 export interface AddShardToFrameBody {
     hash: string;
     size: number;
@@ -77,7 +86,7 @@ export interface InxtApiI {
     createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest;
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-    sendShardToNode(shard: Shard): INXTRequest;
+    sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
 }
 declare class InxtApi implements InxtApiI {
     protected config: EnvironmentConfig;
@@ -89,7 +98,7 @@ declare class InxtApi implements InxtApiI {
     createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest;
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-    sendShardToNode(shard: Shard): INXTRequest;
+    sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
 }
 export declare class EmptyBridgeUrlError extends Error {
     constructor();
@@ -102,6 +111,6 @@ export declare class Bridge extends InxtApi {
     createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest;
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-    sendShardToNode(shard: Shard): INXTRequest;
+    sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
 }
 export {};

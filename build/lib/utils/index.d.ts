@@ -6,6 +6,8 @@
  * @returns Concurrency number
  */
 export declare function determineConcurrency(desiredRamUsage: number, fileSize: number): number;
+export declare function _determineShardSize(fileSize: number, accumulator?: number): number;
+export declare function determineParityShards(totalShards: number): number;
 /**
  * Determines the best shard size for a provided file size
  * @param fileSize Size of the file to be sharded

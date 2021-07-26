@@ -121,10 +121,10 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
             return;
         }
-        var filename = params.filename, size = params.fileSize, fileContent = params.fileContent, progress = params.progressCallback, finished = params.finishedCallback;
+        var filename = params.filename, size = params.fileSize, fileContent = params.fileContent;
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
-            _this.logger.debug("Filename " + filename + " encrypted is " + name);
+            _this.logger.debug('Filename %s encrypted is %s', filename, name);
             var content = blob_to_stream_1.default(fileContent);
             var fileToUpload = { content: content, name: name, size: size };
             upload_1.upload(_this.config, bucketId, fileToUpload, params, _this.logger, uploadState);
@@ -132,7 +132,7 @@ var Environment = /** @class */ (function () {
             .catch(function (err) {
             _this.logger.error("Error encrypting filename due to " + err.message);
             _this.logger.error(err);
-            finished(err, null);
+            params.finishedCallback(err, null);
         });
     };
     /**
@@ -168,7 +168,6 @@ var Environment = /** @class */ (function () {
         }).then(function () {
             _this.logger.info('Upload Success!');
         }).catch(function (err) {
-            // console.log('ERROR RECEIVED', err.message);
             if (err && err.message && err.message.includes('Upload aborted')) {
                 return params.finishedCallback(new Error('Process killed by user'), null);
             }
