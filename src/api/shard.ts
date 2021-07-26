@@ -52,15 +52,11 @@ export async function DownloadShard(config: EnvironmentConfig, shard: Shard, buc
   exchangeReport.params.farmerId = shard.farmer.nodeID;
 
   if (finalShardHash === shard.hash) {
-    console.log('Hash %s is OK', finalShardHash);
     exchangeReport.DownloadOk();
 
-    // exchangeReport.sendReport()
     return outputStream;
   } else {
-    console.error('Hash %s is WRONG', finalShardHash);
     exchangeReport.DownloadError();
-    // exchangeReport.sendReport()
     excludedNodes.push(shard.farmer.nodeID);
     const anotherMirror: Shard[] = await GetFileMirror(config, bucketId, fileId, 1, shard.index, excludedNodes);
     if (!anotherMirror[0].farmer) {
