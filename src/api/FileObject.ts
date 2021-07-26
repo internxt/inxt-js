@@ -103,6 +103,8 @@ export class FileObject extends EventEmitter {
 
       logger.warn('Pointer for shard %s failed, retrieving a new one', shard.index);
 
+      let validPointer = false;
+
       doUntil((next: (err: Error | null, result: Shard | null) => void) => {
         ReplacePointer(this.config, this.bucketId, this.fileId, shard.index, []).then((newShard) => {
           next(null, newShard[0]);
@@ -112,11 +114,15 @@ export class FileObject extends EventEmitter {
           attempts++;
         });
       }, (result: Shard | null, next: any) => {
-        const validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address;
+        validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address ? true : false;
 
         return next(null, validPointer || attempts >= DEFAULT_INXT_MIRRORS);
       }).then((result: any) => {
         logger.info('Pointer replaced for shard %s', shard.index);
+
+        if (!validPointer) {
+          throw new Error(`Missing pointer for shard ${shard.hash}`);
+        }
 
         result.farmer.address = result.farmer.address.trim();
 
