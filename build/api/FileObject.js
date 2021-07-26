@@ -298,8 +298,12 @@ var FileObject = /** @class */ (function (_super) {
                 logger_1.logger.info('Shard %s downloaded OK', shard.index);
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
                 if (!_this.decipher.write(shardBuffer)) {
+                    console.log('avoiding brackpressure');
                     // backpressuring to avoid congestion for excessive buffering
                     return stream_1.drainStream(_this.decipher);
+                }
+                else {
+                    console.log('backpressuring not required');
                 }
             }).then(function () {
                 nextItem();
