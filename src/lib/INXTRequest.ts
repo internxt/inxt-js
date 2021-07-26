@@ -1,7 +1,8 @@
 import { RequestOptions, request as httpsRequest } from 'https';
 import { ClientRequest } from 'http';
 import { parse } from 'url';
-import { EventEmitter, Readable, Writable } from 'stream';
+import { EventEmitter } from 'events';
+import { Readable, Writable } from 'stream';
 import axios, { AxiosRequestConfig, AxiosResponse, Canceler } from 'axios';
 
 import { request } from '../services/request';

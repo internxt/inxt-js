@@ -1,4 +1,5 @@
-import { EventEmitter, PassThrough } from "stream";
+import { PassThrough } from "stream";
+import { EventEmitter } from "events";
 
 import { FileObjectUpload } from "../../api/FileObjectUpload";
 import { ConcurrentQueue } from "../concurrentQueue";
@@ -11,7 +12,7 @@ export interface UploadRequest {
 }
 
 export class UploaderQueue extends ConcurrentQueue<UploadRequest> {
-  private eventEmitter: EventEmitter = new EventEmitter();
+  private eventEmitter = new EventEmitter();
   private passthrough: PassThrough = new PassThrough();
   private shardIndex = 0;
   private concurrentUploads = 0;

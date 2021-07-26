@@ -67,6 +67,7 @@ exports.INXTRequest = void 0;
 var https_1 = require("https");
 var http_1 = require("http");
 var url_1 = require("url");
+var events_1 = require("events");
 var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var request_1 = require("../services/request");
@@ -154,5 +155,5 @@ var INXTRequest = /** @class */ (function (_super) {
         DownloadProgress: 'download-progress'
     };
     return INXTRequest;
-}(stream_1.EventEmitter));
+}(events_1.EventEmitter));
 exports.INXTRequest = INXTRequest;

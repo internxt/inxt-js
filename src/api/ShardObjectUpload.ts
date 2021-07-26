@@ -1,5 +1,6 @@
 import { AxiosError } from "axios";
-import { EventEmitter, Readable } from "stream";
+import { Readable } from "stream";
+import { EventEmitter } from "events";
 
 import { INXTRequest } from "../lib";
 import { ContractNegotiated } from "../lib/contracts";

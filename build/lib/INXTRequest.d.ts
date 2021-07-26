@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { RequestOptions } from 'https';
-import { EventEmitter, Readable, Writable } from 'stream';
+import { EventEmitter } from 'events';
+import { Readable, Writable } from 'stream';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 declare enum Methods {

@@ -51,6 +51,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadQueue = void 0;
 var async_1 = require("async");
+var events_1 = require("events");
 var stream_1 = require("stream");
 var concurrentQueue_1 = require("../concurrentQueue");
 var buffer_1 = require("../utils/buffer");
@@ -60,7 +61,7 @@ var DownloadQueue = /** @class */ (function (_super) {
         if (parallelDownloads === void 0) { parallelDownloads = 1; }
         if (expectedDownloads === void 0) { expectedDownloads = 1; }
         var _this = _super.call(this, parallelDownloads, expectedDownloads) || this;
-        _this.eventEmitter = new stream_1.EventEmitter();
+        _this.eventEmitter = new events_1.EventEmitter();
         _this.passthrough = new stream_1.PassThrough();
         _this.pendingShards = [];
         _this.concurrency = parallelDownloads;

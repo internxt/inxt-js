@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import { EventEmitter, Readable } from 'stream';
+import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 import * as Winston from 'winston';
 import { EnvironmentConfig, UploadProgressCallback } from '..';
 import EncryptStream from '../lib/encryptStream';

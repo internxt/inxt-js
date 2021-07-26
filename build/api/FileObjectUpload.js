@@ -60,7 +60,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateBucketEntry = exports.FileObjectUpload = void 0;
-var stream_1 = require("stream");
+var events_1 = require("events");
 var crypto_1 = require("crypto");
 var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
 var crypto_2 = require("../lib/crypto");
@@ -296,7 +296,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         return this.aborted;
     };
     return FileObjectUpload;
-}(stream_1.EventEmitter));
+}(events_1.EventEmitter));
 exports.FileObjectUpload = FileObjectUpload;
 function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
     var newCurrentBytes = currentBytesUploaded + newBytesUploaded;

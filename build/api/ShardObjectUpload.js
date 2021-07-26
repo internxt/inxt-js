@@ -62,6 +62,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShardObjectUpload = void 0;
 var stream_1 = require("stream");
+var events_1 = require("events");
 var error_1 = require("../lib/utils/error");
 var logger_1 = require("../lib/utils/logger");
 var ShardObjectUpload = /** @class */ (function (_super) {
@@ -162,5 +163,5 @@ var ShardObjectUpload = /** @class */ (function (_super) {
         NodeTransferFinished: 'node-transfer-finished'
     };
     return ShardObjectUpload;
-}(stream_1.EventEmitter));
+}(events_1.EventEmitter));
 exports.ShardObjectUpload = ShardObjectUpload;

@@ -1,4 +1,5 @@
-import { EventEmitter, Readable } from 'stream';
+import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 import { randomBytes } from 'crypto';
 import * as Winston from 'winston';
 

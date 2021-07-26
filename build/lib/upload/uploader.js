@@ -15,6 +15,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploaderQueue = void 0;
 var stream_1 = require("stream");
+var events_1 = require("events");
 var concurrentQueue_1 = require("../concurrentQueue");
 var error_1 = require("../utils/error");
 var UploaderQueue = /** @class */ (function (_super) {
@@ -23,7 +24,7 @@ var UploaderQueue = /** @class */ (function (_super) {
         if (parallelUploads === void 0) { parallelUploads = 1; }
         if (expectedUploads === void 0) { expectedUploads = 1; }
         var _this = _super.call(this, parallelUploads, expectedUploads, UploaderQueue.upload(fileObject)) || this;
-        _this.eventEmitter = new stream_1.EventEmitter();
+        _this.eventEmitter = new events_1.EventEmitter();
         _this.passthrough = new stream_1.PassThrough();
         _this.shardIndex = 0;
         _this.concurrentUploads = 0;

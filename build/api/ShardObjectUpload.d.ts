@@ -1,5 +1,6 @@
 /// <reference types="node" />
-import { EventEmitter, Readable } from "stream";
+import { Readable } from "stream";
+import { EventEmitter } from "events";
 import { ShardMeta } from "../lib/shardMeta";
 import { InxtApiI } from "../services/api";
 export declare class ShardObjectUpload extends EventEmitter {
