@@ -209,11 +209,11 @@ export class Environment {
       return;
     }
 
-    const { filename, fileSize: size, fileContent, progressCallback: progress, finishedCallback: finished } = params;
+    const { filename, fileSize: size, fileContent } = params;
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
-        this.logger.debug(`Filename ${filename} encrypted is ${name}`);
+        this.logger.debug('Filename %s encrypted is %s', filename, name);
 
         const content = BlobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
@@ -224,7 +224,7 @@ export class Environment {
         this.logger.error(`Error encrypting filename due to ${err.message}`);
         this.logger.error(err);
 
-        finished(err, null);
+        params.finishedCallback(err, null);
       });
   }
 
