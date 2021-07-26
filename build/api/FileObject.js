@@ -66,6 +66,7 @@ var events_2 = require("../lib/events");
 var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
+var stream_1 = require("../lib/utils/stream");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId, debug) {
@@ -145,6 +146,7 @@ var FileObject = /** @class */ (function (_super) {
                                     return nextShard(null);
                                 }
                                 logger_1.logger.warn('Pointer for shard %s failed, retrieving a new one', shard.index);
+                                var validPointer = false;
                                 async_1.doUntil(function (next) {
                                     fileinfo_1.ReplacePointer(_this.config, _this.bucketId, _this.fileId, shard.index, []).then(function (newShard) {
                                         next(null, newShard[0]);
@@ -154,10 +156,13 @@ var FileObject = /** @class */ (function (_super) {
                                         attempts++;
                                     });
                                 }, function (result, next) {
-                                    var validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address;
+                                    validPointer = result && result.farmer && result.farmer.nodeID && result.farmer.port && result.farmer.address ? true : false;
                                     return next(null, validPointer || attempts >= constants_1.DEFAULT_INXT_MIRRORS);
                                 }).then(function (result) {
                                     logger_1.logger.info('Pointer replaced for shard %s', shard.index);
+                                    if (!validPointer) {
+                                        throw new Error("Missing pointer for shard " + shard.hash);
+                                    }
                                     result.farmer.address = result.farmer.address.trim();
                                     _this.rawShards[shard.index] = result;
                                     nextShard(null);
@@ -286,7 +291,6 @@ var FileObject = /** @class */ (function (_super) {
             _this.emit(events_2.Decrypt.Progress, msg);
         })
             .on('error', function (err) {
-            console.log('DECRYPTION ERROR', err);
             _this.emit(events_2.Decrypt.Error, err);
         });
         async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
@@ -297,7 +301,13 @@ var FileObject = /** @class */ (function (_super) {
             _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
                 logger_1.logger.info('Shard %s downloaded OK', shard.index);
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
-                _this.decipher.write(shardBuffer);
+                // this.decipher.write(shardBuffer);
+                // nextItem();
+                if (!_this.decipher.write(shardBuffer)) {
+                    // backpressuring to avoid congestion for excessive buffering
+                    return stream_1.drainStream(_this.decipher);
+                }
+            }).then(function () {
                 nextItem();
             }).catch(function (err) {
                 nextItem(error_1.wrap('Download shard error', err));
