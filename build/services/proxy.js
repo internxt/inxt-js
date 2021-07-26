@@ -128,7 +128,7 @@ exports.getProxy = function () { return __awaiter(void 0, void 0, void 0, functi
                         var proxy, proxyReq;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
-                                case 0: return [4 /*yield*/, proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS)];
+                                case 0: return [4 /*yield*/, proxyBalancer.getProxy(10000)];
                                 case 1:
                                     proxy = _a.sent();
                                     proxyReq = { id: crypto_1.randomBytes(30).toString('hex') };
