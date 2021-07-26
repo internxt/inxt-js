@@ -237,9 +237,9 @@ export class FileObjectUpload extends EventEmitter {
 
       if (success) {
         logger.debug('Node %s accepted shard %s', nodeID, hash);
-        exchangeReport.DownloadOk();
+        exchangeReport.UploadOk();
       } else {
-        exchangeReport.DownloadError();
+        exchangeReport.UploadError();
       }
 
       exchangeReport.sendReport().catch(() => {
