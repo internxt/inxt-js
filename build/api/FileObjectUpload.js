@@ -247,10 +247,10 @@ var FileObjectUpload = /** @class */ (function (_super) {
             exchangeReport.params.exchangeEnd = new Date();
             if (success) {
                 logger_1.logger.debug('Node %s accepted shard %s', nodeID, hash);
-                exchangeReport.DownloadOk();
+                exchangeReport.UploadOk();
             }
             else {
-                exchangeReport.DownloadError();
+                exchangeReport.UploadError();
             }
             exchangeReport.sendReport().catch(function () {
                 // no op
