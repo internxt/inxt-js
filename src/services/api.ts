@@ -78,6 +78,10 @@ export interface CreateEntryFromFrameResponse {
   size: number;
 }
 
+export interface SendShardToNodeResponse {
+  result: string;
+}
+
 export interface AddShardToFrameBody {
   /* shard hash */
   hash: string;
