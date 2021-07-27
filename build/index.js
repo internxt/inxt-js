@@ -197,7 +197,6 @@ var Environment = /** @class */ (function () {
      * @param options Options for resolve file case
      */
     Environment.prototype.resolveFile = function (bucketId, fileId, filepath, params) {
-        var _this = this;
         var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
         if (!this.config.encryptionKey) {
             params.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
@@ -214,17 +213,24 @@ var Environment = /** @class */ (function () {
         if (params.debug) {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
+        var destination = fs_1.createWriteStream(filepath);
+        downloadState.once(constants_1.DOWNLOAD_CANCELLED, function () {
+            destination.emit('error', new Error('Process killed by user'));
+        });
+        destination.once('error', function (err) {
+            destination.destroy();
+            params.finishedCallback(err, null);
+        });
+        destination.once('finish', function () {
+            destination.destroy();
+            params.finishedCallback(null, null);
+        });
         download_1.download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
             .then(function (fileStream) {
-            fileStream.pipe(fs_1.createWriteStream(filepath))
-                .on('error', function (err) {
-                params.finishedCallback(err, null);
-            })
-                .on('finish', function () {
-                _this.logger.info('Download success!');
-                params.finishedCallback(null, null);
-            });
+            fileStream.on('error', function (err) { return destination.emit('error', err); });
+            fileStream.pipe(destination);
         }).catch(function (err) {
+            destination.destroy();
             params.finishedCallback(err, null);
         });
         return downloadState;

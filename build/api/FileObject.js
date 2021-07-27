@@ -249,33 +249,29 @@ var FileObject = /** @class */ (function (_super) {
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
-                            _a.trys.push([0, 5, , 6]);
-                            if (!!err) return [3 /*break*/, 1];
-                            if (result) {
-                                resolve(result);
+                            _a.trys.push([0, 3, , 4]);
+                            if (!err) {
+                                if (result) {
+                                    return [2 /*return*/, resolve(result)];
+                                }
+                                return [2 /*return*/, reject(error_1.wrap('Empty result from downloading shard', new Error('')))];
                             }
-                            else {
-                                reject(error_1.wrap('Empty result from downloading shard', new Error('')));
-                            }
-                            return [3 /*break*/, 4];
-                        case 1:
                             logger_1.logger.warn('It seems that shard %s download from farmer %s went wrong. Replacing pointer', shard.index, shard.farmer.nodeID);
                             excluded.push(shard.farmer.nodeID);
                             return [4 /*yield*/, fileinfo_1.GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded)];
-                        case 2:
+                        case 1:
                             newShard = _a.sent();
                             if (!newShard[0].farmer) {
                                 return [2 /*return*/, reject(error_1.wrap('File missing shard error', err))];
                             }
                             return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(newShard[0], excluded)];
-                        case 3:
+                        case 2:
                             buffer = _a.sent();
                             return [2 /*return*/, resolve(buffer)];
-                        case 4: return [3 /*break*/, 6];
-                        case 5:
+                        case 3:
                             err_1 = _a.sent();
                             return [2 /*return*/, reject(err_1)];
-                        case 6: return [2 /*return*/];
+                        case 4: return [2 /*return*/];
                     }
                 });
             }); });
@@ -293,23 +289,44 @@ var FileObject = /** @class */ (function (_super) {
             .on('error', function (err) {
             _this.emit(events_2.Decrypt.Error, err);
         });
-        async_1.eachLimit(this.rawShards, 1, function (shard, nextItem) {
-            _this.checkIfIsAborted();
-            if (shard.healthy === false) {
-                throw new Error('Bridge request pointer error');
-            }
-            _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
-                logger_1.logger.info('Shard %s downloaded OK', shard.index);
-                _this.emit(events_2.Download.Progress, shardBuffer.length);
-                if (!_this.decipher.write(shardBuffer)) {
-                    return stream_1.drainStream(_this.decipher);
+        async_1.eachLimit(this.rawShards, 1, function (shard, cb) { return __awaiter(_this, void 0, void 0, function () {
+            var error, shardBuffer, err_2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 4, 5, 6]);
+                        if (shard.healthy === false) {
+                            throw new Error('Bridge request pointer error');
+                        }
+                        return [4 /*yield*/, this.TryDownloadShardWithFileMuxer(shard)];
+                    case 1:
+                        shardBuffer = _a.sent();
+                        logger_1.logger.info('Shard %s downloaded OK', shard.index);
+                        this.emit(events_2.Download.Progress, shardBuffer.length);
+                        if (!!this.decipher.write(shardBuffer)) return [3 /*break*/, 3];
+                        // backpressuring to avoid congestion for excessive buffering
+                        return [4 /*yield*/, stream_1.drainStream(this.decipher)];
+                    case 2:
+                        // backpressuring to avoid congestion for excessive buffering
+                        _a.sent();
+                        _a.label = 3;
+                    case 3: return [3 /*break*/, 6];
+                    case 4:
+                        err_2 = _a.sent();
+                        error = err_2;
+                        return [3 /*break*/, 6];
+                    case 5:
+                        if (error) {
+                            cb(error_1.wrap('Download shard error', error));
+                        }
+                        else {
+                            cb();
+                        }
+                        return [7 /*endfinally*/];
+                    case 6: return [2 /*return*/];
                 }
-            }).then(function () {
-                nextItem();
-            }).catch(function (err) {
-                nextItem(error_1.wrap('Download shard error', err));
             });
-        }, function () {
+        }); }, function () {
             _this.decipher.end();
         });
         return this.decipher;
