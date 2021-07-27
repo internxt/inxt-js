@@ -34,7 +34,7 @@ declare type DebugCallback = (message: string) => void;
 interface UploadFileParams {
     filename: string;
     fileSize: number;
-    fileContent: Blob;
+    fileContent: ReadableStream<any>;
     progressCallback: UploadProgressCallback;
     finishedCallback: UploadFinishCallback;
 }
