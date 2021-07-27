@@ -14,6 +14,7 @@ import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOpt
 import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
 import { logger, Logger } from './lib/utils/logger';
 import { basename } from 'path';
+import streamToBlob from 'stream-to-blob';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -172,7 +173,14 @@ export class Environment {
       return downloadState;
     }
 
-    download(this.config, bucketId, fileId, WebDownloadOptionsAdapter(options), this.logger, downloadState);
+    download(this.config, bucketId, fileId, options.progressCallback, this.logger, downloadState)
+      .then((downloadStream) => {
+        return streamToBlob(downloadStream, 'application/octet-stream');
+      }).then((blob) => {
+        options.finishedCallback(null, blob);
+      }).catch((err) => {
+        options.finishedCallback(err, null);
+      });
 
     return downloadState;
   }
@@ -321,7 +329,7 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
     }
 
-    download(this.config, bucketId, fileId, params, this.logger, downloadState)
+    download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
       .then((fileStream) => {
         fileStream.pipe(createWriteStream(filepath))
           .on('error', (err) => {
