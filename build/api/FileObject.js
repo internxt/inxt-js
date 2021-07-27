@@ -301,10 +301,7 @@ var FileObject = /** @class */ (function (_super) {
             _this.TryDownloadShardWithFileMuxer(shard).then(function (shardBuffer) {
                 logger_1.logger.info('Shard %s downloaded OK', shard.index);
                 _this.emit(events_2.Download.Progress, shardBuffer.length);
-                // this.decipher.write(shardBuffer);
-                // nextItem();
                 if (!_this.decipher.write(shardBuffer)) {
-                    // backpressuring to avoid congestion for excessive buffering
                     return stream_1.drainStream(_this.decipher);
                 }
             }).then(function () {

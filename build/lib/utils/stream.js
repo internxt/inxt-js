@@ -2,11 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.drainStream = void 0;
 function drainStream(stream) {
-    return new Promise(function (r) {
-        stream.once('drain', function () {
-            console.log('STREAM DRAINED');
-            r(null);
-        });
-    });
+    return new Promise(function (r) { return stream.once('drain', r); });
 }
 exports.drainStream = drainStream;
