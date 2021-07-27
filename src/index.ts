@@ -11,7 +11,6 @@ import { FileMeta } from "./api/FileObjectUpload";
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
-import { DesktopDownloadFileOptions, DownloadOptionsAdapter as DesktopDownloadOptionsAdapter } from './api/adapters/Desktop';
 import { logger, Logger } from './lib/utils/logger';
 import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
