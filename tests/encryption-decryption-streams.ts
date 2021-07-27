@@ -62,44 +62,4 @@ describe('# Encryption - Decryption logic', () => {
       .pipe(new DecryptStream(key, iv))
       .pipe(contentStream)
   })
-
-  it('Check that preleave is generated correctly', () => {
-
-    const fileBuffer = fs.readFileSync('./54.txt')
-    const readableStream = Readable.from(fileBuffer.toString())
-
-    const limit = 100
-    const shard = Buffer.alloc(limit)
-    const cipher = createCipheriv(algorithm, key, iv)
-
-    let preleave:string
-
-    readableStream.on('data', (chunk: Buffer) => {
-      if(shard.length < limit) {
-        cipher.write(chunk)
-        Buffer.concat([shard, chunk])
-      } else {
-        console.log('readable paused')
-        console.log('current shard length', shard.length)
-        readableStream.pause()
-
-        const challenge = Buffer.alloc(32, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')//crypto.randomBytes(32)
-        const shardEncrypted = cipher.final()
-
-        // concatenate with the challenge
-        const preleaveBuffer = Buffer.concat([challenge, shardEncrypted])
-
-        // calculate hash
-        const preleave = ripemd160(sha256(preleaveBuffer)) // .toString('hex')
-        //console.log(`preleave hash: ${preleave}`)
-
-        const leaf = ripemd160(sha256(preleave)).toString('hex')
-
-        console.log(`leaf hash: ${leaf}`)
-
-        // readableStream.resume()
-      }
-    });
-  })
-
 })
