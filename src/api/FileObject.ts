@@ -265,7 +265,10 @@ export class FileObject extends EventEmitter {
 
         this.emit(Download.Progress, shardBuffer.length);
 
-        this.decipher.write(shardBuffer);
+        if (!this.decipher.write(shardBuffer)) {
+          return drainStream(this.decipher);
+        }
+      }).then(() => {
         nextItem();
       }).catch((err) => {
         nextItem(wrap('Download shard error', err));
