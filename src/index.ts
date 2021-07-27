@@ -329,18 +329,28 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
     }
 
+    const destination = createWriteStream(filepath);
+
+    downloadState.once(DOWNLOAD_CANCELLED, () => {
+      destination.emit('error', new Error('Process killed by user'));
+    });
+
+    destination.once('error', (err) => {
+      destination.destroy();
+      params.finishedCallback(err, null);
+    });
+
+    destination.once('finish', () => {
+      destination.destroy();
+      params.finishedCallback(null, null);
+    });
+
     download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
       .then((fileStream) => {
-        fileStream.pipe(createWriteStream(filepath))
-          .on('error', (err) => {
-            params.finishedCallback(err, null);
-          })
-          .on('finish', () => {
-            this.logger.info('Download success!');
-
-            params.finishedCallback(null, null);
-          });
+        fileStream.on('error', (err) => destination.emit('error', err));
+        fileStream.pipe(destination);
       }).catch((err) => {
+        destination.destroy();
         params.finishedCallback(err, null);
       });
 
