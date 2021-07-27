@@ -214,25 +214,24 @@ export class FileObject extends EventEmitter {
         try {
           if (!err) {
             if (result) {
-              resolve(result);
-            } else {
-              reject(wrap('Empty result from downloading shard', new Error('')));
-            }
-          } else {
-            logger.warn('It seems that shard %s download from farmer %s went wrong. Replacing pointer', shard.index, shard.farmer.nodeID);
-
-            excluded.push(shard.farmer.nodeID);
-
-            const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded);
-
-            if (!newShard[0].farmer) {
-              return reject(wrap('File missing shard error', err));
+              return resolve(result);
             }
 
-            const buffer = await this.TryDownloadShardWithFileMuxer(newShard[0], excluded);
-
-            return resolve(buffer);
+            return reject(wrap('Empty result from downloading shard', new Error('')));
           }
+          logger.warn('It seems that shard %s download from farmer %s went wrong. Replacing pointer', shard.index, shard.farmer.nodeID);
+
+          excluded.push(shard.farmer.nodeID);
+
+          const newShard = await GetFileMirror(this.config, this.bucketId, this.fileId, 1, shard.index, excluded);
+
+          if (!newShard[0].farmer) {
+            return reject(wrap('File missing shard error', err));
+          }
+
+          const buffer = await this.TryDownloadShardWithFileMuxer(newShard[0], excluded);
+
+          return resolve(buffer);
         } catch (err) {
           return reject(err);
         }
@@ -253,26 +252,25 @@ export class FileObject extends EventEmitter {
         this.emit(Decrypt.Error, err);
       });
 
-    eachLimit(this.rawShards, 1, (shard, nextItem) => {
-      this.checkIfIsAborted();
+    eachLimit(this.rawShards, 1, async (shard) => {
+      try {
+        if (shard.healthy === false) {
+          throw new Error('Bridge request pointer error');
+        }
 
-      if (shard.healthy === false) {
-        throw new Error('Bridge request pointer error');
-      }
+        const shardBuffer = await this.TryDownloadShardWithFileMuxer(shard);
 
-      this.TryDownloadShardWithFileMuxer(shard).then((shardBuffer) => {
         logger.info('Shard %s downloaded OK', shard.index);
 
         this.emit(Download.Progress, shardBuffer.length);
 
         if (!this.decipher.write(shardBuffer)) {
-          return drainStream(this.decipher);
+          // backpressuring to avoid congestion for excessive buffering
+          await drainStream(this.decipher);
         }
-      }).then(() => {
-        nextItem();
-      }).catch((err) => {
-        nextItem(wrap('Download shard error', err));
-      });
+      } catch (err) {
+        throw wrap('Download shard error', err);
+      }
     }, () => {
       this.decipher.end();
     });
