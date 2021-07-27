@@ -73,9 +73,9 @@ var getLoggerInstance = function (level, debug) {
         })),
         transports: [new Winston.transports.Console()]
     });
-    // if (process.env.STAGE !== 'development') {
-    //     _logger.silent = true;
-    // }
+    if (process.env.STAGE !== 'development') {
+        _logger.silent = true;
+    }
     return _logger;
 };
 exports.logger = getLoggerInstance(1);
