@@ -252,7 +252,8 @@ export class FileObject extends EventEmitter {
         this.emit(Decrypt.Error, err);
       });
 
-    eachLimit(this.rawShards, 1, async (shard) => {
+    eachLimit(this.rawShards, 1, async (shard, cb) => {
+      let error;
       try {
         if (shard.healthy === false) {
           throw new Error('Bridge request pointer error');
@@ -269,7 +270,13 @@ export class FileObject extends EventEmitter {
           await drainStream(this.decipher);
         }
       } catch (err) {
-        throw wrap('Download shard error', err);
+        error = err;
+      } finally {
+        if (error) {
+          cb(wrap('Download shard error', error));
+        } else {
+          cb();
+        }
       }
     }, () => {
       this.decipher.end();
