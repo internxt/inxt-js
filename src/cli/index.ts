@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
-import { createWriteStream, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { Command } from 'commander';
-import { Readable } from 'stream';
+
 import { Environment } from '../index';
 import { logger } from '../lib/utils/logger';
 
@@ -88,8 +88,8 @@ function uploadFile() {
                     resolve(fileId);
                 }
             },
-            debug: (msg: string) => { 
-                // no op
+            debug: (msg: string) => {
+                console.log('DEBUG', msg);
             }
         });
 
@@ -107,40 +107,36 @@ function uploadFile() {
     });
 }
 
-function downloadFile() {
+async function downloadFile() {
     logger.info('Donwloading file %s', opts.fileId);
 
-    new Promise((resolve: (r: Readable) => void, reject) => {
-        network.resolveFile(process.env.BUCKET_ID ?? '', opts.fileId, {
+    await new Promise((resolve, reject) => {
+        const state = network.resolveFile(process.env.BUCKET_ID ?? '', opts.fileId, opts.path, {
             progressCallback: (progress: number) => {
                 logger.info('Progress: %s %', (progress * 100).toFixed(2));
             },
-            finishedCallback: (err: Error | null, res: Readable | null) => {
+            finishedCallback: (err: Error | null) => {
                 if (err) {
-                    reject(err);
-                } else if (!res) {
-                    reject(Error('Readable is null'));
-                } else {
-                    resolve(res);
+                    return reject(err);
                 }
+
+                resolve(null);
+            },
+            debug: (msg: string) => {
+                console.log('DEBUG', msg);
             }
         });
-    }).then((fileStream) => {
-        logger.info('Downloading file');
-        fileStream.pipe(createWriteStream(opts.path))
-            .on('close', () => {
-                logger.info('File downloaded on path %s', opts.path);
 
-                process.exit(0);
-            })
-            .on('error', (err) => {
-                logger.error('Error downloading file %s', err.message);
-                logger.error(err);
+        process.on('SIGINT', () => {
+            network.resolveFileCancel(state);
+        });
+    }).then(() => {
+        logger.info('File downloaded on path %s', opts.path);
 
-                process.exit(1);
-            });
+        process.exit(0);
     }).catch((err) => {
         logger.error('Error uploading file %s', err.message);
+
         process.exit(1);
     });
 }

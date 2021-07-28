@@ -51,7 +51,6 @@
     "multistream": "^4.1.0",
     "mux-demux": "^3.7.9",
     "progress-stream": "^2.0.0",
-    "readable-web-to-node-stream": "^3.0.2",
     "stream-to-blob": "^2.0.1",
     "streamsaver": "^2.0.4",
     "winston": "^3.3.3"
