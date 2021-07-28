@@ -69,6 +69,7 @@ interface UploadFileParams {
 
 interface StoreFileParams extends UploadFileOptions {
   debug?: DebugCallback;
+  filename?: string;
 }
 
 interface ResolveFileParams extends DownloadFileOptions {
@@ -267,7 +268,7 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
     }
 
-    const filename = basename(filepath);
+    const filename = params.filename || basename(filepath);
 
     EncryptFilename(this.config.encryptionKey, bucketId, filename)
       .then((name: string) => {
