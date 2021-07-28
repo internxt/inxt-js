@@ -57,10 +57,6 @@ export class ShardObject extends EventEmitter {
       throw new Error('Frame id not provided');
     }
 
-    if (!this.meta) {
-      throw new Error('Shard meta not provided');
-    }
-
     const contract = await this.negotiateContract();
 
     logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',

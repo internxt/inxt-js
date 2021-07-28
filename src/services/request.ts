@@ -1,5 +1,6 @@
 import * as url from 'url';
 import * as https from 'https';
+import * as http from 'http';
 import { Readable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -41,7 +42,7 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
   let downloader: ClientRequest | null = null;
 
   function _createDownloadStream(): ClientRequest {
-    return https.get({
+    const requestOpts = {
       protocol: uriParts.protocol,
       hostname: uriParts.hostname,
       port: uriParts.port,
@@ -49,7 +50,9 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
       headers: {
         'content-type': 'application/octet-stream'
       }
-    });
+    };
+
+    return uriParts.protocol === 'http:' ? http.get(requestOpts) : https.get(requestOpts);
   }
 
   return new Readable({
