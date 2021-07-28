@@ -20,7 +20,7 @@ import { logger } from '../lib/utils/logger';
 import { determineConcurrency, determineShardSize } from '../lib/utils';
 import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI, SendShardToNodeResponse } from '../services/api';
 import { INXTRequest } from '../lib';
-import { ShardObjectUpload } from './ShardObjectUpload';
+import { ShardObject } from './ShardObject';
 
 export interface FileMeta {
   size: number;
@@ -227,9 +227,9 @@ export class FileObjectUpload extends EventEmitter {
 
     logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
 
-    const shardObject = new ShardObjectUpload(frameId, shardMeta, this.api);
+    const shardObject = new ShardObject(this.api, frameId, shardMeta);
 
-    shardObject.once(ShardObjectUpload.Events.NodeTransferFinished, ({ success, nodeID, hash }) => {
+    shardObject.once(ShardObject.Events.NodeTransferFinished, ({ success, nodeID, hash }) => {
       const exchangeReport = new ExchangeReport(this.config);
       exchangeReport.params.dataHash = hash;
       exchangeReport.params.farmerId = nodeID;

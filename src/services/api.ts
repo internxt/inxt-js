@@ -110,6 +110,7 @@ export interface InxtApiI {
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
+  getShardFromNode(shard: Shard): INXTRequest;
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
@@ -150,6 +151,10 @@ class InxtApi implements InxtApiI {
   }
 
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
+    return emptyINXTRequest(this.config);
+  }
+
+  getShardFromNode(shard: Shard): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 }
@@ -245,5 +250,13 @@ export class Bridge extends InxtApi {
     const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
+  }
+
+  getShardFromNode(shard: Shard): INXTRequest {
+    const { farmer, hash, token } = shard;
+    const { address, port } = farmer;
+    const targetUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
+
+    return new INXTRequest(this.config, Methods.Get, targetUrl, { }, true);
   }
 }

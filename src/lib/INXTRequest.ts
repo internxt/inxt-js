@@ -1,11 +1,9 @@
-import { RequestOptions, request as httpsRequest } from 'https';
 import { ClientRequest } from 'http';
-import { parse } from 'url';
 import { EventEmitter } from 'events';
-import { Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import axios, { AxiosRequestConfig, AxiosResponse, Canceler } from 'axios';
 
-import { request } from '../services/request';
+import { request, streamRequest } from '../services/request';
 import { ProxyManager, getProxy } from '../services/proxy';
 import { EnvironmentConfig } from '..';
 
@@ -55,7 +53,17 @@ export class INXTRequest extends EventEmitter {
     return this.req;
   }
 
-  async stream<K>(content: Readable | Writable, size: number, options?: RequestOptions): Promise<AxiosResponse<K>> {
+  async stream<K>(content: Readable, size: number): Promise<AxiosResponse<K>>;
+  async stream<K>(): Promise<Readable>;
+  async stream<K>(content?: any, size?: number): Promise<any> {
+    if (size) {
+      return this.postStream<K>(content, size);
+    }
+
+    return this.getStream();
+  }
+
+  private async getStream(): Promise<Readable> {
     this.streaming = true;
 
     let proxy: ProxyManager | undefined;
@@ -65,31 +73,20 @@ export class INXTRequest extends EventEmitter {
     }
 
     const targetUrl = `${proxy && proxy.url ? proxy.url + '/' : ''}${this.targetUrl}`;
-    const uriParts = parse(targetUrl);
 
-    this.req = httpsRequest({
-      ...options,
-      method: this.method,
-      protocol: uriParts.protocol,
-      hostname: uriParts.hostname,
-      port: uriParts.port,
-      path: uriParts.path,
-      headers: {
-        'Content-Length': size
-      }
-    });
+    return streamRequest(targetUrl);
+  }
 
-    if (this.method === Methods.Get && content instanceof Writable) {
-      const stream = this.req.pipe(content);
+  private async postStream<K>(content: Readable, size: number): Promise<AxiosResponse<K>> {
+    this.streaming = true;
 
-      return new Promise((resolve, reject) => {
-        stream.on('error', reject);
-        stream.on('end', (x: any) => {
-          proxy?.free();
-          resolve(x);
-        });
-      });
+    let proxy: ProxyManager | undefined;
+
+    if (this.useProxy) {
+      proxy = await getProxy();
     }
+
+    const targetUrl = `${proxy && proxy.url ? proxy.url + '/' : ''}${this.targetUrl}`;
 
     return axios.post<K>(targetUrl, content, {
       maxContentLength: Infinity,

@@ -8,7 +8,6 @@ import DecryptStream from "../lib/decryptstream";
 import FileMuxer from "../lib/filemuxer";
 import { GenerateFileKey } from "../lib/crypto";
 
-import { ShardObject } from "./ShardObject";
 import { FileInfo, GetFileInfo, GetFileMirrors, GetFileMirror, ReplacePointer } from "./fileinfo";
 import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
@@ -18,6 +17,8 @@ import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from './constants';
 import { wrap } from '../lib/utils/error';
 import { drainStream } from '../lib/utils/stream';
+import { ShardObject } from './ShardObject';
+import { Bridge, InxtApiI } from '../services/api';
 
 export class FileObject extends EventEmitter {
   shards: ShardObject[] = [];
@@ -39,6 +40,7 @@ export class FileObject extends EventEmitter {
 
   private aborted = false;
   private debug: Winston.Logger;
+  private api: InxtApiI;
 
   constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger) {
     super();
@@ -48,6 +50,8 @@ export class FileObject extends EventEmitter {
     this.debug = debug;
     this.fileKey = Buffer.alloc(0);
     this.decipher = new DecryptStream(randomBytes(32), randomBytes(16));
+
+    this.api = new Bridge(config);
 
     this.once(DOWNLOAD_CANCELLED, this.abort.bind(this));
 
@@ -156,7 +160,7 @@ export class FileObject extends EventEmitter {
         let downloadCancelled = false;
 
         const oneFileMuxer = new FileMuxer({ shards: 1, length: shard.size });
-        const shardObject = new ShardObject(this.config, shard, this.bucketId, this.fileId);
+        const shardObject = new ShardObject(this.api, '', null, shard);
 
         let buffs: Buffer[] = [];
         let downloaderStream: Readable;
@@ -207,7 +211,7 @@ export class FileObject extends EventEmitter {
           }
         });
 
-        downloaderStream = await shardObject.StartDownloadShard();
+        downloaderStream = await shardObject.download();
         oneFileMuxer.addInputSource(downloaderStream, shard.size, Buffer.from(shard.hash, 'hex'), null);
 
       }, async (err: Error | null | undefined, result: Buffer | undefined) => {
