@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
+var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
 var fs_1 = require("fs");
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
@@ -13,7 +14,6 @@ var ActionState_1 = require("./api/ActionState");
 var logger_1 = require("./lib/utils/logger");
 var path_1 = require("path");
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
-var readable_web_to_node_stream_1 = require("readable-web-to-node-stream");
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -124,11 +124,15 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(Error('Filename was not provided'), null);
             return;
         }
+        if (params.fileContent.size === 0) {
+            params.finishedCallback(Error('Can not upload a file with size 0'), null);
+            return;
+        }
         var filename = params.filename, size = params.fileSize, fileContent = params.fileContent;
-        var content = new readable_web_to_node_stream_1.ReadableWebToNodeStream(fileContent);
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
             _this.logger.debug('Filename %s encrypted is %s', filename, name);
+            var content = blob_to_stream_1.default(fileContent);
             var fileToUpload = { content: content, name: name, size: size };
             upload_1.upload(_this.config, bucketId, fileToUpload, params, _this.logger, uploadState);
         })
@@ -136,10 +140,6 @@ var Environment = /** @class */ (function () {
             _this.logger.error("Error encrypting filename due to " + err.message);
             _this.logger.error(err);
             params.finishedCallback(err, null);
-        }).finally(function () {
-            content.waitForReadToComplete().then(function () {
-                content.close();
-            });
         });
     };
     /**
@@ -166,7 +166,7 @@ var Environment = /** @class */ (function () {
         if (params.debug) {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
-        var filename = path_1.basename(filepath);
+        var filename = params.filename || path_1.basename(filepath);
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
             .then(function (name) {
             logger_1.logger.debug('Filename %s encrypted is %s', filename, name);

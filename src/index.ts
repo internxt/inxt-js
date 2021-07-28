@@ -1,6 +1,6 @@
-import BlobToStream from 'blob-to-stream';
+import blobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
+import { createReadStream, createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
 import { upload } from './lib/upload';
@@ -8,7 +8,7 @@ import { download } from './lib/download';
 import { EncryptFilename } from './lib/crypto';
 
 import { FileMeta } from "./api/FileObjectUpload";
-import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
+import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
 import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
@@ -222,7 +222,7 @@ export class Environment {
       .then((name: string) => {
         this.logger.debug('Filename %s encrypted is %s', filename, name);
 
-        const content = BlobToStream(fileContent);
+        const content = blobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
 
         upload(this.config, bucketId, fileToUpload, params, this.logger, uploadState);
