@@ -2,9 +2,6 @@ import { Hash, createHash } from 'crypto';
 import { Readable, PassThrough } from 'stream';
 import assert from 'assert';
 import { ripemd160 } from './crypto';
-import { FILEMUXER } from './events';
-import { bufferToStream } from './utils/buffer';
-import { logger } from './utils/logger';
 import { DOWNLOAD_CANCELLED, DOWNLOAD_CANCELLED_ERROR } from '../api/constants';
 
 export class FileMuxerError extends Error {
@@ -170,13 +167,7 @@ class FileMuxer extends Readable {
       this.inputs.splice(this.inputs.indexOf(input), 1);
 
       if (Buffer.compare(inputHash, hash) !== 0) {
-        // Send exchange report FAILED_INTEGRITY
-        // const actualHash = hash.toString('hex');
-        // console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
         this.emit('error', Error('Shard failed integrity check'));
-        // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
-      } else {
-        // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
       }
 
       this.emit('drain', input);
