@@ -2,21 +2,37 @@ import { QueueObject, queue, ErrorCallback } from 'async';
 
 export class ConcurrentQueue<K> {
   private totalTasks: number;
+  protected concurrency: number;
   private finishedTasks = 0;
-  private queue: QueueObject<K>;
+  protected queue: QueueObject<K>;
 
-  constructor(concurrency = 1, totalTasks = 1, task: (content: K) => Promise<void>) {
+  constructor(concurrency = 1, totalTasks = 1, task?: (content: K) => Promise<void>) {
     if (concurrency > totalTasks) {
       throw new Error('ConcurrentQueue error: Concurrency can not be greater than total tasks to perform');
     }
 
     this.totalTasks = totalTasks;
+    this.concurrency = concurrency;
+
+    if (task) {
+      this.queue = queue(async (content: K, cb: ErrorCallback<Error>) => {
+        task(content).then(() => {
+          this.finishedTasks++;
+          cb();
+        }).catch(cb);
+      }, concurrency);
+    } else {
+      this.queue = queue(() => {}, 1);
+    }
+  }
+
+  setQueueTask(task: (content: K) => Promise<void>) {
     this.queue = queue(async (content: K, cb: ErrorCallback<Error>) => {
       task(content).then(() => {
         this.finishedTasks++;
         cb();
       }).catch(cb);
-    }, concurrency);
+    }, this.concurrency);
   }
 
   push(content: K) {
