@@ -1,6 +1,6 @@
 import express from 'express';
 import { Server } from 'http';
-import { CreateEntryFromFrameBody } from '../../src/services/request';
+import { CreateEntryFromFrameBody } from '../../src/services/api';
 
 let app: express.Application;
 let server: Server;
