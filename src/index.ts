@@ -10,13 +10,14 @@ import { EncryptFilename } from './lib/crypto';
 import { FileMeta } from "./api/FileObjectUpload";
 import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
-import { DownloadOptionsAdapter as WebDownloadOptionsAdapter, WebDownloadFileOptions } from './api/adapters/Web';
+import { WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
 import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
+export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void;
 export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
@@ -24,7 +25,6 @@ export type DownloadProgressCallback = (progress: number, downloadedBytes: numbe
 
 export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
 
-export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void;
 
 export interface UploadFileOptions {
   progressCallback: UploadProgressCallback;
