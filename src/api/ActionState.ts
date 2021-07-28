@@ -3,28 +3,28 @@ import { EventEmitter } from 'events';
 import { DOWNLOAD_CANCELLED, UPLOAD_CANCELLED } from './constants';
 
 export enum ActionTypes {
-    Download = 'DOWNLOAD',
-    Upload = 'UPLOAD'
+  Download = 'DOWNLOAD',
+  Upload = 'UPLOAD'
 }
 
 export class ActionState extends EventEmitter {
-    private type: ActionTypes;
+  private type: ActionTypes;
 
-    constructor(type: ActionTypes) {
-        super();
+  constructor(type: ActionTypes) {
+    super();
 
-        this.type = type;
+    this.type = type;
+  }
+
+  public stop(): void {
+    if (this.type === ActionTypes.Download) {
+      this.emit(DOWNLOAD_CANCELLED);
+
+      return;
     }
 
-    public stop(): void {
-        if (this.type === ActionTypes.Download) {
-            this.emit(DOWNLOAD_CANCELLED);
-
-            return;
-        }
-
-        if (this.type === ActionTypes.Upload) {
-            this.emit(UPLOAD_CANCELLED);
-        }
+    if (this.type === ActionTypes.Upload) {
+      this.emit(UPLOAD_CANCELLED);
     }
+  }
 }
