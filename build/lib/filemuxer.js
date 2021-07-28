@@ -41,7 +41,6 @@ var FileMuxerError = /** @class */ (function (_super) {
     return FileMuxerError;
 }(Error));
 exports.FileMuxerError = FileMuxerError;
-// tslint:disable-next-line: max-classes-per-file
 var ShardFailedIntegrityCheckError = /** @class */ (function (_super) {
     __extends(ShardFailedIntegrityCheckError, _super);
     function ShardFailedIntegrityCheckError(content) {
@@ -65,7 +64,6 @@ exports.ShardSuccesfulIntegrityCheck = ShardSuccesfulIntegrityCheck;
  * Accepts multiple ordered input sources and exposes them as a single
  * contiguous readable stream. Used for re-assembly of shards.
  */
-// tslint:disable-next-line: max-classes-per-file
 var FileMuxer = /** @class */ (function (_super) {
     __extends(FileMuxer, _super);
     function FileMuxer(options) {
