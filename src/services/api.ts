@@ -113,7 +113,7 @@ export interface InxtApiI {
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
-  return new INXTRequest(config, Methods.Get, '', {}, false);
+  return new INXTRequest(config, Methods.Get, '', { }, false);
 }
 
 class InxtApi implements InxtApiI {

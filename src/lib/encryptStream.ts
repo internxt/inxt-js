@@ -8,7 +8,6 @@ interface RawShard {
 
 export class EncryptStream extends Transform {
   private cipher: Cipher;
-  public encrypted_bytes = 0;
   public shards: RawShard [] = [];
   private indexCounter = 0;
 
@@ -23,7 +22,6 @@ export class EncryptStream extends Transform {
     this.shards.push({ size: chunk.byteLength, index: this.indexCounter });
     this.indexCounter++;
 
-    this.encrypted_bytes += Buffer.byteLength(chunk);
     cb(null, this.cipher.read());
   }
 

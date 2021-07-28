@@ -14,7 +14,7 @@ export class FunnelStream extends Transform {
     }
 
     private bufferStillHasData(): boolean {
-        return this.bufferOffset != 0;
+        return this.bufferOffset !== 0;
     }
 
     private bufferIsEmpty(): boolean {

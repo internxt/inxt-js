@@ -8,7 +8,7 @@ import { wrap } from "../utils/error";
 export interface UploadRequest {
   content: Buffer;
   index: number;
-  finishCb?: (result?: any) => void
+  finishCb?: (result?: any) => void;
 }
 
 export class UploaderQueue extends ConcurrentQueue<UploadRequest> {

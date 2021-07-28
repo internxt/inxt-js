@@ -89,7 +89,7 @@ function uploadFile() {
                 }
             },
             debug: (msg: string) => {
-                console.log('DEBUG', msg);
+                logger.debug('DEBUG', msg);
             }
         });
 
@@ -123,7 +123,7 @@ async function downloadFile() {
                 resolve(null);
             },
             debug: (msg: string) => {
-                console.log('DEBUG', msg);
+                logger.debug('DEBUG', msg);
             }
         });
 

@@ -13,10 +13,6 @@ export interface WebDownloadFileOptions {
     finishedCallback: WebDownloadFinishedCallback;
 }
 
-export interface WebUploadFileOptions {
-    // TODO
-}
-
 /**
  * Adapts web download options to std file download options
  * @param options web download file options
@@ -52,8 +48,4 @@ export const DownloadOptionsAdapter = (options: WebDownloadFileOptions): Downloa
         decryptionProgressCallback: options.decryptionProgressCallback,
         finishedCallback: downloadFinishedCallback
     };
-};
-
-export const UploadOptionsAdapter = (options: WebUploadFileOptions): void => {
-    // TODO
 };

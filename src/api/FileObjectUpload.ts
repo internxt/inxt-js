@@ -47,7 +47,7 @@ export class FileObjectUpload extends EventEmitter {
   funnel: FunnelStream;
   fileEncryptionKey: Buffer;
 
-  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger, api?: InxtApiI) {
+  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, log: Winston.Logger, api?: InxtApiI) {
     super();
 
     this.config = config;
@@ -60,7 +60,7 @@ export class FileObjectUpload extends EventEmitter {
     this.fileEncryptionKey = randomBytes(32);
     this.api = api ?? new Bridge(this.config);
 
-    this.logger = logger;
+    this.logger = log;
 
     this.once(UPLOAD_CANCELLED, this.abort.bind(this));
   }

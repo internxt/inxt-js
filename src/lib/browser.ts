@@ -1,5 +1,4 @@
-const Environment = require('../index');
-
+import { Environment } from '..';
 declare global {
   interface Window {
     Inxt: any;

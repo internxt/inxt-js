@@ -20,12 +20,12 @@ declare module "readable-web-to-node-stream" {
 
     /**
      *
-     * @param stream Readable​Stream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
+     * @param stream Readable Stream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
      */
     constructor(stream: ReadableStream);
 
     /**
-     * If there is no unresolved read call to Web-API Readable​Stream immediately returns;
+     * If there is no unresolved read call to Web-API Readable Stream immediately returns;
      * otherwise will wait until the read is resolved.
      */
     public waitForReadToComplete(): Promise<void>;

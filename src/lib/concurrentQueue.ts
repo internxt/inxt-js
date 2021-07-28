@@ -22,7 +22,8 @@ export class ConcurrentQueue<K> {
         }).catch(cb);
       }, concurrency);
     } else {
-      this.queue = queue(() => {}, 1);
+      // tslint:disable-next-line: no-empty
+      this.queue = queue(() => { }, 1);
     }
   }
 
