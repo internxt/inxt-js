@@ -1,7 +1,6 @@
 /// <reference types="node" />
-import { RequestOptions } from 'https';
 import { EventEmitter } from 'events';
-import { Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 declare enum Methods {
@@ -24,7 +23,10 @@ export declare class INXTRequest extends EventEmitter {
     };
     constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean);
     start<K>(): Promise<K>;
-    stream<K>(content: Readable | Writable, size: number, options?: RequestOptions): Promise<AxiosResponse<K>>;
+    stream<K>(content: Readable, size: number): Promise<AxiosResponse<K>>;
+    stream<K>(): Promise<Readable>;
+    private getStream;
+    private postStream;
     abort(): void;
     isCancelled(err: Error): boolean;
 }

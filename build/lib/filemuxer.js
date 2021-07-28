@@ -152,14 +152,7 @@ var FileMuxer = /** @class */ (function (_super) {
             _this.hasher = crypto_1.createHash('sha256');
             _this.inputs.splice(_this.inputs.indexOf(input), 1);
             if (Buffer.compare(inputHash, hash) !== 0) {
-                // Send exchange report FAILED_INTEGRITY
-                // const actualHash = hash.toString('hex');
-                // console.log('Expected hash: %s, actual: %s', hash.toString('hex'), inputHash.toString('hex'));
                 _this.emit('error', Error('Shard failed integrity check'));
-                // this.emit('error', new ShardFailedIntegrityCheckError({ expectedHash: '', actualHash }));
-            }
-            else {
-                // this.emit(FILEMUXER.PROGRESS, new ShardSuccesfulIntegrityCheck({ expectedHash: '', digest: '' }));
             }
             _this.emit('drain', input);
         });

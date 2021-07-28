@@ -79,7 +79,6 @@ var DownloadQueue = /** @class */ (function (_super) {
                 if (shardContent) {
                     _this.handleData(buffer_1.bufferToStream(shardContent), req.shard);
                 }
-                shardContent = null;
             });
         };
     };

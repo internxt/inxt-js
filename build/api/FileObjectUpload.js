@@ -73,10 +73,10 @@ var uploader_1 = require("../lib/upload/uploader");
 var logger_1 = require("../lib/utils/logger");
 var utils_1 = require("../lib/utils");
 var api_1 = require("../services/api");
-var ShardObjectUpload_1 = require("./ShardObjectUpload");
+var ShardObject_1 = require("./ShardObject");
 var FileObjectUpload = /** @class */ (function (_super) {
     __extends(FileObjectUpload, _super);
-    function FileObjectUpload(config, fileMeta, bucketId, logger, api) {
+    function FileObjectUpload(config, fileMeta, bucketId, log, api) {
         var _this = _super.call(this) || this;
         _this.requests = [];
         _this.id = '';
@@ -92,7 +92,7 @@ var FileObjectUpload = /** @class */ (function (_super) {
         _this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         _this.fileEncryptionKey = crypto_1.randomBytes(32);
         _this.api = api !== null && api !== void 0 ? api : new api_1.Bridge(_this.config);
-        _this.logger = logger;
+        _this.logger = log;
         _this.once(constants_1.UPLOAD_CANCELLED, _this.abort.bind(_this));
         return _this;
     }
@@ -238,8 +238,8 @@ var FileObjectUpload = /** @class */ (function (_super) {
         var _this = this;
         var shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
         logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
-        var shardObject = new ShardObjectUpload_1.ShardObjectUpload(frameId, shardMeta, this.api);
-        shardObject.once(ShardObjectUpload_1.ShardObjectUpload.Events.NodeTransferFinished, function (_a) {
+        var shardObject = new ShardObject_1.ShardObject(this.api, frameId, shardMeta);
+        shardObject.once(ShardObject_1.ShardObject.Events.NodeTransferFinished, function (_a) {
             var success = _a.success, nodeID = _a.nodeID, hash = _a.hash;
             var exchangeReport = new reports_1.ExchangeReport(_this.config);
             exchangeReport.params.dataHash = hash;

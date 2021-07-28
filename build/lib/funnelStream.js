@@ -27,7 +27,7 @@ var FunnelStream = /** @class */ (function (_super) {
         return _this;
     }
     FunnelStream.prototype.bufferStillHasData = function () {
-        return this.bufferOffset != 0;
+        return this.bufferOffset !== 0;
     };
     FunnelStream.prototype.bufferIsEmpty = function () {
         return this.bufferOffset === 0;

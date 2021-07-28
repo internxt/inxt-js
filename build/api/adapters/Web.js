@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UploadOptionsAdapter = exports.DownloadOptionsAdapter = void 0;
+exports.DownloadOptionsAdapter = void 0;
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var logger_1 = require("../../lib/utils/logger");
 var constants_1 = require("../constants");
@@ -37,7 +37,4 @@ exports.DownloadOptionsAdapter = function (options) {
         decryptionProgressCallback: options.decryptionProgressCallback,
         finishedCallback: downloadFinishedCallback
     };
-};
-exports.UploadOptionsAdapter = function (options) {
-    // TODO
 };

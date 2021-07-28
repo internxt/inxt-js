@@ -62,6 +62,9 @@ var InxtApi = /** @class */ (function () {
     InxtApi.prototype.sendShardToNode = function (shard, shardContent) {
         return emptyINXTRequest(this.config);
     };
+    InxtApi.prototype.getShardFromNode = function (shard) {
+        return emptyINXTRequest(this.config);
+    };
     return InxtApi;
 }());
 // tslint:disable-next-line: max-classes-per-file
@@ -142,6 +145,13 @@ var Bridge = /** @class */ (function (_super) {
     Bridge.prototype.sendShardToNode = function (shard, shardContent) {
         var targetUrl = "http://" + shard.farmer.address + ":" + shard.farmer.port + "/shards/" + shard.hash + "?token=" + shard.token;
         return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
+    };
+    Bridge.prototype.getShardFromNode = function (shard) {
+        var _a;
+        var farmer = shard.farmer, hash = shard.hash, token = shard.token;
+        var address = farmer.address, port = farmer.port;
+        var targetUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
+        return new lib_1.INXTRequest(this.config, Methods.Get, targetUrl, {}, (_a = this.config.useProxy) !== null && _a !== void 0 ? _a : true);
     };
     return Bridge;
 }(InxtApi));

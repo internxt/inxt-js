@@ -1,22 +1,25 @@
 /// <reference types="node" />
+import { Readable } from "stream";
+import { EventEmitter } from "events";
+import { ShardMeta } from "../lib/shardMeta";
+import { InxtApiI } from "../services/api";
 import { Shard } from "./shard";
-import { EnvironmentConfig } from "..";
-import { HashStream } from "../lib/hashstream";
-import { ExchangeReport } from "./reports";
-import { Readable } from 'stream';
-import { EventEmitter } from 'events';
 export declare class ShardObject extends EventEmitter {
-    shardInfo: Shard;
-    shardHash: Buffer | null;
-    config: EnvironmentConfig;
-    fileId: string;
-    bucketId: string;
-    retryCount: number;
-    hasher: HashStream;
-    exchangeReport: ExchangeReport;
-    private _isFinished;
-    private _isErrored;
-    constructor(config: EnvironmentConfig, shardInfo: Shard, bucketId: string, fileId: string);
-    StartDownloadShard(): Promise<Readable>;
-    isFinished(): boolean;
+    private meta;
+    private api;
+    private frameId;
+    private requests;
+    private shard?;
+    static Events: {
+        NodeTransferFinished: string;
+    };
+    constructor(api: InxtApiI, frameId: string | null, meta: ShardMeta | null, shard?: Shard);
+    get size(): number;
+    get hash(): string;
+    get index(): number;
+    upload(content: Buffer): Promise<ShardMeta>;
+    private negotiateContract;
+    private sendShardToNode;
+    abort(): void;
+    download(): Promise<Readable>;
 }

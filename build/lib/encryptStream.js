@@ -20,7 +20,6 @@ var EncryptStream = /** @class */ (function (_super) {
     __extends(EncryptStream, _super);
     function EncryptStream(key, iv) {
         var _this = _super.call(this) || this;
-        _this.encrypted_bytes = 0;
         _this.shards = [];
         _this.indexCounter = 0;
         _this.cipher = crypto_1.createCipheriv('aes-256-ctr', key, iv);
@@ -30,7 +29,6 @@ var EncryptStream = /** @class */ (function (_super) {
         this.cipher.write(chunk);
         this.shards.push({ size: chunk.byteLength, index: this.indexCounter });
         this.indexCounter++;
-        this.encrypted_bytes += Buffer.byteLength(chunk);
         cb(null, this.cipher.read());
     };
     EncryptStream.prototype._flush = function (cb) {

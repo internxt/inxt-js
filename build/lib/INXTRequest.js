@@ -64,11 +64,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.INXTRequest = void 0;
-var https_1 = require("https");
 var http_1 = require("http");
-var url_1 = require("url");
 var events_1 = require("events");
-var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var request_1 = require("../services/request");
 var proxy_1 = require("../services/proxy");
@@ -99,9 +96,19 @@ var INXTRequest = /** @class */ (function (_super) {
         this.req = request_1.request(this.config, this.method, this.targetUrl, __assign(__assign({}, this.params), { cancelToken: cancelToken }), this.useProxy).then(function (res) { return res.data; });
         return this.req;
     };
-    INXTRequest.prototype.stream = function (content, size, options) {
+    INXTRequest.prototype.stream = function (content, size) {
         return __awaiter(this, void 0, void 0, function () {
-            var proxy, targetUrl, uriParts, stream_2;
+            return __generator(this, function (_a) {
+                if (size) {
+                    return [2 /*return*/, this.postStream(content, size)];
+                }
+                return [2 /*return*/, this.getStream()];
+            });
+        });
+    };
+    INXTRequest.prototype.getStream = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var proxy, targetUrl;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -113,20 +120,25 @@ var INXTRequest = /** @class */ (function (_super) {
                         _a.label = 2;
                     case 2:
                         targetUrl = "" + (proxy && proxy.url ? proxy.url + '/' : '') + this.targetUrl;
-                        uriParts = url_1.parse(targetUrl);
-                        this.req = https_1.request(__assign(__assign({}, options), { method: this.method, protocol: uriParts.protocol, hostname: uriParts.hostname, port: uriParts.port, path: uriParts.path, headers: {
-                                'Content-Length': size
-                            } }));
-                        if (this.method === Methods.Get && content instanceof stream_1.Writable) {
-                            stream_2 = this.req.pipe(content);
-                            return [2 /*return*/, new Promise(function (resolve, reject) {
-                                    stream_2.on('error', reject);
-                                    stream_2.on('end', function (x) {
-                                        proxy === null || proxy === void 0 ? void 0 : proxy.free();
-                                        resolve(x);
-                                    });
-                                })];
-                        }
+                        return [2 /*return*/, request_1.streamRequest(targetUrl)];
+                }
+            });
+        });
+    };
+    INXTRequest.prototype.postStream = function (content, size) {
+        return __awaiter(this, void 0, void 0, function () {
+            var proxy, targetUrl;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.streaming = true;
+                        if (!this.useProxy) return [3 /*break*/, 2];
+                        return [4 /*yield*/, proxy_1.getProxy()];
+                    case 1:
+                        proxy = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        targetUrl = "" + (proxy && proxy.url ? proxy.url + '/' : '') + this.targetUrl;
                         return [2 /*return*/, axios_1.default.post(targetUrl, content, {
                                 maxContentLength: Infinity,
                                 headers: {

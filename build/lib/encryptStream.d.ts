@@ -6,7 +6,6 @@ interface RawShard {
 }
 export declare class EncryptStream extends Transform {
     private cipher;
-    encrypted_bytes: number;
     shards: RawShard[];
     private indexCounter;
     constructor(key: Buffer, iv: Buffer);

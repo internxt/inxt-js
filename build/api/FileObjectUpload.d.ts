@@ -30,7 +30,7 @@ export declare class FileObjectUpload extends EventEmitter {
     cipher: EncryptStream;
     funnel: FunnelStream;
     fileEncryptionKey: Buffer;
-    constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, logger: Winston.Logger, api?: InxtApiI);
+    constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, log: Winston.Logger, api?: InxtApiI);
     getSize(): number;
     getId(): string;
     checkIfIsAborted(): void;

@@ -130,6 +130,7 @@ export interface EnvironmentConfig {
     encryptionKey?: string;
     logLevel?: number;
     webProxy?: string;
+    useProxy?: boolean;
     config?: {
         shardRetry: number;
         maxConcurrency: number;

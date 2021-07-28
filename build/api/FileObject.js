@@ -59,7 +59,6 @@ var async_1 = require("async");
 var decryptstream_1 = __importDefault(require("../lib/decryptstream"));
 var filemuxer_1 = __importDefault(require("../lib/filemuxer"));
 var crypto_2 = require("../lib/crypto");
-var ShardObject_1 = require("./ShardObject");
 var fileinfo_1 = require("./fileinfo");
 var reports_1 = require("./reports");
 var events_2 = require("../lib/events");
@@ -67,6 +66,8 @@ var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
 var stream_1 = require("../lib/utils/stream");
+var ShardObject_1 = require("./ShardObject");
+var api_1 = require("../services/api");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
     function FileObject(config, bucketId, fileId, debug) {
@@ -83,6 +84,7 @@ var FileObject = /** @class */ (function (_super) {
         _this.debug = debug;
         _this.fileKey = Buffer.alloc(0);
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.api = new api_1.Bridge(config);
         _this.once(constants_1.DOWNLOAD_CANCELLED, _this.abort.bind(_this));
         // DOWNLOAD_CANCELLED attach one listener per concurrent download
         _this.setMaxListeners(100);
@@ -200,7 +202,7 @@ var FileObject = /** @class */ (function (_super) {
                             downloadError = null;
                             downloadCancelled = false;
                             oneFileMuxer = new filemuxer_1.default({ shards: 1, length: shard.size });
-                            shardObject = new ShardObject_1.ShardObject(this.config, shard, this.bucketId, this.fileId);
+                            shardObject = new ShardObject_1.ShardObject(this.api, '', null, shard);
                             buffs = [];
                             this.once(constants_1.DOWNLOAD_CANCELLED, function () {
                                 buffs = [];
@@ -237,7 +239,7 @@ var FileObject = /** @class */ (function (_super) {
                                     nextTry(null, Buffer.concat(buffs));
                                 }
                             });
-                            return [4 /*yield*/, shardObject.StartDownloadShard()];
+                            return [4 /*yield*/, shardObject.download()];
                         case 1:
                             downloaderStream = _a.sent();
                             oneFileMuxer.addInputSource(downloaderStream, shard.size, Buffer.from(shard.hash, 'hex'), null);

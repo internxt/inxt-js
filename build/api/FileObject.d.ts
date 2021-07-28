@@ -3,10 +3,10 @@ import * as Winston from 'winston';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import DecryptStream from "../lib/decryptstream";
-import { ShardObject } from "./ShardObject";
 import { FileInfo } from "./fileinfo";
 import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
+import { ShardObject } from './ShardObject';
 export declare class FileObject extends EventEmitter {
     shards: ShardObject[];
     rawShards: Shard[];
@@ -21,6 +21,7 @@ export declare class FileObject extends EventEmitter {
     decipher: DecryptStream;
     private aborted;
     private debug;
+    private api;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger);
     checkIfIsAborted(): void;
     getInfo(): Promise<FileInfo | undefined>;

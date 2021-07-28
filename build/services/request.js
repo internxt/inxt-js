@@ -72,6 +72,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.streamRequest = exports.request = void 0;
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
+var http = __importStar(require("http"));
 var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
@@ -112,64 +113,44 @@ function request(config, method, targetUrl, params, useProxy) {
     });
 }
 exports.request = request;
-function streamRequest(targetUrl, nodeID, useProxy, timeoutSeconds) {
-    if (useProxy === void 0) { useProxy = true; }
-    return __awaiter(this, void 0, void 0, function () {
-        function _createDownloadStream() {
-            return https.get({
-                protocol: uriParts.protocol,
-                hostname: uriParts.hostname,
-                port: uriParts.port,
-                path: uriParts.path,
-                headers: {
-                    'content-type': 'application/octet-stream',
-                    'x-storj-node-id': nodeID
-                }
-            });
-        }
-        var proxy, reqUrl, uriParts, downloader;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    reqUrl = targetUrl;
-                    if (!useProxy) return [3 /*break*/, 2];
-                    return [4 /*yield*/, proxy_1.getProxy()];
-                case 1:
-                    proxy = _a.sent();
-                    reqUrl = proxy.url + "/" + targetUrl;
-                    _a.label = 2;
-                case 2:
-                    uriParts = url.parse(reqUrl);
-                    downloader = null;
-                    return [2 /*return*/, new stream_1.Readable({
-                            read: function () {
-                                var _this = this;
-                                if (!downloader) {
-                                    downloader = _createDownloadStream();
-                                    if (timeoutSeconds) {
-                                        downloader.setTimeout(timeoutSeconds * 1000, function () {
-                                            downloader === null || downloader === void 0 ? void 0 : downloader.destroy(Error("Request timeouted after " + timeoutSeconds + " seconds"));
-                                        });
-                                    }
-                                    if (useProxy && proxy) {
-                                        proxy.free();
-                                    }
-                                    downloader.on('response', function (res) {
-                                        res
-                                            .on('data', _this.push.bind(_this))
-                                            .on('error', _this.emit.bind(_this, 'error'))
-                                            .on('end', function () {
-                                            _this.push.bind(_this, null);
-                                            _this.emit('end');
-                                        }).on('close', _this.emit.bind(_this, 'close'));
-                                    })
-                                        .on('error', this.emit.bind(this, 'error'))
-                                        .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
-                                }
-                            }
-                        })];
+function streamRequest(targetUrl, timeoutSeconds) {
+    var uriParts = url.parse(targetUrl);
+    var downloader = null;
+    function _createDownloadStream() {
+        var requestOpts = {
+            protocol: uriParts.protocol,
+            hostname: uriParts.hostname,
+            port: uriParts.port,
+            path: uriParts.path,
+            headers: {
+                'content-type': 'application/octet-stream'
             }
-        });
+        };
+        return uriParts.protocol === 'http:' ? http.get(requestOpts) : https.get(requestOpts);
+    }
+    return new stream_1.Readable({
+        read: function () {
+            var _this = this;
+            if (!downloader) {
+                downloader = _createDownloadStream();
+                if (timeoutSeconds) {
+                    downloader.setTimeout(timeoutSeconds * 1000, function () {
+                        downloader === null || downloader === void 0 ? void 0 : downloader.destroy(Error("Request timeouted after " + timeoutSeconds + " seconds"));
+                    });
+                }
+                downloader.on('response', function (res) {
+                    res
+                        .on('data', _this.push.bind(_this))
+                        .on('error', _this.emit.bind(_this, 'error'))
+                        .on('end', function () {
+                        _this.push.bind(_this, null);
+                        _this.emit('end');
+                    }).on('close', _this.emit.bind(_this, 'close'));
+                })
+                    .on('error', this.emit.bind(this, 'error'))
+                    .on('timeout', function () { return _this.emit('error', Error('Request timeout')); });
+            }
+        }
     });
 }
 exports.streamRequest = streamRequest;

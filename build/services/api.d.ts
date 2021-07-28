@@ -87,6 +87,7 @@ export interface InxtApiI {
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
+    getShardFromNode(shard: Shard): INXTRequest;
 }
 declare class InxtApi implements InxtApiI {
     protected config: EnvironmentConfig;
@@ -99,6 +100,7 @@ declare class InxtApi implements InxtApiI {
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
+    getShardFromNode(shard: Shard): INXTRequest;
 }
 export declare class EmptyBridgeUrlError extends Error {
     constructor();
@@ -112,5 +114,6 @@ export declare class Bridge extends InxtApi {
     addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
+    getShardFromNode(shard: Shard): INXTRequest;
 }
 export {};
