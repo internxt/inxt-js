@@ -71,15 +71,16 @@ export function getContractNegotiated(hash = '', token = ''): ContractNegotiated
   }
 }
 
-function startServer(cb: () => void) {
+type EndpointHandler = (req, res) => void;
+
+function startServer(cb: () => void, customGet?: EndpointHandler, customPost?: EndpointHandler) {
   app = express();
   server = app.listen(testServerPort, () => {
     cb();
   });
 
-  app.get('/shards/:shardHash', (req, res) => {
-    // TODO
-    res.status(200).send();
+  app.get('/shards/:shardHash', customGet ? customGet : (req, res) => { 
+    res.status(200).send(); 
   });
 
   app.post('/shards/:hash', (req, res) => {
@@ -111,11 +112,11 @@ function closeServer(cb: () => void) {
 
 type CloseServerFunction = () => Promise<unknown>;
 
-const startApp = () => new Promise(r => startServer(() => r(null)));
+const startApp = (customGet?: EndpointHandler, customPost?: EndpointHandler) => new Promise(r => startServer(() => r(null), customGet, customPost));
 const closeApp = () => new Promise(r => closeServer(() => r(null)));
 
-export async function spawnFarmer(): Promise<CloseServerFunction> {
-  await startApp();
+export async function spawnFarmer(customGet?: EndpointHandler, customPost?: EndpointHandler): Promise<CloseServerFunction> {
+  await startApp(customGet, customPost);
 
   return closeApp;
 }
