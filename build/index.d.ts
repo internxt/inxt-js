@@ -3,12 +3,13 @@ import { Readable } from 'stream';
 import * as Winston from 'winston';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
+import { FileInfo } from './api/fileinfo';
 export declare type OnlyErrorCallback = (err: Error | null) => void;
+export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 export declare type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export declare type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 export declare type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
-export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export interface UploadFileOptions {
     progressCallback: UploadProgressCallback;
     finishedCallback: UploadFinishCallback;
@@ -54,6 +55,13 @@ export declare class Environment {
      * @param cb Callback that will receive api's info
      */
     getInfo(cb: GetInfoCallback): void;
+    /**
+     * Gets file info
+     * @param bucketId Bucket id where file is stored
+     * @param fileId
+     * @returns file info
+     */
+    getFileInfo(bucketId: string, fileId: string): Promise<FileInfo>;
     /**
      * Gets list of available buckets
      * @param cb Callback that will receive the list of buckets

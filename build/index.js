@@ -14,6 +14,7 @@ var ActionState_1 = require("./api/ActionState");
 var logger_1 = require("./lib/utils/logger");
 var path_1 = require("path");
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
+var fileinfo_1 = require("./api/fileinfo");
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -26,6 +27,15 @@ var Environment = /** @class */ (function () {
     Environment.prototype.getInfo = function (cb) {
         /* TODO */
         cb(null, 'Not implemented yet');
+    };
+    /**
+     * Gets file info
+     * @param bucketId Bucket id where file is stored
+     * @param fileId
+     * @returns file info
+     */
+    Environment.prototype.getFileInfo = function (bucketId, fileId) {
+        return fileinfo_1.GetFileInfo(this.config, bucketId, fileId);
     };
     /**
      * Gets list of available buckets

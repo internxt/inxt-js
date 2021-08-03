@@ -14,6 +14,7 @@ import { WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
 import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
+import { FileInfo, GetFileInfo } from './api/fileinfo';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -92,6 +93,16 @@ export class Environment {
   getInfo(cb: GetInfoCallback): void {
     /* TODO */
     cb(null, 'Not implemented yet');
+  }
+
+  /**
+   * Gets file info
+   * @param bucketId Bucket id where file is stored
+   * @param fileId 
+   * @returns file info
+   */
+  getFileInfo(bucketId: string, fileId: string): Promise<FileInfo> {
+    return GetFileInfo(this.config, bucketId, fileId);
   }
 
   /**
