@@ -40,13 +40,22 @@ exports.download = void 0;
 var events_1 = require("../events");
 var FileObject_1 = require("../../api/FileObject");
 var constants_1 = require("../../api/constants");
-function download(config, bucketId, fileId, progress, debug, state) {
+function download(config, bucketId, fileId, options, debug, state) {
     return __awaiter(this, void 0, void 0, function () {
         var file;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     file = new FileObject_1.FileObject(config, bucketId, fileId, debug);
+                    if (options.fileEncryptionKey) {
+                        debug.info('Using file encryption key %s to download', options.fileEncryptionKey.toString('hex'));
+                        console.log('Using custom file encryption key');
+                        file.setFileEncryptionKey(options.fileEncryptionKey);
+                    }
+                    if (options.fileToken) {
+                        debug.info('Using file token %s to download', options.fileToken);
+                        file.setFileToken(options.fileToken);
+                    }
                     state.on(constants_1.DOWNLOAD_CANCELLED, function () {
                         file.emit(constants_1.DOWNLOAD_CANCELLED);
                     });
@@ -56,7 +65,7 @@ function download(config, bucketId, fileId, progress, debug, state) {
                     return [4 /*yield*/, file.getMirrors()];
                 case 2:
                     _a.sent();
-                    handleProgress(file, progress);
+                    handleProgress(file, options.progressCallback);
                     return [2 /*return*/, file.download()];
             }
         });

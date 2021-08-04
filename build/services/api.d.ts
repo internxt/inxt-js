@@ -79,6 +79,16 @@ export interface AddShardToFrameBody {
 export interface SendShardToNodeResponse {
     result: string;
 }
+export interface CreateFileTokenResponse {
+    bucket: string;
+    encryptionKey: string;
+    expires: string;
+    id: string;
+    mimetype: string;
+    operation: 'PUSH' | 'PULL';
+    size: number;
+    token: string;
+}
 export interface InxtApiI {
     getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest;
     getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest;
@@ -88,6 +98,7 @@ export interface InxtApiI {
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
+    createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
 }
 declare class InxtApi implements InxtApiI {
     protected config: EnvironmentConfig;
@@ -101,6 +112,7 @@ declare class InxtApi implements InxtApiI {
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
+    createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
 }
 export declare class EmptyBridgeUrlError extends Error {
     constructor();
@@ -115,5 +127,6 @@ export declare class Bridge extends InxtApi {
     sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
+    createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
 }
 export {};

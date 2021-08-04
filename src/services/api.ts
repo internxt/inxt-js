@@ -102,6 +102,17 @@ export interface SendShardToNodeResponse {
   result: string;
 }
 
+export interface CreateFileTokenResponse {
+  bucket: string;
+  encryptionKey: string;
+  expires: string;
+  id: string;
+  mimetype: string;
+  operation: 'PUSH' | 'PULL';
+  size: number;
+  token: string;
+}
+
 export interface InxtApiI {
   getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest;
   getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest;
@@ -111,6 +122,7 @@ export interface InxtApiI {
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
   getShardFromNode(shard: Shard): INXTRequest;
+  createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
@@ -155,6 +167,10 @@ class InxtApi implements InxtApiI {
   }
 
   getShardFromNode(shard: Shard): INXTRequest {
+    return emptyINXTRequest(this.config);
+  }
+
+  createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 }
@@ -258,5 +274,11 @@ export class Bridge extends InxtApi {
     const targetUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
 
     return new INXTRequest(this.config, Methods.Get, targetUrl, { }, this.config.useProxy ?? true);
+  }
+
+  createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
+    const targetUrl = `https://api.internxt.com/buckets/${bucketId}/tokens`;
+
+    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation, file: fileId } }, false);
   }
 }

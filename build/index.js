@@ -11,10 +11,15 @@ var download_1 = require("./lib/download");
 var crypto_1 = require("./lib/crypto");
 var constants_1 = require("./api/constants");
 var ActionState_1 = require("./api/ActionState");
+var Web_1 = require("./api/adapters/Web");
 var logger_1 = require("./lib/utils/logger");
 var path_1 = require("path");
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var fileinfo_1 = require("./api/fileinfo");
+var api_1 = require("./services/api");
+var utils = {
+    generateFileKey: crypto_1.GenerateFileKey
+};
 var Environment = /** @class */ (function () {
     function Environment(config) {
         this.config = config;
@@ -64,6 +69,19 @@ var Environment = /** @class */ (function () {
         cb(Error('Not implemented yet'), null);
     };
     /**
+     * Creates file token
+     * @param bucketId Bucket id where file is stored
+     * @param fileId File id
+     * @param operation
+     * @param cb
+     */
+    Environment.prototype.createFileToken = function (bucketId, fileId, operation) {
+        return new api_1.Bridge(this.config).createFileToken(bucketId, fileId, operation).start()
+            .then(function (res) {
+            return res.token;
+        });
+    };
+    /**
      * Deletes a bucket
      * @param bucketId Id whose bucket is going to be deleted
      * @param cb Callback that will receive the response after deletion
@@ -96,7 +114,7 @@ var Environment = /** @class */ (function () {
     };
     Environment.prototype.downloadFile = function (bucketId, fileId, options) {
         var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
-        if (!this.config.encryptionKey) {
+        if (!options.fileEncryptionKey && !this.config.encryptionKey) {
             options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
             return downloadState;
         }
@@ -104,7 +122,7 @@ var Environment = /** @class */ (function () {
             options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
             return downloadState;
         }
-        download_1.download(this.config, bucketId, fileId, options.progressCallback, this.logger, downloadState)
+        download_1.download(this.config, bucketId, fileId, Web_1.adapt(options), this.logger, downloadState)
             .then(function (downloadStream) {
             return stream_to_blob_1.default(downloadStream, 'application/octet-stream');
         }).then(function (blob) {
@@ -235,7 +253,7 @@ var Environment = /** @class */ (function () {
             destination.destroy();
             params.finishedCallback(null, null);
         });
-        download_1.download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
+        download_1.download(this.config, bucketId, fileId, params, this.logger, downloadState)
             .then(function (fileStream) {
             fileStream.on('error', function (err) { return destination.emit('error', err); });
             fileStream.pipe(destination);
@@ -252,6 +270,7 @@ var Environment = /** @class */ (function () {
     Environment.prototype.resolveFileCancel = function (state) {
         state.stop();
     };
+    Environment.utils = utils;
     return Environment;
 }());
 exports.Environment = Environment;

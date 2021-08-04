@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
 import * as Winston from 'winston';
+import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
 import { FileInfo } from './api/fileinfo';
@@ -20,6 +21,8 @@ export interface ResolveFileOptions {
     overwritte?: boolean;
 }
 export interface DownloadFileOptions {
+    fileToken?: string;
+    fileEncryptionKey?: Buffer;
     progressCallback: DownloadProgressCallback;
     decryptionProgressCallback?: DecryptionProgressCallback;
     finishedCallback: DownloadFinishedCallback;
@@ -49,6 +52,9 @@ interface ResolveFileParams extends DownloadFileOptions {
 export declare class Environment {
     config: EnvironmentConfig;
     logger: Winston.Logger;
+    static utils: {
+        generateFileKey: typeof GenerateFileKey;
+    };
     constructor(config: EnvironmentConfig);
     /**
      * Gets general API info
@@ -79,6 +85,14 @@ export declare class Environment {
      * @param cb Callback that will receive the response after creation
      */
     createBucket(bucketName: string, cb: CreateBucketCallback): void;
+    /**
+     * Creates file token
+     * @param bucketId Bucket id where file is stored
+     * @param fileId File id
+     * @param operation
+     * @param cb
+     */
+    createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): Promise<string>;
     /**
      * Deletes a bucket
      * @param bucketId Id whose bucket is going to be deleted

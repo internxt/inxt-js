@@ -2,7 +2,7 @@ import { EnvironmentConfig } from '../index';
 import { doUntil } from 'async';
 import { request } from '../services/request';
 import { Shard } from './shard';
-import { AxiosResponse, AxiosError } from 'axios';
+import { AxiosResponse, AxiosError, AxiosRequestConfig } from 'axios';
 
 export interface FileInfo {
   bucket: string;
@@ -22,8 +22,10 @@ export interface FileInfo {
   index: string;
 }
 
-export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo> {
-  return request(config, 'get', `${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, { }, false)
+export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string, token?: string): Promise<FileInfo> {
+  const body: AxiosRequestConfig = token ? { headers: { 'x-token': token } } : { };
+
+  return request(config, 'get', `${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, body, false)
     .then<FileInfo>((res: AxiosResponse) => res.data)
     .catch((err: AxiosError) => {
       switch (err.response?.status) {
@@ -35,11 +37,16 @@ export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId:
   });
 }
 
-export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: string[] = []): Promise<Shard[]> {
+export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: string[] = [], token?: string): Promise<Shard[]> {
   const excludeNodeIds: string = excludeNodes.join(',');
   const targetUrl = `${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}?limit=${limit}&skip=${skip}&exclude=${excludeNodeIds}`;
 
-  return request(config, 'GET', targetUrl, { responseType: 'json' }, false)
+  const params: AxiosRequestConfig = {
+    responseType: 'json',
+    headers: token ? { 'x-token': token } : { }
+  };
+
+  return request(config, 'GET', targetUrl, params, false)
     .then((res: AxiosResponse) => res.data);
 }
 
@@ -47,11 +54,11 @@ export function ReplacePointer(config: EnvironmentConfig, bucketId: string, file
   return GetFileMirror(config, bucketId, fileId, 1, pointerIndex, excludeNodes);
 }
 
-export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]> {
+export function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string, token?: string): Promise<Shard[]> {
   const shards: Shard[] = [];
 
   return doUntil((next: (err: Error | null, results?: Shard[], shards?: Shard[]) => void) => {
-    GetFileMirror(config, bucketId, fileId, 3, shards.length).then((results: any) => {
+    GetFileMirror(config, bucketId, fileId, 3, shards.length, [], token).then((results: any) => {
       results.forEach((shard: Shard) => {
         shards.push(shard);
       });

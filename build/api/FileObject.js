@@ -90,6 +90,12 @@ var FileObject = /** @class */ (function (_super) {
         _this.setMaxListeners(100);
         return _this;
     }
+    FileObject.prototype.setFileEncryptionKey = function (key) {
+        this.fileKey = key;
+    };
+    FileObject.prototype.setFileToken = function (token) {
+        this.fileToken = token;
+    };
     FileObject.prototype.checkIfIsAborted = function () {
         if (this.isAborted()) {
             throw new Error('Download aborted');
@@ -105,13 +111,13 @@ var FileObject = /** @class */ (function (_super) {
                         logger_1.logger.info('Retrieving file info...');
                         if (!!this.fileInfo) return [3 /*break*/, 3];
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileInfo(this.config, this.bucketId, this.fileId)
+                        return [4 /*yield*/, fileinfo_1.GetFileInfo(this.config, this.bucketId, this.fileId, this.fileToken)
                                 .catch(function (err) {
                                 throw error_1.wrap('Get file info error', err);
                             })];
                     case 1:
                         _a.fileInfo = _c.sent();
-                        if (!this.config.encryptionKey) return [3 /*break*/, 3];
+                        if (!(this.fileKey.length === 0 && this.config.encryptionKey)) return [3 /*break*/, 3];
                         _b = this;
                         return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'))
                                 .catch(function (err) {
@@ -136,7 +142,7 @@ var FileObject = /** @class */ (function (_super) {
                         logger_1.logger.info('Retrieving file mirrors...');
                         // Discard mirrors for shards with parities (ECs)
                         _a = this;
-                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId)];
+                        return [4 /*yield*/, fileinfo_1.GetFileMirrors(this.config, this.bucketId, this.fileId, this.fileToken)];
                     case 1:
                         // Discard mirrors for shards with parities (ECs)
                         _a.rawShards = (_b.sent()).filter(function (shard) { return !shard.parity; });

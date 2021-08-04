@@ -5,16 +5,17 @@ import * as Winston from 'winston';
 
 import { upload } from './lib/upload';
 import { download } from './lib/download';
-import { EncryptFilename } from './lib/crypto';
+import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
 import { FileMeta } from "./api/FileObjectUpload";
 import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
-import { WebDownloadFileOptions } from './api/adapters/Web';
+import { adapt as webAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
 import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
+import { Bridge, CreateFileTokenResponse } from './services/api';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -25,7 +26,6 @@ export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable 
 export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 
 export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
-
 
 export interface UploadFileOptions {
   progressCallback: UploadProgressCallback;
@@ -39,6 +39,8 @@ export interface ResolveFileOptions {
 }
 
 export interface DownloadFileOptions {
+  fileToken?: string;
+  fileEncryptionKey?: Buffer;
   progressCallback: DownloadProgressCallback;
   decryptionProgressCallback?: DecryptionProgressCallback;
   finishedCallback: DownloadFinishedCallback;
@@ -77,9 +79,15 @@ interface ResolveFileParams extends DownloadFileOptions {
   debug?: DebugCallback;
 }
 
+const utils = {
+  generateFileKey: GenerateFileKey
+};
+
 export class Environment {
   config: EnvironmentConfig;
   logger: Winston.Logger;
+
+  static utils = utils;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
@@ -135,6 +143,20 @@ export class Environment {
   }
 
   /**
+   * Creates file token
+   * @param bucketId Bucket id where file is stored
+   * @param fileId File id
+   * @param operation 
+   * @param cb 
+   */
+  createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): Promise<string> {
+    return new Bridge(this.config).createFileToken(bucketId, fileId, operation).start<CreateFileTokenResponse>()
+      .then((res) => {
+        return res.token;
+      });
+  }
+
+  /**
    * Deletes a bucket
    * @param bucketId Id whose bucket is going to be deleted
    * @param cb Callback that will receive the response after deletion
@@ -172,7 +194,7 @@ export class Environment {
   downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState {
     const downloadState = new ActionState(ActionTypes.Download);
 
-    if (!this.config.encryptionKey) {
+    if (!options.fileEncryptionKey && !this.config.encryptionKey) {
       options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
 
       return downloadState;
@@ -184,7 +206,7 @@ export class Environment {
       return downloadState;
     }
 
-    download(this.config, bucketId, fileId, options.progressCallback, this.logger, downloadState)
+    download(this.config, bucketId, fileId, webAdapter(options), this.logger, downloadState)
       .then((downloadStream) => {
         return streamToBlob(downloadStream, 'application/octet-stream');
       }).then((blob) => {
@@ -356,7 +378,7 @@ export class Environment {
       params.finishedCallback(null, null);
     });
 
-    download(this.config, bucketId, fileId, params.progressCallback, this.logger, downloadState)
+    download(this.config, bucketId, fileId, params, this.logger, downloadState)
       .then((fileStream) => {
         fileStream.on('error', (err) => destination.emit('error', err));
         fileStream.pipe(destination);

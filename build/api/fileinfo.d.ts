@@ -17,7 +17,7 @@ export interface FileInfo {
     };
     index: string;
 }
-export declare function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<FileInfo>;
-export declare function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes?: string[]): Promise<Shard[]>;
+export declare function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId: string, token?: string): Promise<FileInfo>;
+export declare function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes?: string[], token?: string): Promise<Shard[]>;
 export declare function ReplacePointer(config: EnvironmentConfig, bucketId: string, fileId: string, pointerIndex: number, excludeNodes?: string[]): Promise<Shard[]>;
-export declare function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string): Promise<Shard[]>;
+export declare function GetFileMirrors(config: EnvironmentConfig, bucketId: string, fileId: string, token?: string): Promise<Shard[]>;

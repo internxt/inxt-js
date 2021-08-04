@@ -33,6 +33,7 @@ export class FileObject extends EventEmitter {
   fileId: string;
 
   fileKey: Buffer;
+  fileToken?: string;
 
   totalSizeWithECs = 0;
 
@@ -59,6 +60,14 @@ export class FileObject extends EventEmitter {
     this.setMaxListeners(100);
   }
 
+  setFileEncryptionKey(key: Buffer): void {
+    this.fileKey = key;
+  }
+
+  setFileToken(token: string): void {
+    this.fileToken = token;
+  }
+
   checkIfIsAborted() {
     if (this.isAborted()) {
       throw new Error('Download aborted');
@@ -71,11 +80,11 @@ export class FileObject extends EventEmitter {
     logger.info('Retrieving file info...');
 
     if (!this.fileInfo) {
-      this.fileInfo = await GetFileInfo(this.config, this.bucketId, this.fileId)
+      this.fileInfo = await GetFileInfo(this.config, this.bucketId, this.fileId, this.fileToken)
         .catch((err) => {
           throw wrap('Get file info error', err);
         });
-      if (this.config.encryptionKey) {
+      if (this.fileKey.length === 0 && this.config.encryptionKey) {
         this.fileKey = await GenerateFileKey(this.config.encryptionKey, this.bucketId, Buffer.from(this.fileInfo.index, 'hex'))
           .catch((err) => {
             throw wrap('Generate file key error', err);
@@ -92,7 +101,7 @@ export class FileObject extends EventEmitter {
     logger.info('Retrieving file mirrors...');
 
     // Discard mirrors for shards with parities (ECs)
-    this.rawShards = (await GetFileMirrors(this.config, this.bucketId, this.fileId)).filter(shard => !shard.parity);
+    this.rawShards = (await GetFileMirrors(this.config, this.bucketId, this.fileId, this.fileToken)).filter(shard => !shard.parity);
 
     await eachLimit(this.rawShards, 1, (shard: Shard, nextShard) => {
       let attempts = 0;

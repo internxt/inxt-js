@@ -65,6 +65,9 @@ var InxtApi = /** @class */ (function () {
     InxtApi.prototype.getShardFromNode = function (shard) {
         return emptyINXTRequest(this.config);
     };
+    InxtApi.prototype.createFileToken = function (bucketId, fileId, operation) {
+        return emptyINXTRequest(this.config);
+    };
     return InxtApi;
 }());
 // tslint:disable-next-line: max-classes-per-file
@@ -152,6 +155,10 @@ var Bridge = /** @class */ (function (_super) {
         var address = farmer.address, port = farmer.port;
         var targetUrl = "http://" + address + ":" + port + "/shards/" + hash + "?token=" + token;
         return new lib_1.INXTRequest(this.config, Methods.Get, targetUrl, {}, (_a = this.config.useProxy) !== null && _a !== void 0 ? _a : true);
+    };
+    Bridge.prototype.createFileToken = function (bucketId, fileId, operation) {
+        var targetUrl = "https://api.internxt.com/buckets/" + bucketId + "/tokens";
+        return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation: operation, file: fileId } }, false);
     };
     return Bridge;
 }(InxtApi));

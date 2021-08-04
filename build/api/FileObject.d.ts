@@ -17,12 +17,15 @@ export declare class FileObject extends EventEmitter {
     bucketId: string;
     fileId: string;
     fileKey: Buffer;
+    fileToken?: string;
     totalSizeWithECs: number;
     decipher: DecryptStream;
     private aborted;
     private debug;
     private api;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger);
+    setFileEncryptionKey(key: Buffer): void;
+    setFileToken(token: string): void;
     checkIfIsAborted(): void;
     getInfo(): Promise<FileInfo | undefined>;
     getMirrors(): Promise<void>;
