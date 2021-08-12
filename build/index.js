@@ -162,7 +162,7 @@ var Environment = /** @class */ (function () {
             _this.logger.debug('Filename %s encrypted is %s', filename, name);
             var content = blob_to_stream_1.default(fileContent);
             var fileToUpload = { content: content, name: name, size: size };
-            upload_1.upload(_this.config, bucketId, fileToUpload, params, _this.logger, uploadState);
+            return upload_1.upload(_this.config, bucketId, fileToUpload, params, _this.logger, uploadState);
         })
             .catch(function (err) {
             _this.logger.error("Error encrypting filename due to " + err.message);

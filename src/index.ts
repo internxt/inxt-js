@@ -259,7 +259,7 @@ export class Environment {
         const content = blobToStream(fileContent);
         const fileToUpload: FileMeta = { content, name, size };
 
-        upload(this.config, bucketId, fileToUpload, params, this.logger, uploadState);
+        return upload(this.config, bucketId, fileToUpload, params, this.logger, uploadState);
       })
       .catch((err: Error) => {
         this.logger.error(`Error encrypting filename due to ${err.message}`);
