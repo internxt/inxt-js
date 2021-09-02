@@ -6,7 +6,7 @@ import { determineShardSize } from '../../src/lib/utils'
 import { Aes256ctrDecrypter, Aes256ctrEncrypter, sha256 } from '../../src/lib/crypto';
 
 import EncryptStream from '../../src/lib/encryptStream';
-import { FunnelStream } from '../../src/lib/FunnelStream';
+import { FunnelStream } from '../../src/lib/funnelStream';
 
 const key = Buffer.from('1111111111111111111111111111111111111111111111111111111111111111', 'hex');
 const iv = Buffer.from('11111111111111111111111111111111', 'hex');

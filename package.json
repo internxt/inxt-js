@@ -1,12 +1,12 @@
 {
   "name": "@internxt/inxt-js",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "",
   "main": "build/index.js",
   "scripts": {
     "build": "rimraf build/* && tsc",
     "build:js": "npm run build && browserify -s 'inxt' ./build/index.js -o dist/inxt.es6.js",
-    "test": "ts-mocha tests/**/*.ts",
+    "test": "ts-mocha tests/**/*.ts --timeout 10000",
     "lint": "tslint './src/**/*.ts'",
     "lint:fix": "npm run lint -- --fix",
     "dev": "tsc lab/index.ts && node lab/index.js && rm lab/index.js",

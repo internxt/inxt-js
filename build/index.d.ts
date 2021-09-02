@@ -119,7 +119,7 @@ export declare class Environment {
      * @param bucketId Bucket id where file is going to be stored
      * @param params Upload file params
      */
-    uploadFile(bucketId: string, params: UploadFileParams): void;
+    uploadFile(bucketId: string, params: UploadFileParams): ActionState;
     /**
      * Uploads a file from file system
      * @param bucketId Bucket id where file is going to be stored

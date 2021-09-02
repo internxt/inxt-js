@@ -223,31 +223,31 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Upload file params
    */
-  uploadFile(bucketId: string, params: UploadFileParams): void {
+  uploadFile(bucketId: string, params: UploadFileParams): ActionState {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
-      return;
+      return uploadState;
     }
 
     if (!bucketId) {
       params.finishedCallback(Error('Bucket id was not provided'), null);
 
-      return;
+      return uploadState;
     }
 
     if (!params.filename) {
       params.finishedCallback(Error('Filename was not provided'), null);
 
-      return;
+      return uploadState;
     }
 
     if (params.fileContent.size === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
 
-      return;
+      return uploadState;
     }
 
     const { filename, fileSize: size, fileContent } = params;
@@ -267,6 +267,8 @@ export class Environment {
 
         params.finishedCallback(err, null);
       });
+
+      return uploadState;
   }
 
   /**

@@ -142,19 +142,19 @@ var Environment = /** @class */ (function () {
         var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
         if (!this.config.encryptionKey) {
             params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-            return;
+            return uploadState;
         }
         if (!bucketId) {
             params.finishedCallback(Error('Bucket id was not provided'), null);
-            return;
+            return uploadState;
         }
         if (!params.filename) {
             params.finishedCallback(Error('Filename was not provided'), null);
-            return;
+            return uploadState;
         }
         if (params.fileContent.size === 0) {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
-            return;
+            return uploadState;
         }
         var filename = params.filename, size = params.fileSize, fileContent = params.fileContent;
         crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
@@ -169,6 +169,7 @@ var Environment = /** @class */ (function () {
             _this.logger.error(err);
             params.finishedCallback(err, null);
         });
+        return uploadState;
     };
     /**
      * Uploads a file from file system
