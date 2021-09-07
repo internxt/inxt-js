@@ -138,38 +138,18 @@ var Environment = /** @class */ (function () {
      * @param params Upload file params
      */
     Environment.prototype.uploadFile = function (bucketId, params) {
-        var _this = this;
         var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
-        if (!this.config.encryptionKey) {
-            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-            return uploadState;
-        }
-        if (!bucketId) {
-            params.finishedCallback(Error('Bucket id was not provided'), null);
-            return uploadState;
-        }
-        if (!params.filename) {
+        var filename = params.filename, size = params.fileSize, fileContent = params.fileContent;
+        if (!filename) {
             params.finishedCallback(Error('Filename was not provided'), null);
             return uploadState;
         }
-        if (params.fileContent.size === 0) {
+        if (fileContent.size === 0) {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
             return uploadState;
         }
-        var filename = params.filename, size = params.fileSize, fileContent = params.fileContent;
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
-            .then(function (name) {
-            _this.logger.debug('Filename %s encrypted is %s', filename, name);
-            var content = blob_to_stream_1.default(fileContent);
-            var fileToUpload = { content: content, name: name, size: size };
-            return upload_1.upload(_this.config, bucketId, fileToUpload, params, _this.logger, uploadState);
-        })
-            .catch(function (err) {
-            _this.logger.error("Error encrypting filename due to " + err.message);
-            _this.logger.error(err);
-            params.finishedCallback(err, null);
-        });
-        return uploadState;
+        var file = { content: blob_to_stream_1.default(fileContent), uncryptedName: filename, size: size };
+        return this.uploadStream(bucketId, file, params, uploadState);
     };
     /**
      * Uploads a file from file system
@@ -177,16 +157,7 @@ var Environment = /** @class */ (function () {
      * @param params Store file params
      */
     Environment.prototype.storeFile = function (bucketId, filepath, params) {
-        var _this = this;
         var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
-        if (!this.config.encryptionKey) {
-            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-            return uploadState;
-        }
-        if (!bucketId) {
-            params.finishedCallback(Error('Bucket id was not provided'), null);
-            return uploadState;
-        }
         var fileStat = fs_1.statSync(filepath);
         if (fileStat.size === 0) {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
@@ -196,10 +167,29 @@ var Environment = /** @class */ (function () {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
         var filename = params.filename || path_1.basename(filepath);
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
-            .then(function (name) {
-            logger_1.logger.debug('Filename %s encrypted is %s', filename, name);
-            var fileMeta = { content: fs_1.createReadStream(filepath), name: name, size: fileStat.size };
+        var file = { content: fs_1.createReadStream(filepath), uncryptedName: filename, size: fileStat.size };
+        return this.uploadStream(bucketId, file, params, uploadState);
+    };
+    /**
+       * Uploads a file from a stream
+       * @param bucketId Bucket id where file is going to be stored
+       * @param params Store file params
+       */
+    Environment.prototype.uploadStream = function (bucketId, file, params, uploadState) {
+        var _this = this;
+        if (!this.config.encryptionKey) {
+            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+            return uploadState;
+        }
+        if (!bucketId) {
+            params.finishedCallback(Error('Bucket id was not provided'), null);
+            return uploadState;
+        }
+        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, file.uncryptedName)
+            .then(function (encryptedName) {
+            logger_1.logger.debug('Filename %s encrypted is %s', file.uncryptedName, encryptedName);
+            var content = file.content, size = file.size;
+            var fileMeta = { content: content, size: size, name: encryptedName };
             return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
         }).then(function () {
             _this.logger.info('Upload Success!');

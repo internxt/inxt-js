@@ -127,6 +127,16 @@ export declare class Environment {
      */
     storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
     /**
+       * Uploads a file from a stream
+       * @param bucketId Bucket id where file is going to be stored
+       * @param params Store file params
+       */
+    uploadStream(bucketId: string, file: {
+        content: Readable;
+        size: number;
+        uncryptedName: string;
+    }, params: UploadFileOptions, uploadState: ActionState): ActionState;
+    /**
      * Cancels a file upload
      * @param {ActionState} state Upload state
      */
