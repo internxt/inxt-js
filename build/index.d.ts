@@ -134,7 +134,7 @@ export declare class Environment {
     uploadStream(bucketId: string, file: {
         content: Readable;
         size: number;
-        uncryptedName: string;
+        plainName: string;
     }, params: UploadFileOptions, uploadState: ActionState): ActionState;
     /**
      * Cancels a file upload

@@ -240,7 +240,7 @@ export class Environment {
       return uploadState;
     }
 
-    const file = { content:blobToStream(fileContent) , uncryptedName: filename, size };
+    const file = { content:blobToStream(fileContent) , plainName: filename, size };
 
     return this.uploadStream(bucketId, file, params, uploadState);
   }
@@ -267,7 +267,7 @@ export class Environment {
 
     const filename = params.filename || basename(filepath);
 
-    const file = { content: createReadStream(filepath), uncryptedName: filename, size: fileStat.size };
+    const file = { content: createReadStream(filepath), plainName: filename, size: fileStat.size };
 
     return this.uploadStream(bucketId, file, params, uploadState)
   }
@@ -277,7 +277,7 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  uploadStream(bucketId: string, file: {content:Readable, size:number, uncryptedName:string}, params: UploadFileOptions, uploadState: ActionState): ActionState {
+  uploadStream(bucketId: string, file: {content:Readable, size:number, plainName:string}, params: UploadFileOptions, uploadState: ActionState): ActionState {
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
@@ -290,9 +290,9 @@ export class Environment {
       return uploadState;
     }
 
-    EncryptFilename(this.config.encryptionKey, bucketId, file.uncryptedName)
+    EncryptFilename(this.config.encryptionKey, bucketId, file.plainName)
       .then((encryptedName: string) => {
-        logger.debug('Filename %s encrypted is %s', file.uncryptedName, encryptedName);
+        logger.debug('Filename %s encrypted is %s', file.plainName, encryptedName);
 
         const {content, size} = file
 

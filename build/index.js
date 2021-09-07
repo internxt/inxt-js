@@ -148,7 +148,7 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
             return uploadState;
         }
-        var file = { content: blob_to_stream_1.default(fileContent), uncryptedName: filename, size: size };
+        var file = { content: blob_to_stream_1.default(fileContent), plainName: filename, size: size };
         return this.uploadStream(bucketId, file, params, uploadState);
     };
     /**
@@ -167,7 +167,7 @@ var Environment = /** @class */ (function () {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
         var filename = params.filename || path_1.basename(filepath);
-        var file = { content: fs_1.createReadStream(filepath), uncryptedName: filename, size: fileStat.size };
+        var file = { content: fs_1.createReadStream(filepath), plainName: filename, size: fileStat.size };
         return this.uploadStream(bucketId, file, params, uploadState);
     };
     /**
@@ -185,9 +185,9 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(Error('Bucket id was not provided'), null);
             return uploadState;
         }
-        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, file.uncryptedName)
+        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, file.plainName)
             .then(function (encryptedName) {
-            logger_1.logger.debug('Filename %s encrypted is %s', file.uncryptedName, encryptedName);
+            logger_1.logger.debug('Filename %s encrypted is %s', file.plainName, encryptedName);
             var content = file.content, size = file.size;
             var fileMeta = { content: content, size: size, name: encryptedName };
             return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
