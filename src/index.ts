@@ -226,49 +226,23 @@ export class Environment {
   uploadFile(bucketId: string, params: UploadFileParams): ActionState {
     const uploadState = new ActionState(ActionTypes.Upload);
 
-    if (!this.config.encryptionKey) {
-      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+    const { filename, fileSize: size, fileContent } = params;
 
-      return uploadState;
-    }
-
-    if (!bucketId) {
-      params.finishedCallback(Error('Bucket id was not provided'), null);
-
-      return uploadState;
-    }
-
-    if (!params.filename) {
+    if (!filename) {
       params.finishedCallback(Error('Filename was not provided'), null);
 
       return uploadState;
     }
 
-    if (params.fileContent.size === 0) {
+    if (fileContent.size === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
 
       return uploadState;
     }
 
-    const { filename, fileSize: size, fileContent } = params;
+    const file = { content:blobToStream(fileContent) , plainName: filename, size };
 
-    EncryptFilename(this.config.encryptionKey, bucketId, filename)
-      .then((name: string) => {
-        this.logger.debug('Filename %s encrypted is %s', filename, name);
-
-        const content = blobToStream(fileContent);
-        const fileToUpload: FileMeta = { content, name, size };
-
-        return upload(this.config, bucketId, fileToUpload, params, this.logger, uploadState);
-      })
-      .catch((err: Error) => {
-        this.logger.error(`Error encrypting filename due to ${err.message}`);
-        this.logger.error(err);
-
-        params.finishedCallback(err, null);
-      });
-
-      return uploadState;
+    return this.uploadStream(bucketId, file, params, uploadState);
   }
 
   /**
@@ -278,18 +252,6 @@ export class Environment {
    */
   storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
     const uploadState = new ActionState(ActionTypes.Upload);
-
-    if (!this.config.encryptionKey) {
-      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-
-      return uploadState;
-    }
-
-    if (!bucketId) {
-      params.finishedCallback(Error('Bucket id was not provided'), null);
-
-      return uploadState;
-    }
 
     const fileStat = statSync(filepath);
 
@@ -305,13 +267,39 @@ export class Environment {
 
     const filename = params.filename || basename(filepath);
 
-    EncryptFilename(this.config.encryptionKey, bucketId, filename)
-      .then((name: string) => {
-        logger.debug('Filename %s encrypted is %s', filename, name);
+    const file = { content: createReadStream(filepath), plainName: filename, size: fileStat.size };
 
-        const fileMeta: FileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
+    return this.uploadStream(bucketId, file, params, uploadState)
+  }
+
+/**
+   * Uploads a file from a stream
+   * @param bucketId Bucket id where file is going to be stored
+   * @param params Store file params
+   */
+  uploadStream(bucketId: string, file: {content:Readable, size:number, plainName:string}, params: UploadFileOptions, uploadState: ActionState): ActionState {
+    if (!this.config.encryptionKey) {
+      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
+      return uploadState;
+    }
+
+    if (!bucketId) {
+      params.finishedCallback(Error('Bucket id was not provided'), null);
+
+      return uploadState;
+    }
+
+    EncryptFilename(this.config.encryptionKey, bucketId, file.plainName)
+      .then((encryptedName: string) => {
+        logger.debug('Filename %s encrypted is %s', file.plainName, encryptedName);
+
+        const {content, size} = file
+
+        const fileMeta = {content, size, name: encryptedName}
 
         return upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
+
       }).then(() => {
         this.logger.info('Upload Success!');
       }).catch((err: Error) => {
