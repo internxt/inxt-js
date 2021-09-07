@@ -135,7 +135,7 @@ export declare class Environment {
         content: Readable;
         size: number;
         plainName: string;
-    }, params: UploadFileOptions, uploadState: ActionState): ActionState;
+    }, params: UploadFileOptions, givenUploadState?: ActionState): ActionState;
     /**
      * Cancels a file upload
      * @param {ActionState} state Upload state

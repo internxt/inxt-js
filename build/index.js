@@ -175,8 +175,9 @@ var Environment = /** @class */ (function () {
        * @param bucketId Bucket id where file is going to be stored
        * @param params Store file params
        */
-    Environment.prototype.uploadStream = function (bucketId, file, params, uploadState) {
+    Environment.prototype.uploadStream = function (bucketId, file, params, givenUploadState) {
         var _this = this;
+        var uploadState = givenUploadState !== null && givenUploadState !== void 0 ? givenUploadState : new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
         if (!this.config.encryptionKey) {
             params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
             return uploadState;

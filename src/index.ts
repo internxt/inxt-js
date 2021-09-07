@@ -277,7 +277,9 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  uploadStream(bucketId: string, file: {content:Readable, size:number, plainName:string}, params: UploadFileOptions, uploadState: ActionState): ActionState {
+  uploadStream(bucketId: string, file: {content:Readable, size:number, plainName:string}, params: UploadFileOptions, givenUploadState?: ActionState): ActionState {
+    const uploadState = givenUploadState ?? new ActionState(ActionTypes.Upload);
+
     if (!this.config.encryptionKey) {
       params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
