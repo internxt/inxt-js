@@ -72,8 +72,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     interface LocalShard {
       size: number;
       index: number;
-      start: number;
-      end: number;
       filepath: string;
     }
 
@@ -93,8 +91,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         },
         size: end - start,
         index: shardIndex,
-        start,
-        end,
         filepath: this.filepath
       });
 
