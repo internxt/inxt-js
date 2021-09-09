@@ -8,7 +8,7 @@ import { determineConcurrency, determineShardSize } from '../utils';
 import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from './UploadStrategy';
 import EncryptStream from '../encryptStream';
 import { wrap } from '../utils/error';
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import { generateMerkleTree } from '../merkleTreeStreams';
 
 interface Params extends UploadParams {
@@ -44,6 +44,26 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
   setFileEncryptionKey(fk: Buffer) {
     this.fileEncryptionKey = fk;
+  }
+
+  private streamShardToNode(params: { address: string, port: number, hash: string, token: string, stream: Readable }): Writable {
+    const req = https.request({
+      protocol: 'https:',
+      method: 'POST',
+      hostname: 'proxy01.api.internxt.com',
+      path: `/http://${params.address}:${params.port}/shards/${params.hash}?token=${params.token}`,
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    }, (res) => {
+      console.log(`statusCode: ${res.statusCode}`);
+
+      res.on('data', d => {
+        process.stdout.write(d);
+      });
+    });
+
+    return params.stream.pipe(req);
   }
 
   async upload(negotiateContract: NegotiateContract): Promise<void> {
@@ -130,23 +150,13 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
         console.log('uploadShardParams', uploadShardParams);
 
-        const req = https.request({
-          protocol: 'https:',
-          method: 'POST',
-          hostname: 'proxy01.api.internxt.com',
-          path: `/http://${uploadShardParams.farmer.address}:${uploadShardParams.farmer.port}/shards/${uploadShardParams.hash}?token=${uploadShardParams.token}`,
-          headers: {
-            'Content-Type': 'application/octet-stream'
-          }
-        }, (res) => {
-          console.log(`statusCode: ${res.statusCode}`);
-
-          res.on('data', d => {
-            process.stdout.write(d);
-          });
-        });
-
-        shard.getStream().pipe(new EncryptStream(this.fileEncryptionKey, this.iv)).pipe(req)
+        this.streamShardToNode({
+          address: uploadShardParams.farmer.address,
+          port: uploadShardParams.farmer.port,
+          hash: uploadShardParams.hash,
+          stream: shard.getStream().pipe(new EncryptStream(this.fileEncryptionKey, this.iv)),
+          token: uploadShardParams.token
+        })
           .on('data', () => {})
           .on('error', (err) => {
             next(err);
