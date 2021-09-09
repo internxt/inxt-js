@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import { createReadStream, createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
-import { upload } from './lib/upload';
+import { upload, uploadV2 } from './lib/upload';
 import { download } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
@@ -16,6 +16,7 @@ import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
+import { StreamFileSystemStrategy } from './lib/upload/StreamsFileSystemStrategy';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -251,9 +252,23 @@ export class Environment {
    * @param params Store file params
    */
   storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
-    const uploadState = new ActionState(ActionTypes.Upload);
+    const desiredRamUsage = 1024 * 1024 * 200; // 200Mb
 
+    const uploadState = new ActionState(ActionTypes.Upload);
+    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath });
     const fileStat = statSync(filepath);
+
+    if (!this.config.encryptionKey) {
+      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
+      return uploadState;
+    }
+
+    if (!bucketId) {
+      params.finishedCallback(Error('Bucket id was not provided'), null);
+
+      return uploadState;
+    }
 
     if (fileStat.size === 0) {
       params.finishedCallback(Error('Can not upload a file with size 0'), null);
@@ -267,12 +282,26 @@ export class Environment {
 
     const filename = params.filename || basename(filepath);
 
-    const file = { content: createReadStream(filepath), plainName: filename, size: fileStat.size };
+    EncryptFilename(this.config.encryptionKey, bucketId, filename)
+      .then((encryptedName: string) => {
+        logger.debug('Filename %s encrypted is %s', filename, encryptedName);
 
-    return this.uploadStream(bucketId, file, params, uploadState)
+        const fileMeta = { content: Readable.from(''), size: fileStat.size, name: encryptedName };
+
+        return uploadV2(this.config, fileMeta, bucketId, params, this.logger, uploadState, uploadStrategy);
+      }).then(() => {
+        this.logger.info('Upload Success!');
+      }).catch((err: Error) => {
+        if (err && err.message && err.message.includes('Upload aborted')) {
+          return params.finishedCallback(new Error('Process killed by user'), null);
+        }
+        params.finishedCallback(err, null);
+      });
+
+    return uploadState;
   }
 
-/**
+  /**
    * Uploads a file from a stream
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
