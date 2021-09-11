@@ -11,9 +11,9 @@ export class EncryptStream extends Transform {
   public shards: RawShard [] = [];
   private indexCounter = 0;
 
-  constructor(key: Buffer, iv: Buffer) {
+  constructor(key: Buffer, iv: Buffer, cipher?: Cipher) {
     super();
-    this.cipher = createCipheriv('aes-256-ctr', key, iv);
+    this.cipher = cipher ?? createCipheriv('aes-256-ctr', key, iv);
   }
 
   _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void): void {
