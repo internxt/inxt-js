@@ -1,6 +1,8 @@
 import https from 'https';
 import { eachLimit } from 'async';
 import { createReadStream, statSync } from 'fs';
+import { Cipher, createCipheriv } from 'crypto';
+import { Readable, Writable, pipeline, PassThrough } from 'stream';
 
 import { HashStream } from '../hasher';
 import { ShardMeta } from '../shardMeta';
@@ -8,13 +10,25 @@ import { determineConcurrency, determineShardSize } from '../utils';
 import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from './UploadStrategy';
 import EncryptStream from '../encryptStream';
 import { wrap } from '../utils/error';
-import { Readable, Writable } from 'stream';
 import { generateMerkleTree } from '../merkleTreeStreams';
+import { FunnelStream } from '../funnelStream';
+import { ContractNegotiated } from '../contracts';
+import { UploaderQueueV2 } from './UploadStream';
+import { UploadTaskParams } from './UploadStream';
+import { IncomingMessage } from 'http';
+import { promisify } from 'util';
+
+const pipelineAsync = promisify(pipeline);
 
 interface Params extends UploadParams {
   filepath: string;
 }
 
+interface LocalShard {
+  size: number;
+  index: number;
+  filepath: string;
+}
 export interface ContentAccessor {
   getStream(): Readable;
 }
@@ -46,7 +60,38 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     this.fileEncryptionKey = fk;
   }
 
-  private streamShardToNode(params: { address: string, port: number, hash: string, token: string, stream: Readable }): Writable {
+  static streamShardToNodeV2(params: { hostname: string, path: string, stream: Readable }): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        protocol: 'https:',
+        method: 'POST',
+        hostname: params.hostname,
+        path: params.path,
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        }
+      }, (res: IncomingMessage) => {
+        console.log(`statusCode: ${res.statusCode}`);
+  
+        res.on('error', (err) => {
+          console.log(err);
+          reject(err);
+        })
+  
+        res.on('data', d => {
+          process.stdout.write(d);
+        });
+  
+        res.on('end', () => {
+          resolve();
+        });
+      });
+
+      params.stream.pipe(req);
+    })  
+  }
+
+  static streamShardToNode(params: { address: string, port: number, hash: string, token: string, stream: Readable }): Writable {
     const req = https.request({
       protocol: 'https:',
       method: 'POST',
@@ -58,6 +103,10 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     }, (res) => {
       console.log(`statusCode: ${res.statusCode}`);
 
+      res.on('error', (err) => {
+        console.log(err);
+      })
+
       res.on('data', d => {
         process.stdout.write(d);
       });
@@ -66,61 +115,85 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     return params.stream.pipe(req);
   }
 
-  async upload(negotiateContract: NegotiateContract): Promise<void> {
-    this.emit(UploadEvents.Started);
 
-    interface LocalShard {
-      size: number;
-      index: number;
-      filepath: string;
-    }
+  // TODO: El ultimo shard no se envia bien!!
 
-    const fileSize = statSync(this.filepath).size;
-    const shardSize = determineShardSize(fileSize);
-    const nShards = Math.ceil(fileSize / shardSize);
-    const shards: (ContentAccessor & LocalShard)[] = [];
-    const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
+  private generateShardAccessors(filepath: string, nShards: number, shardSize: number, fileSize: number): (LocalShard & ContentAccessor)[] {
+    const shards: (LocalShard & ContentAccessor)[] = [];
 
-    for (let i = 0, shardIndex = 0; i < nShards; i += shardSize, shardIndex++) {
+    for (let i = 0, shardIndex = 0; shardIndex < nShards; i += shardSize, shardIndex++) {
       const start = i;
-      const end = i + shardSize - 1 > fileSize ? fileSize : i + shardSize - 1;
+      // const end = Math.min(start + shardSize - 1, fileSize);
+      const end = Math.min(start + shardSize, fileSize);
 
       shards.push({
         getStream: () => {
-          return createReadStream(this.filepath, { start, end });
+          return createReadStream(filepath, { start, end: end - 1 });
         },
-        size: end - start,
+        filepath,
         index: shardIndex,
-        filepath: this.filepath
+        size: end - start
+        // cuando todos los trozos tienen shardSize, necesita un + 1
+        // cuando el ultimo no tiene shardSize, no necesita un +1
       });
 
       console.log('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end);
     }
 
+    return shards;
+  }
+
+  calculateShardHash(shard: ContentAccessor, cipher: Cipher): Promise<string> {
+    const hasher = new HashStream();
+    const encrypter = new EncryptStream(this.fileEncryptionKey, this.iv, cipher);
+
+    return new Promise((resolve, reject) => {
+      pipeline(shard.getStream(), encrypter, hasher, (err) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(hasher.getHash().toString('hex'));
+      }).on('data', () => {}) // force pipeline to change to flowing mode
+    });
+  }
+
+  // TODO: Extract this to a separate fn
+  async negotiateContracts(shardMetas: ShardMeta[], negotiateContract: NegotiateContract): Promise<(ContractNegotiated & { shardIndex: number })[]> {
+    const contracts: (ContractNegotiated & { shardIndex: number })[] = [];
+
+    await eachLimit(shardMetas, 6, (shardMeta, next) => {
+      negotiateContract(shardMeta).then((contract) => {
+        contracts.push({ ...contract, shardIndex: shardMeta.index });
+        next();
+      }).catch((err) => {
+        next(err);
+      });
+    });
+
+    return contracts;
+  }
+
+  async upload(negotiateContract: NegotiateContract): Promise<void> {
+    this.emit(UploadEvents.Started);
+
+    const fileSize = statSync(this.filepath).size;
+    const shardSize = determineShardSize(fileSize);
+    const nShards = Math.ceil(fileSize / shardSize);
+    const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
+
+    const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+    const shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
     const shardMetas: ShardMeta[] = [];
 
-    // TODO: use concurrency instead of 1
-    // TODO: add retry 3 times
-    // TODO: add upload progress callback
-    await eachLimit(shards, 1, (shard, next) => {
-      let shardMeta: ShardMeta;
+    await eachLimit(shards, 1, async (shard, next: (err?: unknown) => void) => {
+      try {
+        const shardHash = await this.calculateShardHash(shard, cipher);
+        console.log('Shard %s: Hash %s', shard.index, shardHash);
 
-      const hashStream = new HashStream();
+        const merkleTree = await generateMerkleTree(shard);
 
-      // 1. Encriptar shard
-      // 2. Calcular hash
-      new Promise((resolve, reject) => {
-        shard.getStream().pipe(new EncryptStream(this.fileEncryptionKey, this.iv)).pipe(hashStream)
-          .on('data', () => {})
-          .on('error', reject)
-          .on('end', resolve);
-      }).then(() => {
-        return generateMerkleTree(shard);
-      })
-      .then((merkleTree) => {
-        // 3. Generar meta
-        shardMeta = {
-          hash: hashStream.getHash().toString('hex'),
+        const shardMeta = {
+          hash: shardHash,
           size: shard.size,
           index: shard.index,
           parity: false,
@@ -128,49 +201,67 @@ export class StreamFileSystemStrategy extends UploadStrategy {
           tree: merkleTree.leaf
         };
 
-        console.log('Uploading shard %s', shardMeta.hash);
         shardMetas.push(shardMeta);
-
-        return negotiateContract(shardMeta);
-      }).then((contract) => {
-        const uploadShardParams = {
-          index: shardMeta.index,
-          replaceCount: 0,
-          hash: shardMeta.hash,
-          size: shardMeta.size,
-          parity: false,
-          token: contract.token,
-          farmer: { ...contract.farmer, lastSeen: new Date() },
-          operation: contract.operation
-        };
-
-        console.log('uploadShardParams', uploadShardParams);
-
-        this.streamShardToNode({
-          address: uploadShardParams.farmer.address,
-          port: uploadShardParams.farmer.port,
-          hash: uploadShardParams.hash,
-          stream: shard.getStream().pipe(new EncryptStream(this.fileEncryptionKey, this.iv)),
-          token: uploadShardParams.token
-        })
-          .on('data', () => {})
-          .on('error', (err) => {
-            next(err);
-          })
-          .on('finish', () => {
-            this.emit(UploadEvents.ShardUploadSuccess, {
-              hash: shardMeta.hash,
-              size: shardMeta.size
-            });
-            next();
-          });
-      }).catch((err) => {
+        next();
+      } catch (err) {
+        console.log('err', err);
         next(err);
+      }
+    });
+
+    const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
+
+    function getPath(shardIndex: number) {
+      const contract = contracts.find(c => c.shardIndex === shardIndex);
+      const shardMeta = shardMetas.find(s => s.index === shardIndex);
+      const path = `/http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
+
+      return path;
+    }
+
+    function getHostname() {
+      return 'proxy01.api.internxt.com';
+    }
+
+    const uploadTask = (content: UploadTaskParams) => {
+      return StreamFileSystemStrategy.streamShardToNodeV2(content).then(() => {
+        console.log('llego aquiiiii %s', content.hostname);
+        content.finishCb();
+      }).catch((err) => {
+        console.log('err', err);
       });
-    }).then(() => {
-      this.emit(UploadEvents.Finished, { result: shardMetas });
-    }).catch((err) => {
+    };
+
+    console.log('CONCURRENCY', concurrency);
+
+    const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask, getPath, getHostname);
+
+    uploader.on('error', (err) => {
       this.emit(UploadEvents.Error, wrap('Shard upload error', err));
+    });
+
+    uploader.on('upload-progress', ([ shardIndex ]) => {
+      const shardMeta = shardMetas.find(s => s.index === shardIndex);
+      this.emit(UploadEvents.ShardUploadSuccess, {
+        hash: shardMeta?.hash,
+        size: shardMeta?.size
+      });
+    });
+
+    const fileStream = createReadStream(this.filepath, {
+      // highWaterMark: 16384
+    });
+    const slicer = new FunnelStream(shardSize);
+    const encrypter = new EncryptStream(this.fileEncryptionKey, this.iv);
+
+    uploader.once('end', () => {
+      this.emit(UploadEvents.Finished, { result: shardMetas });
+    });
+
+    pipeline(fileStream, slicer, encrypter, uploader.getUpstream(), (err) => {
+      if (err) {
+        this.emit(UploadEvents.Error, err);
+      }
     });
   }
 
