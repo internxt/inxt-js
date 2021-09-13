@@ -17,6 +17,7 @@ import { UploaderQueueV2 } from './UploadStream';
 import { UploadTaskParams } from './UploadStream';
 import { IncomingMessage } from 'http';
 import { promisify } from 'util';
+import { Tap } from '../TapStream';
 
 const pipelineAsync = promisify(pipeline);
 
@@ -179,7 +180,8 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const fileSize = statSync(this.filepath).size;
     const shardSize = determineShardSize(fileSize);
     const nShards = Math.ceil(fileSize / shardSize);
-    const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
+    // const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
+    const concurrency = 4;
 
     const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
     const shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
@@ -232,13 +234,13 @@ export class StreamFileSystemStrategy extends UploadStrategy {
       });
     };
 
-    console.log('CONCURRENCY', concurrency);
-
     const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask, getPath, getHostname);
+    const fileStream = createReadStream(this.filepath, { /* highWaterMark: 16384 */ });
+    const slicer = new FunnelStream(shardSize);
 
-    uploader.on('error', (err) => {
-      this.emit(UploadEvents.Error, wrap('Shard upload error', err));
-    });
+    console.log('tap allowing an influx of %s bytes', shardSize * concurrency);
+
+    let uploads: number [] = [];
 
     uploader.on('upload-progress', ([ shardIndex ]) => {
       const shardMeta = shardMetas.find(s => s.index === shardIndex);
@@ -246,23 +248,61 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         hash: shardMeta?.hash,
         size: shardMeta?.size
       });
+
+      uploads.push(0);
+
+      if (uploads.length === concurrency) {
+        tap.open();
+        uploads = [];
+      }
     });
 
-    const fileStream = createReadStream(this.filepath, {
-      // highWaterMark: 16384
+    uploader.on('error', (err) => {
+      this.emit(UploadEvents.Error, wrap('Shard upload error', err));
     });
-    const slicer = new FunnelStream(shardSize);
-    const encrypter = new EncryptStream(this.fileEncryptionKey, this.iv);
 
     uploader.once('end', () => {
       this.emit(UploadEvents.Finished, { result: shardMetas });
     });
 
-    pipeline(fileStream, slicer, encrypter, uploader.getUpstream(), (err) => {
-      if (err) {
-        this.emit(UploadEvents.Error, err);
+    const tap = new Tap(shardSize * concurrency);
+
+    pipeline(
+      fileStream,
+      tap,
+      slicer,
+      createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv),
+      uploader.getUpstream(),
+      (err) => {
+        if (err) {
+          this.emit(UploadEvents.Error, err);
+        }
       }
-    });
+    );
+
+    // const uploads: number [] = [];
+    let shardCounter = 0;
+
+    // passthrough.on('data', (content) => {
+    //   uploads.push(0);
+
+    //   const shardMeta = shardMetas.find(m => m.index === shardCounter);
+
+    //   shardCounter++;
+
+    //   StreamFileSystemStrategy.streamShardToNodeV2({
+    //     hostname: getHostname(),
+    //     path: getPath(shardMeta!.index),
+    //     stream: Readable.from(content)
+    //   }).then(() => {
+    //     uploads.pop();
+    //     if (uploads.length === 0) {
+    //       tap.open();
+    //     }
+    //   }).catch((err) => {
+    //     console.log('err', err);
+    //   });
+    // });
   }
 
   abort(): void {
