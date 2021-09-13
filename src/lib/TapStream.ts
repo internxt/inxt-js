@@ -46,7 +46,7 @@ export class Tap extends Transform {
     if (chunk.length > this.diameterSize - this.bytesRead) {
       // console.log('chunk cannot be pushed at all');
 
-      if (this.diameterSize - this.bytesRead > 0) {
+      if (this.diameterSize - this.bytesRead >= 0) { // bug here, if this.diameterSize - this.bytesRead == 0, what to do?
         // console.log('pushing from byte 0 to byte %s', this.diameterSize - this.bytesRead - 1);
         // console.log('bytes %s', this.diameterSize - this.bytesRead);
         // console.log('saving from byte %s to byte %s', this.diameterSize - this.bytesRead, chunk.length);
