@@ -1,4 +1,3 @@
-import https from 'https';
 import { eachLimit } from 'async';
 import { createReadStream, statSync } from 'fs';
 import { Cipher, createCipheriv } from 'crypto';
@@ -16,6 +15,7 @@ import { ContractNegotiated } from '../contracts';
 import { Events as UploaderQueueEvents, UploaderQueueV2 } from './UploadStream';
 import { UploadTaskParams } from './UploadStream';
 import { Tap } from '../TapStream';
+import { httpsStreamPostRequest } from '../../services/request';
 
 interface Params extends UploadParams {
   filepath: string;
@@ -55,37 +55,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
   setFileEncryptionKey(fk: Buffer) {
     this.fileEncryptionKey = fk;
-  }
-
-  static streamShardToNodeV2(params: { hostname: string, path: string, stream: Readable }): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const req = https.request({
-        protocol: 'https:',
-        method: 'POST',
-        hostname: params.hostname,
-        path: params.path,
-        headers: {
-          'Content-Type': 'application/octet-stream'
-        }
-      }, (res: IncomingMessage) => {
-        console.log(`statusCode: ${res.statusCode}`);
-  
-        res.on('error', (err) => {
-          console.log(err);
-          reject(err);
-        })
-  
-        res.on('data', d => {
-          process.stdout.write(d);
-        });
-  
-        res.on('end', () => {
-          resolve();
-        });
-      });
-
-      params.stream.pipe(req);
-    });
   }
 
   private generateShardAccessors(filepath: string, nShards: number, shardSize: number, fileSize: number): (LocalShard & ContentAccessor)[] {
@@ -147,23 +116,13 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const shardMetas = await this.generateShardMetas(shards);
     const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
 
-    function getPath(shardIndex: number) {
+    const uploadTask = ({ stream: source, finishCb: cb, shardIndex }: UploadTaskParams) => {
       const contract = contracts.find(c => c.shardIndex === shardIndex);
       const shardMeta = shardMetas.find(s => s.index === shardIndex);
-      const path = `/http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
+      const hostname = `http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
 
-      return path;
-    }
-
-    function getHostname() {
-      return 'proxy01.api.internxt.com';
-    }
-
-    const uploadTask = (content: UploadTaskParams) => {
-      return StreamFileSystemStrategy.streamShardToNodeV2(content).then(() => {
-        content.finishCb();
-      }).catch((err) => {
-        console.log('err', err);
+      return httpsStreamPostRequest({ hostname, source }).then(cb).catch((err) => {
+        throw wrap('Farmer request error', err);
       });
     };
 
@@ -171,18 +130,15 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const tap = new Tap(shardSize * concurrency);
     const slicer = new FunnelStream(shardSize);
     const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-    const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask, getPath, getHostname);
+    const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask);
 
     console.log('tap allowing an influx of %s bytes', shardSize * concurrency);
 
     let uploads: number [] = [];
 
     uploader.on(UploaderQueueEvents.Progress, ([ shardIndex ]) => {
-      const shardMeta = shardMetas.find(s => s.index === shardIndex);
-      this.emit(UploadEvents.ShardUploadSuccess, {
-        hash: shardMeta?.hash,
-        size: shardMeta?.size
-      });
+      const { hash, size } = shardMetas.find(s => s.index === shardIndex)!;
+      this.emit(UploadEvents.ShardUploadSuccess, { hash, size });
 
       uploads.push(0);
 

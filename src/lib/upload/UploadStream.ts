@@ -5,8 +5,7 @@ import { ConcurrentQueue } from "../concurrentQueue";
 import { Abortable } from "../../api/Abortable";
 
 export interface UploadTaskParams {
-  hostname: string;
-  path: string;
+  shardIndex: number;
   stream: Readable;
   finishCb: () => void;
 }
@@ -18,8 +17,6 @@ export enum Events {
 }
 
 type UploadTask = (content: UploadTaskParams) => Promise<any>;
-type GetPath = (index: number) => string;
-type GetHostname = () => string;
 
 export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> implements Abortable {
   private eventEmitter = new EventEmitter();
@@ -28,20 +25,13 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> implement
   private concurrentUploads = 0;
   concurrency = 0;
 
-  private getPath: GetPath;
-  private getHostname: GetHostname;
-
   constructor(
     parallelUploads = 1,
     expectedUploads = 1,
-    task: UploadTask,
-    getPath: GetPath,
-    getHostname: GetHostname
+    task: UploadTask
   ) {
     super(parallelUploads, expectedUploads, task);
     this.concurrency = parallelUploads;
-    this.getHostname = getHostname;
-    this.getPath = getPath;
 
     this.passthrough.on('data', this.handleData.bind(this));
     this.passthrough.on('end', this.end.bind(this));
@@ -70,12 +60,7 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> implement
       }
     };
 
-    this.push({
-      stream: Readable.from(chunk),
-      path: this.getPath(this.shardIndex),
-      hostname: this.getHostname(),
-      finishCb
-    });
+    this.push({ shardIndex: this.shardIndex, stream: Readable.from(chunk), finishCb });
 
     this.shardIndex++;
   }
