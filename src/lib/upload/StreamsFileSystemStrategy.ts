@@ -151,8 +151,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const fileSize = statSync(this.filepath).size;
     const shardSize = determineShardSize(fileSize);
     const nShards = Math.ceil(fileSize / shardSize);
-    // const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
-    const concurrency = 4;
+    const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
 
     const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
     const shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
