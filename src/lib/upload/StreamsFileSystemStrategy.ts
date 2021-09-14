@@ -113,20 +113,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     return shards;
   }
 
-  calculateShardHash(shard: ContentAccessor, cipher: Cipher): Promise<string> {
-    const hasher = new HashStream();
-    const encrypter = new EncryptStream(this.fileEncryptionKey, this.iv, cipher);
-
-    return new Promise((resolve, reject) => {
-      pipeline(shard.getStream(), encrypter, hasher, (err) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(hasher.getHash().toString('hex'));
-      }).on('data', () => {}) // force pipeline to change to flowing mode
-    });
-  }
-
   // TODO: Extract this to a separate fn
   async negotiateContracts(shardMetas: ShardMeta[], negotiateContract: NegotiateContract): Promise<(ContractNegotiated & { shardIndex: number })[]> {
     const contracts: (ContractNegotiated & { shardIndex: number })[] = [];
@@ -143,6 +129,12 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     return contracts;
   }
 
+  generateShardMetas(shards: (LocalShard & ContentAccessor)[]): Promise<ShardMeta[]> {
+    const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+
+    return generateShardMetas(shards, cipher);
+  }
+
   async upload(negotiateContract: NegotiateContract): Promise<void> {
     this.emit(UploadEvents.Started);
 
@@ -151,33 +143,8 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const nShards = Math.ceil(fileSize / shardSize);
     const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
 
-    const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
     const shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
-    const shardMetas: ShardMeta[] = [];
-
-    await eachLimit(shards, 1, async (shard, next: (err?: unknown) => void) => {
-      try {
-        const shardHash = await this.calculateShardHash(shard, cipher);
-        console.log('Shard %s: Hash %s', shard.index, shardHash);
-
-        const merkleTree = generateMerkleTree();
-
-        const shardMeta = {
-          hash: shardHash,
-          size: shard.size,
-          index: shard.index,
-          parity: false,
-          challenges_as_str: merkleTree.challenges_as_str,
-          tree: merkleTree.leaf
-        };
-
-        shardMetas.push(shardMeta);
-        next();
-      } catch (err) {
-        next(err);
-      }
-    });
-
+    const shardMetas = await this.generateShardMetas(shards);
     const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
 
     function getPath(shardIndex: number) {
@@ -246,4 +213,52 @@ export class StreamFileSystemStrategy extends UploadStrategy {
   abort(): void {
     this.emit(UploadEvents.Aborted);
   }
+}
+
+function calculateShardHash(shard: ContentAccessor, cipher: Cipher): Promise<string> {
+  const hasher = new HashStream();
+
+  // Avoid cipher to end (in order to reuse it later), using encrypt stream to wrap it
+  const encrypter = new EncryptStream(Buffer.from(''), Buffer.from(''), cipher);
+
+  return new Promise((resolve, reject) => {
+    pipeline(shard.getStream(), encrypter, hasher, (err) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(hasher.getHash().toString('hex'));
+    }).on('data', () => {
+      // force data to flow
+    });
+  });
+}
+
+function generateShardMetas(shards: (LocalShard & ContentAccessor)[], cipher: Cipher): Promise<ShardMeta[]> {
+  const shardMetas: ShardMeta[] = [];
+
+  return eachLimit(shards, 1, (shard, next: (err?: Error) => void) => {
+    generateShardMeta(shard, cipher).then((shardMeta) => {
+      shardMetas.push(shardMeta);
+      next();
+    }).catch((err) => {
+      next(err);
+    });
+  }).then(() => {
+    return shardMetas;
+  });
+}
+
+function generateShardMeta(shard: (LocalShard & ContentAccessor), cipher: Cipher): Promise<ShardMeta> {
+  return calculateShardHash(shard, cipher).then((shardHash) => {
+    const merkleTree = generateMerkleTree();
+
+    return {
+      hash: shardHash,
+      size: shard.size,
+      index: shard.index,
+      parity: false,
+      challenges_as_str: merkleTree.challenges_as_str,
+      tree: merkleTree.leaf
+    };
+  });
 }
