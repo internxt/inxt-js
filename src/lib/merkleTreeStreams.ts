@@ -1,5 +1,4 @@
 import { eachLimit } from 'async';
-import cloneable from 'cloneable-readable';
 import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 
