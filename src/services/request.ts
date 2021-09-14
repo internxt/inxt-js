@@ -81,3 +81,56 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
     }
   });
 }
+
+interface PostStreamRequestParams {
+  hostname: string;
+  source: Readable;
+}
+
+export async function httpsStreamPostRequest(params: PostStreamRequestParams, useProxy = true): Promise<Buffer> {
+  let targetUrl = params.hostname;
+  let free: () => void;
+
+  if (useProxy) {
+    const proxy = await getProxy();
+    targetUrl = `${proxy.url}/${params.hostname}`;
+    free = proxy.free;
+  }
+
+  const reqUrl = new url.URL(targetUrl);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      protocol: 'https:',
+      method: 'POST',
+      hostname: reqUrl.hostname,
+      path: reqUrl.pathname,
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    }, (res: IncomingMessage) => {
+      let dataResponse = Buffer.alloc(0);
+
+      res.on('error', (err) => {
+        if (free) {
+          free();
+        }
+        reject(err);
+      });
+      res.on('data', d => {
+        dataResponse = Buffer.concat([dataResponse, d]);
+      });
+      res.on('end', () => {
+        if (free) {
+          free();
+        }
+        if (res.statusCode && res.statusCode > 399) {
+          return reject(new Error(dataResponse.toString()));
+        }
+        resolve(dataResponse);
+      });
+    });
+
+    params.source.pipe(req);
+  });
+}
