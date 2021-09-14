@@ -149,12 +149,12 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     });
 
     uploader.once(UploaderQueueEvents.Error, ([ err ]) => {
-      uploader.removeAllListeners();
+      uploader.destroy();
       this.emit(UploadEvents.Error, wrap('Farmer request error', err));
     });
 
     uploader.once(UploaderQueueEvents.End, () => {
-      uploader.removeAllListeners();
+      uploader.destroy();
       this.emit(UploadEvents.Finished, { result: shardMetas });
     });
 
