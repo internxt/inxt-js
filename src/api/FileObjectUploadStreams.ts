@@ -22,24 +22,19 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
   private id = '';
   private aborted = false;
   private api: InxtApiI;
-  shardMetas: ShardMeta[] = [];
   private logger: winston.Logger;
+  private uploader: UploadStrategy;
 
-  bucketId: string;
-  frameId: string;
-  index: Buffer;
-  encrypted = false;
-
-  fileEncryptionKey: Buffer;
   iv: Buffer;
-
-  uploader: UploadStrategy;
+  index: Buffer;
+  frameId: string;
+  bucketId: string;
+  fileEncryptionKey: Buffer;
 
   constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, log: winston.Logger, uploader: UploadStrategy, api?: InxtApiI) {
     super();
 
     this.fileMeta = fileMeta;
-
     this.uploader = uploader;
 
     this.config = config;
@@ -137,18 +132,13 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
   }
 
   upload(cb: UploadProgressCallback): Promise<ShardMeta[]> {
-    console.log('FileEncryptionKey: %s', this.fileEncryptionKey.toString('hex'));
-    console.log('Index: %s', this.index.toString('hex'));
-    console.log('IV: %s', this.iv.toString('hex'));
-
     this.checkIfIsAborted();
 
     this.uploader.setIv(this.iv);
     this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
 
-    this.uploader.once(UploadEvents.Started, () => {
-      this.logger.info('Upload started');
-    });
+    this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
+    this.uploader.once(UploadEvents.Aborted, () => this.uploader.removeAllListeners());
 
     let currentBytesUploaded = 0;
     this.uploader.on(UploadEvents.ShardUploadSuccess, (message: ShardUploadSuccessMessage) => {
@@ -156,26 +146,23 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
     });
 
+    const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
+      this.uploader.removeAllListeners();
+      reject(err);
+    };
+
+    const finishHandler = (resolve: (result: ShardMeta[]) => void) => (message: UploadFinishedMessage) => {
+      this.uploader.removeAllListeners();
+      resolve(message.result);
+    };
+
+    const negotiateContract = (shardMeta: ShardMeta) => {
+      return new ShardObject(this.api, this.frameId, shardMeta).negotiateContract();
+    };
+
     return new Promise((resolve, reject) => {
-      this.uploader.once(UploadEvents.Aborted, () => {
-        this.logger.info('Upload aborted');
-        this.uploader.removeAllListeners();
-      });
-
-      this.uploader.once(UploadEvents.Error, (err) => {
-        this.logger.error(err);
-        this.uploader.removeAllListeners();
-        reject(err);
-      });
-
-      this.uploader.on(UploadEvents.Finished, (message: UploadFinishedMessage) => {
-        console.log('Upload finished');
-        resolve(message.result as ShardMeta[]);
-      });
-
-      const negotiateContract = (shardMeta: ShardMeta) => {
-        return new ShardObject(this.api, this.frameId, shardMeta).negotiateContract();
-      };
+      this.uploader.once(UploadEvents.Error, errorHandler(reject));
+      this.uploader.once(UploadEvents.Finished, finishHandler(resolve));
 
       this.uploader.upload(negotiateContract);
     });
@@ -199,6 +186,7 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
 
     this.aborted = true;
     this.requests.forEach((r) => r.abort());
+    this.uploader.abort();
   }
 
   isAborted(): boolean {
