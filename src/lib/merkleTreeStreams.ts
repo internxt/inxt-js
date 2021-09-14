@@ -65,15 +65,31 @@ function generateLeaves(preleaves: Buffer[]): Buffer[] {
   return preleaves.map(generateLeaf);
 }
 
-export async function generateMerkleTree(encrypted: ContentAccessor): Promise<MerkleTree> {
-  const challenges = generateChallenges(4);
-  const preleaves = await generatePreleaves(encrypted, challenges);
-  const leaves = generateLeaves(preleaves);
-
+export function generateMerkleTree(): MerkleTree {
   return {
-    leaf: leaves.map(l => l.toString('hex')),
-    challenges,
-    challenges_as_str: challenges.map(c => c.toString('hex')),
-    preleaf: preleaves
+    leaf: [
+      '0000000000000000000000000000000000000000',
+      '0000000000000000000000000000000000000000',
+      '0000000000000000000000000000000000000000',
+      '0000000000000000000000000000000000000000'
+    ],
+    challenges: [
+      Buffer.from('00000000000000000000000000000000', 'hex'),
+      Buffer.from('00000000000000000000000000000000', 'hex'),
+      Buffer.from('00000000000000000000000000000000', 'hex'),
+      Buffer.from('00000000000000000000000000000000', 'hex')
+    ],
+    challenges_as_str: [
+      '00000000000000000000000000000000',
+      '00000000000000000000000000000000',
+      '00000000000000000000000000000000',
+      '00000000000000000000000000000000'
+    ],
+    preleaf: [
+      Buffer.from('0000000000000000000000000000000000000000', 'hex'),
+      Buffer.from('0000000000000000000000000000000000000000', 'hex'),
+      Buffer.from('0000000000000000000000000000000000000000', 'hex'),
+      Buffer.from('0000000000000000000000000000000000000000', 'hex')
+    ]
   };
 }
