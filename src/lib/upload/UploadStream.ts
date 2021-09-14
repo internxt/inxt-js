@@ -54,9 +54,11 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> {
       this.passthrough.pause();
     }
 
+    const currentShardIndex = this.shardIndex;
+
     const finishCb = () => {
       this.concurrentUploads--;
-      this.emit('upload-progress', this.shardIndex - 1);
+      this.emit('upload-progress', currentShardIndex);
 
       if (this.passthrough.isPaused()) {
         this.passthrough.resume();
