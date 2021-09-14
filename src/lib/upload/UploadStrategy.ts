@@ -1,4 +1,5 @@
 import { EventEmitter } from 'stream';
+import { Abortable } from '../../api/Abortable';
 import { ContractNegotiated } from '../contracts';
 import { ShardMeta } from '../shardMeta';
 
@@ -21,7 +22,7 @@ export enum UploadEvents {
   ShardUploadSuccess = 'shard-upload-success',
 }
 
-export abstract class UploadStrategy extends EventEmitter {
+export abstract class UploadStrategy extends EventEmitter implements Abortable {
   fileEncryptionKey = Buffer.alloc(0);
   iv = Buffer.alloc(0);
   abstract getIv(): Buffer;
