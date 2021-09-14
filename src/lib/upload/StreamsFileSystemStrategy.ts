@@ -2,7 +2,7 @@ import https from 'https';
 import { eachLimit } from 'async';
 import { createReadStream, statSync } from 'fs';
 import { Cipher, createCipheriv } from 'crypto';
-import { Readable, Writable, pipeline, PassThrough } from 'stream';
+import { Readable, pipeline } from 'stream';
 
 import { HashStream } from '../hasher';
 import { ShardMeta } from '../shardMeta';
@@ -18,8 +18,6 @@ import { UploadTaskParams } from './UploadStream';
 import { IncomingMessage } from 'http';
 import { promisify } from 'util';
 import { Tap } from '../TapStream';
-
-const pipelineAsync = promisify(pipeline);
 
 interface Params extends UploadParams {
   filepath: string;
@@ -89,35 +87,8 @@ export class StreamFileSystemStrategy extends UploadStrategy {
       });
 
       params.stream.pipe(req);
-    })  
-  }
-
-  static streamShardToNode(params: { address: string, port: number, hash: string, token: string, stream: Readable }): Writable {
-    const req = https.request({
-      protocol: 'https:',
-      method: 'POST',
-      hostname: 'proxy01.api.internxt.com',
-      path: `/http://${params.address}:${params.port}/shards/${params.hash}?token=${params.token}`,
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    }, (res) => {
-      console.log(`statusCode: ${res.statusCode}`);
-
-      res.on('error', (err) => {
-        console.log(err);
-      })
-
-      res.on('data', d => {
-        process.stdout.write(d);
-      });
     });
-
-    return params.stream.pipe(req);
   }
-
-
-  // TODO: El ultimo shard no se envia bien!!
 
   private generateShardAccessors(filepath: string, nShards: number, shardSize: number, fileSize: number): (LocalShard & ContentAccessor)[] {
     const shards: (LocalShard & ContentAccessor)[] = [];
@@ -279,30 +250,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         }
       }
     );
-
-    // const uploads: number [] = [];
-    let shardCounter = 0;
-
-    // passthrough.on('data', (content) => {
-    //   uploads.push(0);
-
-    //   const shardMeta = shardMetas.find(m => m.index === shardCounter);
-
-    //   shardCounter++;
-
-    //   StreamFileSystemStrategy.streamShardToNodeV2({
-    //     hostname: getHostname(),
-    //     path: getPath(shardMeta!.index),
-    //     stream: Readable.from(content)
-    //   }).then(() => {
-    //     uploads.pop();
-    //     if (uploads.length === 0) {
-    //       tap.open();
-    //     }
-    //   }).catch((err) => {
-    //     console.log('err', err);
-    //   });
-    // });
   }
 
   abort(): void {
