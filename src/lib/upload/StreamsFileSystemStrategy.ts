@@ -163,7 +163,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         const shardHash = await this.calculateShardHash(shard, cipher);
         console.log('Shard %s: Hash %s', shard.index, shardHash);
 
-        const merkleTree = await generateMerkleTree(shard);
+        const merkleTree = generateMerkleTree();
 
         const shardMeta = {
           hash: shardHash,
