@@ -83,7 +83,7 @@ export class ShardObject extends EventEmitter {
     return this.meta;
   }
 
-  private negotiateContract(): Promise<ContractNegotiated> {
+  negotiateContract(): Promise<ContractNegotiated> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);
     this.requests.push(req);
 
