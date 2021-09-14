@@ -1,7 +1,8 @@
 import { PassThrough, Readable } from "stream";
 import { EventEmitter } from "events";
+
 import { ConcurrentQueue } from "../concurrentQueue";
-import { wrap } from "../utils/error";
+import { Abortable } from "../../api/Abortable";
 
 export interface UploadTaskParams {
   hostname: string;
@@ -10,11 +11,17 @@ export interface UploadTaskParams {
   finishCb: () => void;
 }
 
+export enum Events {
+  Error = 'uploader-queue-error',
+  Progress  = 'uploader-queue-progress',
+  End = 'uploader-queue-end'
+}
+
 type UploadTask = (content: UploadTaskParams) => Promise<any>;
 type GetPath = (index: number) => string;
 type GetHostname = () => string;
 
-export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> {
+export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> implements Abortable {
   private eventEmitter = new EventEmitter();
   private passthrough = new PassThrough();
   private shardIndex = 0;
@@ -38,9 +45,7 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> {
 
     this.passthrough.on('data', this.handleData.bind(this));
     this.passthrough.on('end', this.end.bind(this));
-    this.passthrough.on('error', (err) => {
-      this.emit('error', wrap('Farmer request error', err));
-    });
+    this.passthrough.on('error', (err) => this.emit(Events.Error, err));
   }
 
   getUpstream(): PassThrough {
@@ -58,7 +63,7 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> {
 
     const finishCb = () => {
       this.concurrentUploads--;
-      this.emit('upload-progress', currentShardIndex);
+      this.emit(Events.Progress, currentShardIndex);
 
       if (this.passthrough.isPaused()) {
         this.passthrough.resume();
@@ -99,12 +104,25 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> {
     return this;
   }
 
-  end(cb?: () => void) {
+  removeAllListeners(): void {
+    this.eventEmitter.removeAllListeners();
+  }
+
+  end(cb?: () => void): void {
     super.end(() => {
       if (cb) {
         cb();
       }
-      this.emit('end');
+      this.emit(Events.End);
     });
+  }
+
+  destroy(): void {
+    this.removeAllListeners();
+  }
+
+  abort(): void {
+    this.passthrough.destroy();
+    this.queue.kill();
   }
 }
