@@ -252,7 +252,7 @@ export class Environment {
    * @param params Store file params
    */
   storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
-    const desiredRamUsage = 1024 * 1024 * 200; // 200Mb
+    const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
 
     const uploadState = new ActionState(ActionTypes.Upload);
     const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath });
@@ -431,6 +431,6 @@ export interface EnvironmentConfig {
   useProxy?: boolean;
   config?: {
     shardRetry: number,
-    maxConcurrency: number
+    ramUsage: number
   };
 }
