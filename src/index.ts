@@ -255,7 +255,7 @@ export class Environment {
     const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
 
     const uploadState = new ActionState(ActionTypes.Upload);
-    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath });
+    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
     const fileStat = statSync(filepath);
 
     if (!this.config.encryptionKey) {

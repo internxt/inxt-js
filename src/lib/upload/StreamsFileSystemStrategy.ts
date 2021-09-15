@@ -16,6 +16,7 @@ import { Events as UploaderQueueEvents, UploaderQueueV2 } from './UploadStream';
 import { UploadTaskParams } from './UploadStream';
 import { Tap } from '../TapStream';
 import { httpsStreamPostRequest } from '../../services/request';
+import { Abortable } from '../../api/Abortable';
 
 interface Params extends UploadParams {
   filepath: string;
@@ -26,17 +27,29 @@ interface LocalShard {
   index: number;
   filepath: string;
 }
+
 export interface ContentAccessor {
   getStream(): Readable;
+}
+
+type LoggerFunction = (message: string, ...meta: any[]) => void;
+interface Logger {
+  debug: LoggerFunction;
+  info: LoggerFunction;
+  error: LoggerFunction;
 }
 
 export class StreamFileSystemStrategy extends UploadStrategy {
   private filepath: string;
   private ramUsage: number;
 
-  constructor(params: Params) {
+  private abortables: Abortable[] = [];
+  private logger: Logger;
+
+  constructor(params: Params, logger: Logger) {
     super();
 
+    this.logger = logger;
     this.filepath = params.filepath;
     this.ramUsage = params.desiredRamUsage;
   }
@@ -76,7 +89,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         // cuando el ultimo no tiene shardSize, no necesita un +1
       });
 
-      console.log('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end);
+      this.logger.debug('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end);
     }
 
     return shards;
@@ -116,6 +129,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const shardMetas = await this.generateShardMetas(shards);
     const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
 
+    // UPLOAD STARTS HERE
     const uploadTask = ({ stream: source, finishCb: cb, shardIndex }: UploadTaskParams) => {
       const contract = contracts.find(c => c.shardIndex === shardIndex);
       const shardMeta = shardMetas.find(s => s.index === shardIndex);
@@ -131,6 +145,28 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const slicer = new FunnelStream(shardSize);
     const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
     const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask);
+
+    this.abortables.push({
+      abort: () => {
+        try { reader.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { tap.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { slicer.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { encrypter.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { uploader.destroy() } catch {}
+      }
+    });
 
     console.log('tap allowing an influx of %s bytes', shardSize * concurrency);
 
@@ -164,10 +200,19 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         uploadPipeline.destroy();
       }
     });
+
+    this.abortables.push({
+      abort: () => {
+        try { uploadPipeline.destroy() } catch {}
+      }
+    });
   }
 
   abort(): void {
     this.emit(UploadEvents.Aborted);
+    this.abortables.forEach((abortable) => {
+      abortable.abort();
+    });
   }
 }
 
