@@ -16,6 +16,7 @@ import { Events as UploaderQueueEvents, UploaderQueueV2 } from './UploadStream';
 import { UploadTaskParams } from './UploadStream';
 import { Tap } from '../TapStream';
 import { httpsStreamPostRequest } from '../../services/request';
+import { UploadTransform } from './UploadTransform';
 
 interface Params extends UploadParams {
   filepath: string;
@@ -116,31 +117,60 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const shardMetas = await this.generateShardMetas(shards);
     const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
 
-    const uploadTask = ({ stream: source, finishCb: cb, shardIndex }: UploadTaskParams) => {
-      const contract = contracts.find(c => c.shardIndex === shardIndex);
-      const shardMeta = shardMetas.find(s => s.index === shardIndex);
-      const hostname = `http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
+    // const uploadTask = ({ stream: source, finishCb: cb, shardIndex }: UploadTaskParams) => {
+    //   const contract = contracts.find(c => c.shardIndex === shardIndex);
+    //   const shardMeta = shardMetas.find(s => s.index === shardIndex);
+    //   const hostname = `http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
 
-      return httpsStreamPostRequest({ hostname, source }).then(cb).catch((err) => {
-        throw wrap('Farmer request error', err);
-      });
-    };
+    //   return httpsStreamPostRequest({ hostname, source }).then(cb).catch((err) => {
+    //     throw wrap('Farmer request error', err);
+    //   });
+    // };
 
     const reader = createReadStream(this.filepath, { /* highWaterMark: 16384 */ });
     const tap = new Tap(shardSize * concurrency);
     const slicer = new FunnelStream(shardSize);
     const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-    const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask);
+    const uploader = new UploadTransform(
+      shardMetas.map(meta => {
+        const contract = contracts.find(c => c.shardIndex === meta.index)!;
+
+        return { meta, contract, finished: false };
+      }),
+      nShards
+    );
+    // const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask);
 
     console.log('tap allowing an influx of %s bytes', shardSize * concurrency);
 
     let uploads: number [] = [];
 
-    uploader.on(UploaderQueueEvents.Progress, ([ shardIndex ]) => {
-      const { hash, size } = shardMetas.find(s => s.index === shardIndex)!;
-      this.emit(UploadEvents.ShardUploadSuccess, { hash, size });
+    // uploader.on(UploaderQueueEvents.Progress, ([ shardIndex ]) => {
+    //   const { hash, size } = shardMetas.find(s => s.index === shardIndex)!;
+    //   this.emit(UploadEvents.ShardUploadSuccess, { hash, size });
 
+    //   uploads.push(0);
+
+    //   if (uploads.length === concurrency) {
+    //     tap.open();
+    //     uploads = [];
+    //   }
+    // });
+
+    // uploader.once(UploaderQueueEvents.Error, ([ err ]) => {
+    //   uploader.destroy();
+    //   this.emit(UploadEvents.Error, wrap('Farmer request error', err));
+    // });
+
+    // uploader.once(UploaderQueueEvents.End, () => {
+    //   uploader.destroy();
+    //   this.emit(UploadEvents.Finished, { result: shardMetas });
+    // });
+
+    uploader.on('task-processed', () => {
       uploads.push(0);
+
+      console.log('task procesed');
 
       if (uploads.length === concurrency) {
         tap.open();
@@ -148,17 +178,12 @@ export class StreamFileSystemStrategy extends UploadStrategy {
       }
     });
 
-    uploader.once(UploaderQueueEvents.Error, ([ err ]) => {
-      uploader.destroy();
-      this.emit(UploadEvents.Error, wrap('Farmer request error', err));
-    });
-
-    uploader.once(UploaderQueueEvents.End, () => {
-      uploader.destroy();
+    uploader.on('tasks-end', () => {
+      console.log('shardMeta', shardMetas);
       this.emit(UploadEvents.Finished, { result: shardMetas });
     });
 
-    const uploadPipeline = pipeline(reader, tap, slicer, encrypter, uploader.getUpstream(), (err) => {
+    const uploadPipeline = pipeline(reader, tap, encrypter, uploader, (err) => {
       if (err) {
         this.emit(UploadEvents.Error, err);
         uploadPipeline.destroy();
