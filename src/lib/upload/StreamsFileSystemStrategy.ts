@@ -75,7 +75,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
     for (let i = 0, shardIndex = 0; shardIndex < nShards; i += shardSize, shardIndex++) {
       const start = i;
-      // const end = Math.min(start + shardSize - 1, fileSize);
       const end = Math.min(start + shardSize, fileSize);
 
       shards.push({
@@ -85,8 +84,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         filepath,
         index: shardIndex,
         size: end - start
-        // cuando todos los trozos tienen shardSize, necesita un + 1
-        // cuando el ultimo no tiene shardSize, no necesita un +1
       });
 
       this.logger.debug('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end);
