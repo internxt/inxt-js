@@ -147,7 +147,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
       });
     };
 
-    const reader = createReadStream(this.filepath, { /* highWaterMark: 16384 */ });
+    const reader = createReadStream(this.filepath, { highWaterMark: 16384 });
     const tap = new Tap(shardSize * concurrency);
     const slicer = new FunnelStream(shardSize);
     const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
