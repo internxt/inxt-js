@@ -50,6 +50,7 @@
     "memory-blob-store": "^5.0.1",
     "multistream": "^4.1.0",
     "mux-demux": "^3.7.9",
+    "node-fetch": "^3.0.0",
     "progress-stream": "^2.0.0",
     "stream-to-blob": "^2.0.1",
     "streamsaver": "^2.0.4",

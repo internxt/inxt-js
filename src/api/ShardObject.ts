@@ -9,6 +9,9 @@ import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
 import { Shard } from "./shard";
+import { get, putStream } from "../services/request";
+
+type PutUrl = string;
 
 export class ShardObject extends EventEmitter {
   private meta: ShardMeta;
@@ -81,6 +84,14 @@ export class ShardObject extends EventEmitter {
     await this.sendShardToNode(content, shard);
 
     return this.meta;
+  }
+
+  static requestPut(url: string): Promise<PutUrl> {
+    return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
+  } 
+
+  static putStream(url: PutUrl, content: Readable): Promise<any> {
+    return putStream(url, content);
   }
 
   negotiateContract(): Promise<ContractNegotiated> {
