@@ -92,8 +92,8 @@ const utils = {
 type BlobStrategyObject = { label: 'Blob', params: {}};
 type OneStreamStrategyObject = { label: 'OneStreamOnly', params: OneStreamOnlyStrategyParams };
 
-type BlobStrategyFunction = (bucketId: string, opts: UploadOptions, s: BlobStrategyObject) => ActionState;
-type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, s: OneStreamStrategyObject) => ActionState;
+type BlobStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: BlobStrategyObject) => ActionState;
+type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
 
 type UploadFunction = BlobStrategyFunction & OneStreamOnlyStrategyFunction;
 
@@ -314,7 +314,7 @@ export class Environment {
     return uploadState;
   }
 
-  upload: UploadFunction = (bucketId, opts, strategyObj) => {
+  upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: BlobStrategyObject | OneStreamStrategyObject) => {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
@@ -333,6 +333,8 @@ export class Environment {
       logger.debug('Filename %s encrypted is %s', opts.filename, encryptedFilename);
 
       const fileMeta = { content: Readable.from(''), size: 0, name: encryptedFilename };
+
+      logger.debug('Using %s strategy', strategyObj.label);
 
       if (strategyObj.label === 'OneStreamOnly') {
         return this.uploadOneStreamOnly(bucketId, fileMeta, strategyObj.params, uploadState);
