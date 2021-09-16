@@ -1,13 +1,12 @@
 import blobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createReadStream, createWriteStream, statSync } from 'fs';
+import { createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
-import { upload, uploadV2 } from './lib/upload';
+import { OneStreamStrategy, upload, UploadFunction, UploadStrategyObject, uploadV2 } from './lib/upload';
 import { download } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
-import { FileMeta } from "./api/FileObjectUpload";
 import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
 import { adapt as webAdapter, WebDownloadFileOptions } from './api/adapters/Web';
@@ -16,8 +15,7 @@ import { basename } from 'path';
 import streamToBlob from 'stream-to-blob';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
-import { StreamFileSystemStrategy } from './lib/upload/StreamsFileSystemStrategy';
-import { OneStreamStrategy, Params as OneStreamOnlyStrategyParams } from './lib/upload/OneStreamStrategy';
+import { StreamFileSystemStrategy } from './lib/upload';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -88,14 +86,6 @@ interface UploadOptions extends UploadFileOptions {
 const utils = {
   generateFileKey: GenerateFileKey
 };
-
-type BlobStrategyObject = { label: 'Blob', params: {}};
-type OneStreamStrategyObject = { label: 'OneStreamOnly', params: OneStreamOnlyStrategyParams };
-
-type BlobStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: BlobStrategyObject) => ActionState;
-type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
-
-type UploadFunction = BlobStrategyFunction & OneStreamOnlyStrategyFunction;
 
 export class Environment {
   config: EnvironmentConfig;
@@ -314,7 +304,7 @@ export class Environment {
     return uploadState;
   }
 
-  upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: BlobStrategyObject | OneStreamStrategyObject) => {
+  upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
@@ -337,11 +327,15 @@ export class Environment {
       logger.debug('Using %s strategy', strategyObj.label);
 
       if (strategyObj.label === 'OneStreamOnly') {
-        return this.uploadOneStreamOnly(bucketId, fileMeta, strategyObj.params, uploadState);
+        return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, new OneStreamStrategy(strategyObj.params));
+      }
+
+      if (strategyObj.label === 'MultipleStreams') {
+        return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, new StreamFileSystemStrategy(strategyObj.params, logger));
       }
 
       if (strategyObj.label === 'Blob') {
-        // return this.uploadBlob(params as BlobStrategyParams);
+        // return uploadV2(....);
       }
     }).catch((err) => {
       if (err && err.message && err.message.includes('Upload aborted')) {
