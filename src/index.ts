@@ -16,6 +16,8 @@ import streamToBlob from 'stream-to-blob';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
 import { StreamFileSystemStrategy } from './lib/upload';
+import { UploadStrategy } from './lib/upload/UploadStrategy';
+import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -326,17 +328,26 @@ export class Environment {
 
       logger.debug('Using %s strategy', strategyObj.label);
 
+      let strategy: UploadStrategy = new EmptyStrategy();
+
       if (strategyObj.label === 'OneStreamOnly') {
-        return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, new OneStreamStrategy(strategyObj.params));
+        strategy = new OneStreamStrategy(strategyObj.params);
       }
 
       if (strategyObj.label === 'MultipleStreams') {
-        return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, new StreamFileSystemStrategy(strategyObj.params, logger));
+        strategy = new StreamFileSystemStrategy(strategyObj.params, logger);
       }
 
-      if (strategyObj.label === 'Blob') {
-        // return uploadV2(....);
+      if (strategy instanceof EmptyStrategy) {
+        return opts.finishedCallback(new Error('Unknown upload strategy'), null);
       }
+
+      if (this.config.inject) {
+        strategy.setFileEncryptionKey(this.config.inject.fileEncryptionKey);
+        strategy.setIv(this.config.inject.iv);
+      } 
+
+      return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, strategy);
     }).catch((err) => {
       if (err && err.message && err.message.includes('Upload aborted')) {
         return opts.finishedCallback(new Error('Process killed by user'), null);
@@ -483,4 +494,8 @@ export interface EnvironmentConfig {
     shardRetry: number,
     ramUsage: number
   };
+  inject?: {
+    fileEncryptionKey: Buffer,
+    iv: Buffer;
+  }
 }

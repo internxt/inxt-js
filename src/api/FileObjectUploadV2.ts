@@ -31,7 +31,7 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   index: Buffer;
   frameId: string;
   bucketId: string;
-  fileEncryptionKey: Buffer;
+  fileEncryptionKey = Buffer.alloc(0);
 
   constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, log: winston.Logger, uploader: UploadStrategy, api?: InxtApiI) {
     super();
@@ -47,7 +47,6 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
 
     this.logger = log;
 
-    this.fileEncryptionKey = randomBytes(32);
     this.index = randomBytes(32);
     this.iv = this.index.slice(0, 16);
 
@@ -136,8 +135,18 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   upload(cb: UploadProgressCallback): Promise<ShardMeta[]> {
     this.checkIfIsAborted();
 
-    this.uploader.setIv(this.iv);
-    this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
+    const fileEncryptionKeyNotSet = this.uploader.getFileEncryptionKey().length === 0;
+    const ivNotSet = this.uploader.getIv().length === 0;
+
+    if (fileEncryptionKeyNotSet) {
+      this.logger.debug('File encryption key not set, using the generated one');
+      this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
+    }
+
+    if (ivNotSet) {
+      this.logger.debug('Initialization vector not set, using the generated one');
+      this.uploader.setIv(this.iv);
+    }
 
     this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
     this.uploader.once(UploadEvents.Aborted, () => this.uploader.removeAllListeners());
