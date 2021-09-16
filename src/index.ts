@@ -347,13 +347,8 @@ export class Environment {
     return uploadState;
   }
 
-  private uploadOneStreamOnly(bucketId: string, fileMeta: FileMeta, params: OneStreamOnlyStrategyParams, state: ActionState) {
-    return uploadV2(this.config, fileMeta, bucketId, {
-      progressCallback: (progress) => {
-        console.log('PROGRESS %s', progress);
-      },
-      finishedCallback: () => {}
-    }, logger, state, new OneStreamStrategy(params));
+  uploadCancel(state: ActionState): void {
+    state.stop();
   }
 
   /**

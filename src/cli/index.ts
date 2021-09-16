@@ -143,7 +143,10 @@ async function uploadDirectory() {
   const directoryStream = archiverSetup.directory(opts.path + '/', false);
   archiverSetup.finalize();
 
+  const directoryHash = hasher.getHash().toString('hex');
+
   logger.debug('directory size zipped is %s', counter.count);
+  logger.debug('directory hash zipped is %s', directoryHash);
 
   new Promise((resolve, reject) => {
     const state = network.upload(process.env.BUCKET_ID, {
@@ -163,14 +166,14 @@ async function uploadDirectory() {
         desiredRamUsage: 200,
         source: {
           stream: directoryStream,
-          hash: hasher.getHash().toString('hex'),
+          hash: directoryHash,
           size: counter.count
         }
       }
     });
 
     process.on('SIGINT', () => {
-      // network.storeFileCancel(state);
+      network.uploadCancel(state);
     });
   }).then((fileId) => {
     logger.info('File upload finished. File id: %s', fileId);
