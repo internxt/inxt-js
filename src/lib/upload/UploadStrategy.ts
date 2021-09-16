@@ -17,6 +17,7 @@ export interface UploadFinishedMessage {
 export enum UploadEvents {
   Error = 'upload-error',
   Started = 'upload-start',
+  Progress = 'upload-progress',
   Aborted = 'upload-aborted',
   Finished = 'upload-finished',
   ShardUploadSuccess = 'shard-upload-success',
