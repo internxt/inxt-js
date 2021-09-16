@@ -1,5 +1,6 @@
+import EventEmitter from 'events';
 import { createCipheriv } from 'crypto';
-import { pipeline, Readable, Transform, TransformOptions } from 'stream';
+import { Duplex, pipeline, Readable, Writable } from 'stream';
 
 import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from './UploadStrategy';
 import { generateMerkleTree } from '../merkleTreeStreams';
@@ -7,11 +8,12 @@ import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
 import { ContractNegotiated } from '../contracts';
 import { wrap } from '../utils/error';
+import { Events as ProgressEvents, ProgressNotifier } from '../streams';
 
 interface Source {
-  size: number
-  hash: string
-  stream: Readable
+  size: number;
+  hash: string;
+  stream: Readable;
 }
 
 export interface Params extends UploadParams {
@@ -62,15 +64,14 @@ export class OneStreamStrategy extends UploadStrategy {
       const url = buildUrlFromContract(contract);
 
       const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-      const progress = new ProgressStream(this.source.size);
+      const progressNotifier = new ProgressNotifier(this.source.size);
 
-      progress.on(ProgressEvents.Progress, (progress: number) => {
-        console.log('progress: %s', progress);
-        this.emit(UploadEvents.ShardUploadSuccess);
+      progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+        this.emit(UploadEvents.Progress, progress);
       });
 
       const putUrl = await ShardObject.requestPut(url);
-      const uploadPipeline = pipeline(this.source.stream, encrypter, progress, (err) => {
+      const uploadPipeline = pipeline(this.source.stream, encrypter, progressNotifier, (err) => {
         if (err) {
           uploadPipeline.destroy();
           this.emit(UploadEvents.Error, wrap('OneStreamStrategyUploadError', err));
@@ -82,6 +83,9 @@ export class OneStreamStrategy extends UploadStrategy {
       await ShardObject.putStream(putUrl, uploadPipeline);
 
       this.emit(UploadEvents.Finished, { result: [shardMeta] });
+
+      cleanStreams([ progressNotifier, uploadPipeline, encrypter, this.source.stream ]);
+      cleanEventEmitters([ this ]);
     } catch (err) {
       this.emit(UploadEvents.Error);
     }
@@ -99,30 +103,15 @@ function buildUrlFromContract(contract: ContractNegotiated) {
   return `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${contract.hash}`;
 }
 
-enum ProgressEvents {
-  Progress = 'progress'
+function cleanEventEmitters(emitters: EventEmitter[]) {
+  emitters.forEach(e => e.removeAllListeners());
 }
 
-class ProgressStream extends Transform {
-  private readBytes = 0;
-  private progressInterval: NodeJS.Timeout;
-
-  constructor(totalBytes: number, opts?: TransformOptions) {
-    super(opts);
-
-    this.progressInterval = setInterval(() => {
-      this.emit(ProgressEvents.Progress, this.readBytes / totalBytes);
-    }, 100);
-  }
-
-  _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void) {
-    this.readBytes += chunk.length;
-
-    cb(null, chunk);
-  }
-
-  _flush(cb: (err: Error | null) => void) {
-    clearInterval(this.progressInterval);
-    cb(null);
-  }
+function cleanStreams(streams: (Readable | Writable | Duplex)[]) {
+  cleanEventEmitters(streams);
+  streams.forEach(s => {
+    if (!s.destroyed) {
+      s.destroy();
+    }
+  });
 }
