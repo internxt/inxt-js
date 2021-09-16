@@ -148,6 +148,11 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
     });
 
+    this.uploader.on(UploadEvents.Progress, (progress: number) => {
+      this.logger.debug('Progress %s', (progress * 100).toFixed(2));
+      // currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
+    });
+
     const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
       this.uploader.removeAllListeners();
       reject(err);
