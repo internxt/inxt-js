@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/archiver": "^5.1.1",
     "@types/async": "^3.2.3",
     "@types/chai": "^4.2.11",
     "@types/chai-as-promised": "^7.1.4",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@types/progress-stream": "^2.0.2",
+    "archiver": "^5.3.0",
     "async": "^3.2.0",
     "axios": "^0.19.2",
     "bip39": "^3.0.2",
