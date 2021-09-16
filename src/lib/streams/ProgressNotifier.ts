@@ -12,7 +12,9 @@ export class ProgressNotifier extends Transform {
     super(opts);
 
     this.progressInterval = setInterval(() => {
-      this.emit(Events.Progress, this.readBytes / totalBytes);
+      if (this.readBytes > 0) {
+        this.emit(Events.Progress, this.readBytes / totalBytes);
+      }
     }, 10);
   }
 
