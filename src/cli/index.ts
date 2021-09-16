@@ -10,6 +10,8 @@ import { HashStream } from '../lib/hasher';
 import { BytesCounter } from '../lib/streams/BytesCounter';
 
 import { promisify } from 'util';
+import { createCipheriv, randomBytes } from 'crypto';
+import { GenerateFileKey } from '../lib/crypto';
 
 const pipelineAsync = promisify(pipeline);
 const archive = archiver('zip', { zlib: { level: 9 } });
@@ -122,6 +124,20 @@ function uploadFile() {
 }
 
 async function uploadDirectory() {
+  const index = randomBytes(32);
+  const iv = index.slice(0, 16);
+  const encryptionKey = process.env.MNEMONIC;
+  const bucketId = process.env.BUCKET_ID;
+  const fileEncryptionKey = await GenerateFileKey(encryptionKey, bucketId, index);
+
+  const network = new Environment({
+    bridgePass: process.env.BRIDGE_PASS,
+    bridgeUser: process.env.BRIDGE_USER,
+    encryptionKey: process.env.MNEMONIC,
+    bridgeUrl: process.env.BRIDGE_URL ?? opts.url,
+    inject: { fileEncryptionKey, iv }
+  });
+
   logger.info('Uploading directory "%s"', opts.path);
   logger.info('Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, directoryPath: %s }',
     process.env.BUCKET_ID,
@@ -129,7 +145,8 @@ async function uploadDirectory() {
     network.config.bridgeUser,
     opts.path
   );
-
+  
+  const cipher = createCipheriv('aes-256-ctr', fileEncryptionKey, iv);
   const hasher = new HashStream();
   const counter = new BytesCounter();
   
@@ -137,7 +154,7 @@ async function uploadDirectory() {
   
   hasher.on('data', () => {});
   
-  await pipelineAsync(archive.directory(opts.path + '/', false), counter, hasher)
+  await pipelineAsync(archive.directory(opts.path + '/', false), cipher, counter, hasher)
 
   const archiverSetup = archiver('zip', { zlib: { level: 9 } })
   const directoryStream = archiverSetup.directory(opts.path + '/', false);
