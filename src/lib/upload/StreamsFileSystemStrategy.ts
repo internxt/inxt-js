@@ -18,7 +18,7 @@ import { Tap } from '../TapStream';
 import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
 
-interface Params extends UploadParams {
+export interface Params extends UploadParams {
   filepath: string;
 }
 
