@@ -4,6 +4,7 @@ import { Command } from 'commander';
 
 import { Environment } from '../index';
 import { logger } from '../lib/utils/logger';
+import { Readable } from 'stream';
 
 config();
 
@@ -17,6 +18,7 @@ program
   // .option('-u --url <url>', 'set the base url for the api')
   // .option('-l, --log <level>', 'set the log level (default 0)')
   // .option('-d, --debug', 'set the debug log level')
+  .option('-o, --only', 'use only one stream to upload the file (only for uploads)')
   .option('-u, --upload', 'upload file from provided path')
   .option('-d, --download', 'download file to provided path')
   .option('-f, --fileId <file_id>', 'file id to download (only for downloads)')
@@ -44,6 +46,10 @@ if (opts.upload) {
     logger.error('File not found in provided path');
 
     process.exit(1);
+  }
+
+  if (opts.only) {
+     
   }
 
   uploadFile();
@@ -90,6 +96,42 @@ function uploadFile() {
       },
       debug: (msg: string) => {
         logger.debug('DEBUG', msg);
+      }
+    });
+
+    process.on('SIGINT', () => {
+      network.storeFileCancel(state);
+    });
+  }).then((fileId) => {
+    logger.info('File upload finished. File id: %s', fileId);
+
+    process.exit(0);
+  }).catch((err) => {
+    logger.error('Error uploading file: %s', err.message);
+
+    process.exit(1);
+  });
+}
+
+function uploadFileOneStream() {
+  logger.info('Uploading file located at %s', opts.path);
+  logger.info('Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, filePath: %s }',
+    process.env.BUCKET_ID,
+    network.config.bridgeUrl,
+    network.config.bridgeUser,
+    opts.path
+  );
+
+  new Promise((resolve, reject) => {
+    const state = network.upload(process.env.BUCKET_ID, opts.path, {
+      label: 'OneStreamOnly',
+      params: {
+        desiredRamUsage: 200,
+        source: {
+          stream: Readable.from(''),
+          hash: '',
+          size: 0
+        }
       }
     });
 

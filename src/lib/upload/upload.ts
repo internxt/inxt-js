@@ -4,9 +4,11 @@ import { EnvironmentConfig, UploadFileOptions } from "../..";
 import { ActionState } from "../../api/ActionState";
 import { UPLOAD_CANCELLED } from "../../api/constants";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
-import { FileObjectUploadStreams } from '../../api/FileObjectUploadStreams';
+import { FileObjectUploadV2 } from '../../api/FileObjectUploadV2';
 import { logger } from '../utils/logger';
 import { UploadStrategy } from './UploadStrategy';
+
+import { Events } from '../../api/events';
 
 /**
  * Uploads a file to the network
@@ -41,10 +43,11 @@ export async function upload(config: EnvironmentConfig, bucketId: string, fileMe
 }
 
 export async function uploadV2(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, params: UploadFileOptions, debug: Winston.Logger, actionState: ActionState, uploader: UploadStrategy): Promise<void> {
-  const file = new FileObjectUploadStreams(config, fileMeta, bucketId, debug, uploader);
+  const file = new FileObjectUploadV2(config, fileMeta, bucketId, debug, uploader);
 
-  actionState.on(UPLOAD_CANCELLED, () => {
-    file.emit(UPLOAD_CANCELLED);
+  actionState.once(Events.Upload.Abort, () => {
+    file.emit(Events.Upload.Abort);
+    actionState.removeAllListeners();
   });
 
   await file.init();

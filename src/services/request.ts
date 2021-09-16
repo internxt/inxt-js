@@ -8,6 +8,9 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
+import { Methods } from './api';
+
+const { fetch } = require('./node-fetch');
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -133,4 +136,42 @@ export async function httpsStreamPostRequest(params: PostStreamRequestParams, us
 
     params.source.pipe(req);
   });
+}
+
+export async function get<K>(url: string, config = { useProxy: false }): Promise<K> {
+  let targetUrl = url;
+  let free: undefined | (() => void);
+
+  if (config.useProxy) {
+    const proxy = await getProxy();
+    free = proxy.free;
+    targetUrl = `${proxy.url}/${targetUrl}`;
+  }
+
+  return axios.get<K>(targetUrl).then((res) => {
+    if (free) {
+      free();
+    }
+
+    return res.data;
+  });
+}
+
+export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }): Promise<K> {
+  let targetUrl = url;
+  let free: undefined | (() => void);
+
+  if (config.useProxy) {
+    const proxy = await getProxy();
+    free = proxy.free;
+    targetUrl = `${proxy.url}/${targetUrl}`;
+  }
+
+  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: K) => {
+    if (free) {
+      free();
+    }
+
+    return res;
+  }); 
 }

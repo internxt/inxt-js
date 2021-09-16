@@ -107,6 +107,7 @@ export class UploaderQueueV2 extends ConcurrentQueue<UploadTaskParams> implement
   }
 
   abort(): void {
+    this.destroy();
     this.passthrough.destroy();
     this.queue.kill();
   }

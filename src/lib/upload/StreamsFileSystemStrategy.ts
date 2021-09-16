@@ -15,7 +15,8 @@ import { ContractNegotiated } from '../contracts';
 import { Events as UploaderQueueEvents, UploaderQueueV2 } from './UploadStream';
 import { UploadTaskParams } from './UploadStream';
 import { Tap } from '../TapStream';
-import { httpsStreamPostRequest } from '../../services/request';
+import { Abortable } from '../../api/Abortable';
+import { ShardObject } from '../../api/ShardObject';
 
 interface Params extends UploadParams {
   filepath: string;
@@ -26,17 +27,29 @@ interface LocalShard {
   index: number;
   filepath: string;
 }
+
 export interface ContentAccessor {
   getStream(): Readable;
+}
+
+type LoggerFunction = (message: string, ...meta: any[]) => void;
+interface Logger {
+  debug: LoggerFunction;
+  info: LoggerFunction;
+  error: LoggerFunction;
 }
 
 export class StreamFileSystemStrategy extends UploadStrategy {
   private filepath: string;
   private ramUsage: number;
 
-  constructor(params: Params) {
+  private abortables: Abortable[] = [];
+  private logger: Logger;
+
+  constructor(params: Params, logger: Logger) {
     super();
 
+    this.logger = logger;
     this.filepath = params.filepath;
     this.ramUsage = params.desiredRamUsage;
   }
@@ -73,7 +86,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         size: end - start
       });
 
-      console.log('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end);
+      this.logger.debug('Shard %s stream generated [byte %s to byte %s]', shardIndex, start, end - 1);
     }
 
     return shards;
@@ -84,6 +97,8 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const contracts: (ContractNegotiated & { shardIndex: number })[] = [];
 
     await eachLimit(shardMetas, 6, (shardMeta, next) => {
+      this.logger.debug('Negotiating contract for shard %s', shardMeta.hash);
+
       negotiateContract(shardMeta).then((contract) => {
         contracts.push({ ...contract, shardIndex: shardMeta.index });
         next();
@@ -113,21 +128,52 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const shardMetas = await this.generateShardMetas(shards);
     const contracts = await this.negotiateContracts(shardMetas, negotiateContract);
 
+    // UPLOAD STARTS HERE
     const uploadTask = ({ stream: source, finishCb: cb, shardIndex }: UploadTaskParams) => {
       const contract = contracts.find(c => c.shardIndex === shardIndex);
       const shardMeta = shardMetas.find(s => s.index === shardIndex);
-      const hostname = `http://${contract?.farmer.address}:${contract?.farmer.port}/shards/${shardMeta?.hash}?token=${contract?.token}`;
+      const url = `http://${contract?.farmer.address}:${contract?.farmer.port}/upload/link/${shardMeta?.hash}`;
 
-      return httpsStreamPostRequest({ hostname, source }).then(cb).catch((err) => {
-        throw wrap('Farmer request error', err);
+      return ShardObject.requestPut(url).then((putUrl) => {
+        this.logger.debug('Streaming shard %s to %s', shardMeta?.hash, putUrl);
+
+        return ShardObject.putStream(putUrl, source);
+      }).then((res) => {
+        console.log('res', res);
+        this.logger.debug('Shard %s uploaded correctly', shardMeta?.hash);
+        cb();
+      }).catch((err) => {
+        throw wrap('Shard upload error', err);
       });
     };
 
-    const reader = createReadStream(this.filepath, { /* highWaterMark: 16384 */ });
+    const reader = createReadStream(this.filepath, { highWaterMark: 16384 });
     const tap = new Tap(shardSize * concurrency);
     const slicer = new FunnelStream(shardSize);
     const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
     const uploader = new UploaderQueueV2(concurrency, nShards, uploadTask);
+
+    this.abortables.push({
+      abort: () => {
+        try { reader.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { tap.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { slicer.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { encrypter.destroy() } catch {}
+      }
+    }, {
+      abort: () => {
+        try { uploader.destroy() } catch {}
+      }
+    });
 
     console.log('tap allowing an influx of %s bytes', shardSize * concurrency);
 
@@ -161,10 +207,19 @@ export class StreamFileSystemStrategy extends UploadStrategy {
         uploadPipeline.destroy();
       }
     });
+
+    this.abortables.push({
+      abort: () => {
+        try { uploadPipeline.destroy() } catch {}
+      }
+    });
   }
 
   abort(): void {
     this.emit(UploadEvents.Aborted);
+    this.abortables.forEach((abortable) => {
+      abortable.abort();
+    });
   }
 }
 

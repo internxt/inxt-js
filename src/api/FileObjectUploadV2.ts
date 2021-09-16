@@ -15,7 +15,9 @@ import { ShardUploadSuccessMessage, UploadEvents, UploadFinishedMessage, UploadS
 import { FileMeta } from "./FileObjectUpload";
 import { Abortable } from "./Abortable";
 
-export class FileObjectUploadStreams extends EventEmitter implements FileObjectUploadProtocol, Abortable {
+import { Events } from './events';
+
+export class FileObjectUploadV2 extends EventEmitter implements FileObjectUploadProtocol, Abortable {
   private fileMeta: FileMeta;
   private config: EnvironmentConfig;
   private requests: INXTRequest[] = [];
@@ -49,7 +51,7 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
     this.index = randomBytes(32);
     this.iv = this.index.slice(0, 16);
 
-    // this.once(UPLOAD_CANCELLED, this.abort.bind(this));
+    this.once(Events.Upload.Abort, this.abort.bind(this));
   }
 
   getSize(): number {
@@ -66,7 +68,7 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
     }
   }
 
-  async init(): Promise<FileObjectUploadStreams> {
+  async init(): Promise<FileObjectUploadV2> {
     this.checkIfIsAborted();
 
     this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
@@ -194,7 +196,7 @@ export class FileObjectUploadStreams extends EventEmitter implements FileObjectU
   }
 }
 
-export function generateBucketEntry(fileObject: FileObjectUploadStreams, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
+export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename: fileMeta.name,

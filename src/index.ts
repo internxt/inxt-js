@@ -17,6 +17,7 @@ import streamToBlob from 'stream-to-blob';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
 import { StreamFileSystemStrategy } from './lib/upload/StreamsFileSystemStrategy';
+import { OneStreamStrategy, Params as OneStreamOnlyStrategyParams } from './lib/upload/OneStreamStrategy';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -80,9 +81,21 @@ interface ResolveFileParams extends DownloadFileOptions {
   debug?: DebugCallback;
 }
 
+interface UploadOptions extends UploadFileOptions {
+  filename: string;
+}
+
 const utils = {
   generateFileKey: GenerateFileKey
 };
+
+type BlobStrategyObject = { label: 'Blob', params: {}};
+type OneStreamStrategyObject = { label: 'OneStreamOnly', params: OneStreamOnlyStrategyParams };
+
+type BlobStrategyFunction = (bucketId: string, opts: UploadOptions, s: BlobStrategyObject) => ActionState;
+type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, s: OneStreamStrategyObject) => ActionState;
+
+type UploadFunction = BlobStrategyFunction & OneStreamOnlyStrategyFunction;
 
 export class Environment {
   config: EnvironmentConfig;
@@ -255,7 +268,7 @@ export class Environment {
     const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
 
     const uploadState = new ActionState(ActionTypes.Upload);
-    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath });
+    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
     const fileStat = statSync(filepath);
 
     if (!this.config.encryptionKey) {
@@ -299,6 +312,52 @@ export class Environment {
       });
 
     return uploadState;
+  }
+
+  upload: UploadFunction = (bucketId, opts, strategyObj) => {
+    const uploadState = new ActionState(ActionTypes.Upload);
+
+    if (!this.config.encryptionKey) {
+      opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
+      return uploadState;
+    }
+
+    if (!bucketId) {
+      opts.finishedCallback(Error('Bucket id was not provided'), null);
+
+      return uploadState;
+    }
+
+    EncryptFilename(this.config.encryptionKey, bucketId, opts.filename).then((encryptedFilename) => {
+      logger.debug('Filename %s encrypted is %s', opts.filename, encryptedFilename);
+
+      const fileMeta = { content: Readable.from(''), size: 0, name: encryptedFilename };
+
+      if (strategyObj.label === 'OneStreamOnly') {
+        return this.uploadOneStreamOnly(bucketId, fileMeta, strategyObj.params, uploadState);
+      }
+
+      if (strategyObj.label === 'Blob') {
+        // return this.uploadBlob(params as BlobStrategyParams);
+      }
+    }).catch((err) => {
+      if (err && err.message && err.message.includes('Upload aborted')) {
+        return opts.finishedCallback(new Error('Process killed by user'), null);
+      }
+      opts.finishedCallback(err, null);
+    });
+
+    return uploadState;
+  }
+
+  private uploadOneStreamOnly(bucketId: string, fileMeta: FileMeta, params: OneStreamOnlyStrategyParams, state: ActionState) {
+    return uploadV2(this.config, fileMeta, bucketId, {
+      progressCallback: (progress) => {
+        console.log('PROGRESS %s', progress);
+      },
+      finishedCallback: () => {}
+    }, logger, state, new OneStreamStrategy(params));
   }
 
   /**
