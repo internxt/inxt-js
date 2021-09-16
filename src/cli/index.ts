@@ -4,7 +4,15 @@ import { Command } from 'commander';
 
 import { Environment } from '../index';
 import { logger } from '../lib/utils/logger';
-import { Readable } from 'stream';
+import { pipeline, Readable } from 'stream';
+import archiver from 'archiver';
+import { HashStream } from '../lib/hasher';
+import { BytesCounter } from '../lib/streams/BytesCounter';
+
+import { promisify } from 'util';
+
+const pipelineAsync = promisify(pipeline);
+const archive = archiver('zip', { zlib: { level: 9 } });
 
 config();
 
@@ -49,10 +57,10 @@ if (opts.upload) {
   }
 
   if (opts.only) {
-     
+    uploadDirectory();
+  } else {
+    uploadFile();
   }
-
-  uploadFile();
 } else if (opts.download) {
   if (!opts.path) {
     logger.error('File path not provided');
@@ -113,30 +121,56 @@ function uploadFile() {
   });
 }
 
-function uploadFileOneStream() {
-  logger.info('Uploading file located at %s', opts.path);
-  logger.info('Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, filePath: %s }',
+async function uploadDirectory() {
+  logger.info('Uploading directory "%s"', opts.path);
+  logger.info('Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, directoryPath: %s }',
     process.env.BUCKET_ID,
     network.config.bridgeUrl,
     network.config.bridgeUser,
     opts.path
   );
 
+  const hasher = new HashStream();
+  const counter = new BytesCounter();
+  
+  setTimeout(archive.finalize.bind(archive), 100);
+  
+  hasher.on('data', () => {});
+  
+  await pipelineAsync(archive.directory(opts.path + '/', false), counter, hasher)
+
+  const archiverSetup = archiver('zip', { zlib: { level: 9 } })
+  const directoryStream = archiverSetup.directory(opts.path + '/', false);
+  archiverSetup.finalize();
+
+  logger.debug('directory size zipped is %s', counter.count);
+
   new Promise((resolve, reject) => {
-    const state = network.upload(process.env.BUCKET_ID, opts.path, {
+    const state = network.upload(process.env.BUCKET_ID, {
+      filename: opts.path,
+      progressCallback: () => {
+        console.log('progress')
+      },
+      finishedCallback: (err: Error | null) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(null);
+      }
+    }, {
       label: 'OneStreamOnly',
       params: {
         desiredRamUsage: 200,
         source: {
-          stream: Readable.from(''),
-          hash: '',
-          size: 0
+          stream: directoryStream,
+          hash: hasher.getHash().toString('hex'),
+          size: counter.count
         }
       }
     });
 
     process.on('SIGINT', () => {
-      network.storeFileCancel(state);
+      // network.storeFileCancel(state);
     });
   }).then((fileId) => {
     logger.info('File upload finished. File id: %s', fileId);
