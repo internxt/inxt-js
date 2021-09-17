@@ -74,11 +74,11 @@ export class OneStreamStrategy extends UploadStrategy {
       const uploadPipeline = pipeline(this.source.stream, encrypter, progressNotifier, (err) => {
         if (err) {
           uploadPipeline.destroy();
-          this.emit(UploadEvents.Error, wrap('OneStreamStrategyUploadError', err));
+          this.emit(UploadEvents.Error, wrap('OneStreamStrategyError', err));
         }
       });
 
-      this.abortables.push({ abort: () => uploadPipeline.destroy() });
+      this.addToAbortables(() => uploadPipeline.destroy());
 
       await ShardObject.putStream(putUrl, uploadPipeline);
 
@@ -87,8 +87,12 @@ export class OneStreamStrategy extends UploadStrategy {
       cleanStreams([ progressNotifier, uploadPipeline, encrypter, this.source.stream ]);
       cleanEventEmitters([ this ]);
     } catch (err) {
-      this.emit(UploadEvents.Error);
+      this.emit(UploadEvents.Error, wrap('OneStreamStrategyError', err as Error));
     }
+  }
+
+  private addToAbortables(abortFunction: () => void) {
+    this.abortables.push({ abort: abortFunction });
   }
 
   abort(): void {

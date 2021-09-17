@@ -10,7 +10,8 @@ import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
 import { Methods } from './api';
 
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
+import { wrap } from '../lib/utils/error';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -167,11 +168,17 @@ export async function putStream<K>(url: string, content: Readable, config = { us
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: any) => {
+  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: Response) => {
     if (free) {
       free();
     }
 
-    return res;
+    if (res.status >= 400) {
+      throw new Error(`Server responded with status code ${res.status}`);
+    }
+
+    return res.json();
+  }).catch((err) => {
+    throw wrap('PutStreamError', err);
   }); 
 }
