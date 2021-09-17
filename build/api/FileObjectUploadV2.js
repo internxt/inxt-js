@@ -182,18 +182,12 @@ var FileObjectUploadV2 = /** @class */ (function (_super) {
         this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
         this.uploader.setIv(this.iv);
         this.uploader.once(UploadStrategy_1.UploadEvents.Started, function () { return _this.logger.info('Upload started'); });
-        this.uploader.once(UploadStrategy_1.UploadEvents.Aborted, function () {
-            _this.uploader.abort();
-            _this.emit(UploadStrategy_1.UploadEvents.Error, new Error('Upload aborted'));
-        });
+        this.uploader.once(UploadStrategy_1.UploadEvents.Aborted, function () { return _this.uploader.emit(UploadStrategy_1.UploadEvents.Error, new Error('Upload aborted')); });
+        this.uploader.on(UploadStrategy_1.UploadEvents.Progress, function (progress) { return _this.emit(UploadStrategy_1.UploadEvents.Progress, progress); });
         var currentBytesUploaded = 0;
         this.uploader.on(UploadStrategy_1.UploadEvents.ShardUploadSuccess, function (message) {
             _this.logger.debug('Shard %s uploaded correctly. Size %s', message.hash, message.size);
             currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, message.size, cb);
-        });
-        this.uploader.on(UploadStrategy_1.UploadEvents.Progress, function (progress) {
-            _this.logger.debug('Progress %s', (progress * 100).toFixed(2));
-            // currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
         });
         var errorHandler = function (reject) { return function (err) {
             _this.uploader.removeAllListeners();
@@ -226,7 +220,6 @@ var FileObjectUploadV2 = /** @class */ (function (_super) {
         });
     };
     FileObjectUploadV2.prototype.abort = function () {
-        logger_1.logger.info('Aborting file upload');
         this.aborted = true;
         this.requests.forEach(function (r) { return r.abort(); });
         this.uploader.abort();

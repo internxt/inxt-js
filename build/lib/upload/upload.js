@@ -41,6 +41,7 @@ var constants_1 = require("../../api/constants");
 var FileObjectUpload_1 = require("../../api/FileObjectUpload");
 var FileObjectUploadV2_1 = require("../../api/FileObjectUploadV2");
 var logger_1 = require("../utils/logger");
+var UploadStrategy_1 = require("./UploadStrategy");
 var events_1 = require("../../api/events");
 /**
  * Uploads a file to the network
@@ -96,6 +97,9 @@ function uploadV2(config, fileMeta, bucketId, params, debug, actionState, upload
                     actionState.once(events_1.Events.Upload.Abort, function () {
                         file.emit(events_1.Events.Upload.Abort);
                         actionState.removeAllListeners();
+                    });
+                    file.on(UploadStrategy_1.UploadEvents.Progress, function (progress) {
+                        params.progressCallback(progress, 0, 0);
                     });
                     return [4 /*yield*/, file.init()];
                 case 1:
