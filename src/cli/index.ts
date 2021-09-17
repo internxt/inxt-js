@@ -4,7 +4,7 @@ import { Command } from 'commander';
 
 import { Environment } from '../index';
 import { logger } from '../lib/utils/logger';
-import { pipeline, Readable } from 'stream';
+import { pipeline } from 'stream';
 import archiver from 'archiver';
 import { HashStream } from '../lib/hasher';
 import { BytesCounter } from '../lib/streams/BytesCounter';
@@ -21,6 +21,12 @@ config();
 const program = new Command();
 const version = '0.0.1';
 
+// program.command('upload-folder-zip')
+//   .option('-p, --path <path>', 'Folder path')
+//   .action(() => {
+//     require('./upload-folder-zip');
+//   });
+
 program
   .version(version)
   .option('-v, --version', 'output the version number')
@@ -28,7 +34,7 @@ program
   // .option('-u --url <url>', 'set the base url for the api')
   // .option('-l, --log <level>', 'set the log level (default 0)')
   // .option('-d, --debug', 'set the debug log level')
-  .option('-o, --only', 'use only one stream to upload the file (only for uploads)')
+  // .option('-o, --only', 'use only one stream to upload the file (only for uploads)')
   .option('-u, --upload', 'upload file from provided path')
   .option('-d, --download', 'download file to provided path')
   .option('-f, --fileId <file_id>', 'file id to download (only for downloads)')
@@ -61,6 +67,7 @@ if (opts.upload) {
   if (opts.only) {
     uploadDirectory();
   } else {
+    console.log('uploading file');
     uploadFile();
   }
 } else if (opts.download) {
@@ -125,10 +132,12 @@ function uploadFile() {
 
 async function uploadDirectory() {
   const index = randomBytes(32);
+  console.log('index %s', index.toString('hex'));
   const iv = index.slice(0, 16);
   const encryptionKey = process.env.MNEMONIC;
   const bucketId = process.env.BUCKET_ID;
   const fileEncryptionKey = await GenerateFileKey(encryptionKey, bucketId, index);
+  console.log('fk %s', fileEncryptionKey.toString('hex'));
 
   const network = new Environment({
     bridgePass: process.env.BRIDGE_PASS,
