@@ -6,7 +6,7 @@ import { UPLOAD_CANCELLED } from "../../api/constants";
 import { FileObjectUpload, FileMeta } from "../../api/FileObjectUpload";
 import { FileObjectUploadV2 } from '../../api/FileObjectUploadV2';
 import { logger } from '../utils/logger';
-import { UploadStrategy } from './UploadStrategy';
+import { UploadEvents, UploadStrategy } from './UploadStrategy';
 
 import { Events } from '../../api/events';
 
@@ -48,6 +48,10 @@ export async function uploadV2(config: EnvironmentConfig, fileMeta: FileMeta, bu
   actionState.once(Events.Upload.Abort, () => {
     file.emit(Events.Upload.Abort);
     actionState.removeAllListeners();
+  });
+
+  file.on(UploadEvents.Progress, (progress) => {
+    params.progressCallback(progress, 0, 0);
   });
 
   await file.init();

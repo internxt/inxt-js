@@ -150,20 +150,13 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     this.uploader.setIv(this.iv);
 
     this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
-    this.uploader.once(UploadEvents.Aborted, () => {
-      this.uploader.abort();
-      this.emit(UploadEvents.Error, new Error('Upload aborted'));
-    });
+    this.uploader.once(UploadEvents.Aborted, () => this.uploader.emit(UploadEvents.Error, new Error('Upload aborted')));
+    this.uploader.on(UploadEvents.Progress, (progress: number) => this.emit(UploadEvents.Progress, progress));
 
     let currentBytesUploaded = 0;
     this.uploader.on(UploadEvents.ShardUploadSuccess, (message: ShardUploadSuccessMessage) => {
       this.logger.debug('Shard %s uploaded correctly. Size %s', message.hash, message.size);
       currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
-    });
-
-    this.uploader.on(UploadEvents.Progress, (progress: number) => {
-      this.logger.debug('Progress %s', (progress * 100).toFixed(2));
-      // currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
     });
 
     const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
@@ -202,8 +195,6 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   }
 
   abort(): void {
-    logger.info('Aborting file upload');
-
     this.aborted = true;
     this.requests.forEach((r) => r.abort());
     this.uploader.abort();
