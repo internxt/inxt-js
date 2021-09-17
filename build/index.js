@@ -20,8 +20,10 @@ var fileinfo_1 = require("./api/fileinfo");
 var api_1 = require("./services/api");
 var upload_2 = require("./lib/upload");
 var EmptyStrategy_1 = require("./lib/upload/EmptyStrategy");
+var hasher_1 = require("./lib/hasher");
 var utils = {
-    generateFileKey: crypto_1.GenerateFileKey
+    generateFileKey: crypto_1.GenerateFileKey,
+    Hasher: hasher_1.HashStream
 };
 var Environment = /** @class */ (function () {
     function Environment(config) {

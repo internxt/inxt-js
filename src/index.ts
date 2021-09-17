@@ -18,6 +18,7 @@ import { Bridge, CreateFileTokenResponse } from './services/api';
 import { StreamFileSystemStrategy } from './lib/upload';
 import { UploadStrategy } from './lib/upload/UploadStrategy';
 import { EmptyStrategy } from './lib/upload/EmptyStrategy';
+import { HashStream } from './lib/hasher';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -86,7 +87,8 @@ interface UploadOptions extends UploadFileOptions {
 }
 
 const utils = {
-  generateFileKey: GenerateFileKey
+  generateFileKey: GenerateFileKey,
+  Hasher: HashStream
 };
 
 export class Environment {

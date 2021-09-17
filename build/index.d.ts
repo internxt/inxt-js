@@ -6,6 +6,7 @@ import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
 import { FileInfo } from './api/fileinfo';
+import { HashStream } from './lib/hasher';
 export declare type OnlyErrorCallback = (err: Error | null) => void;
 export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
@@ -55,6 +56,7 @@ export declare class Environment {
     logger: Winston.Logger;
     static utils: {
         generateFileKey: typeof GenerateFileKey;
+        Hasher: typeof HashStream;
     };
     constructor(config: EnvironmentConfig);
     /**
