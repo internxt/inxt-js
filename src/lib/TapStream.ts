@@ -14,7 +14,7 @@ export class Tap extends Transform {
   private bytesRead = 0;
   private temporalBuffer = Buffer.alloc(0);
 
-  private pausedInterval: NodeJS.Timeout = setTimeout(() => null, 1);
+  private pausedInterval: NodeJS.Timeout = setTimeout(() => {});
   private shouldContinue = false;
 
   constructor(diameterSize: number, options?: TransformOptions) {
@@ -81,13 +81,10 @@ export class Tap extends Transform {
 
     this.pausedInterval = setInterval(() => {
       if (this.shouldContinue) {
-        console.log('continuing');
         cb(null);
         clearInterval(this.pausedInterval);
 
         this.shouldContinue = false;
-      } else {
-        // console.log('not continuing');
       }
     }, 50);
   }

@@ -47,7 +47,13 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
 
     this.logger = log;
 
-    this.index = randomBytes(32);
+    if (this.config.inject && this.config.inject.index) {
+      this.index = this.config.inject.index;
+      this.logger.debug('Using injected index %s', this.index.toString('hex'));
+    } else {
+      this.index = randomBytes(32);
+    }
+
     this.iv = this.index.slice(0, 16);
 
     this.once(Events.Upload.Abort, this.abort.bind(this));
@@ -70,7 +76,12 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   async init(): Promise<FileObjectUploadV2> {
     this.checkIfIsAborted();
 
-    this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
+    if (this.config.inject && this.config.inject.fileEncryptionKey) {
+      this.fileEncryptionKey = this.config.inject.fileEncryptionKey;
+      this.logger.debug('Using injected file encryption key %s', this.fileEncryptionKey.toString('hex'));
+    } else {
+      this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
+    }
 
     return this;
   }
@@ -135,18 +146,8 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   upload(cb: UploadProgressCallback): Promise<ShardMeta[]> {
     this.checkIfIsAborted();
 
-    const fileEncryptionKeyNotSet = this.uploader.getFileEncryptionKey().length === 0;
-    const ivNotSet = this.uploader.getIv().length === 0;
-
-    if (fileEncryptionKeyNotSet) {
-      this.logger.debug('File encryption key not set, using the generated one');
-      this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
-    }
-
-    if (ivNotSet) {
-      this.logger.debug('Initialization vector not set, using the generated one');
-      this.uploader.setIv(this.iv);
-    }
+    this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
+    this.uploader.setIv(this.iv);
 
     this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
     this.uploader.once(UploadEvents.Aborted, () => this.uploader.removeAllListeners());

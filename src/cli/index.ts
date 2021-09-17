@@ -135,7 +135,7 @@ async function uploadDirectory() {
     bridgeUser: process.env.BRIDGE_USER,
     encryptionKey: process.env.MNEMONIC,
     bridgeUrl: process.env.BRIDGE_URL ?? opts.url,
-    inject: { fileEncryptionKey, iv }
+    inject: { fileEncryptionKey, index }
   });
 
   logger.info('Uploading directory "%s"', opts.path);

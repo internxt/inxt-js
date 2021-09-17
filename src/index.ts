@@ -342,11 +342,6 @@ export class Environment {
         return opts.finishedCallback(new Error('Unknown upload strategy'), null);
       }
 
-      if (this.config.inject) {
-        strategy.setFileEncryptionKey(this.config.inject.fileEncryptionKey);
-        strategy.setIv(this.config.inject.iv);
-      } 
-
       return uploadV2(this.config, fileMeta, bucketId, opts, logger, uploadState, strategy);
     }).catch((err) => {
       if (err && err.message && err.message.includes('Upload aborted')) {
@@ -495,7 +490,7 @@ export interface EnvironmentConfig {
     ramUsage: number
   };
   inject?: {
-    fileEncryptionKey: Buffer,
-    iv: Buffer;
+    fileEncryptionKey?: Buffer,
+    index?: Buffer;
   }
 }
