@@ -10,7 +10,7 @@ import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
 import { Methods } from './api';
 
-const { fetch } = require('./node-fetch');
+import fetch from 'node-fetch';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -167,7 +167,7 @@ export async function putStream<K>(url: string, content: Readable, config = { us
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: K) => {
+  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: any) => {
     if (free) {
       free();
     }

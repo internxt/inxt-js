@@ -78,7 +78,7 @@ var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
 var api_1 = require("./api");
-var fetch = require('./node-fetch').fetch;
+var node_fetch_1 = __importDefault(require("node-fetch"));
 function request(config, method, targetUrl, params, useProxy) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -251,7 +251,7 @@ function putStream(url, content, config) {
                     free = proxy.free;
                     targetUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
-                case 2: return [2 /*return*/, fetch(targetUrl, { method: api_1.Methods.Put, body: content }).then(function (res) {
+                case 2: return [2 /*return*/, node_fetch_1.default(targetUrl, { method: api_1.Methods.Put, body: content }).then(function (res) {
                         if (free) {
                             free();
                         }
