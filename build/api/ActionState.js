@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActionState = exports.ActionTypes = void 0;
 var events_1 = require("events");
 var constants_1 = require("./constants");
+var events_2 = require("./events");
 var ActionTypes;
 (function (ActionTypes) {
     ActionTypes["Download"] = "DOWNLOAD";
@@ -35,6 +36,7 @@ var ActionState = /** @class */ (function (_super) {
         }
         if (this.type === ActionTypes.Upload) {
             this.emit(constants_1.UPLOAD_CANCELLED);
+            this.emit(events_2.Events.Upload.Abort);
         }
     };
     return ActionState;

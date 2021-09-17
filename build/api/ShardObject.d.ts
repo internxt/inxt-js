@@ -1,9 +1,11 @@
 /// <reference types="node" />
 import { Readable } from "stream";
 import { EventEmitter } from "events";
+import { ContractNegotiated } from "../lib/contracts";
 import { ShardMeta } from "../lib/shardMeta";
 import { InxtApiI } from "../services/api";
 import { Shard } from "./shard";
+declare type PutUrl = string;
 export declare class ShardObject extends EventEmitter {
     private meta;
     private api;
@@ -18,8 +20,11 @@ export declare class ShardObject extends EventEmitter {
     get hash(): string;
     get index(): number;
     upload(content: Buffer): Promise<ShardMeta>;
-    private negotiateContract;
+    static requestPut(url: string): Promise<PutUrl>;
+    static putStream(url: PutUrl, content: Readable): Promise<any>;
+    negotiateContract(): Promise<ContractNegotiated>;
     private sendShardToNode;
     abort(): void;
     download(): Promise<Readable>;
 }
+export {};

@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
 import * as Winston from 'winston';
+import { UploadFunction } from './lib/upload';
 import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
@@ -126,11 +127,13 @@ export declare class Environment {
      * @param params Store file params
      */
     storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
+    upload: UploadFunction;
+    uploadCancel(state: ActionState): void;
     /**
-       * Uploads a file from a stream
-       * @param bucketId Bucket id where file is going to be stored
-       * @param params Store file params
-       */
+     * Uploads a file from a stream
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Store file params
+     */
     uploadStream(bucketId: string, file: {
         content: Readable;
         size: number;
@@ -165,7 +168,11 @@ export interface EnvironmentConfig {
     useProxy?: boolean;
     config?: {
         shardRetry: number;
-        maxConcurrency: number;
+        ramUsage: number;
+    };
+    inject?: {
+        fileEncryptionKey?: Buffer;
+        index?: Buffer;
     };
 }
 export {};

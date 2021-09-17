@@ -64,6 +64,7 @@ exports.ShardObject = void 0;
 var events_1 = require("events");
 var error_1 = require("../lib/utils/error");
 var logger_1 = require("../lib/utils/logger");
+var request_1 = require("../services/request");
 var ShardObject = /** @class */ (function (_super) {
     __extends(ShardObject, _super);
     function ShardObject(api, frameId, meta, shard) {
@@ -137,6 +138,12 @@ var ShardObject = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    ShardObject.requestPut = function (url) {
+        return request_1.get(url, { useProxy: true }).then(function (res) { return res.result; });
+    };
+    ShardObject.putStream = function (url, content) {
+        return request_1.putStream(url, content);
     };
     ShardObject.prototype.negotiateContract = function () {
         var req = this.api.addShardToFrame(this.frameId, this.meta);

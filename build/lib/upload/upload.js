@@ -36,10 +36,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.upload = void 0;
+exports.uploadV2 = exports.upload = void 0;
 var constants_1 = require("../../api/constants");
 var FileObjectUpload_1 = require("../../api/FileObjectUpload");
+var FileObjectUploadV2_1 = require("../../api/FileObjectUploadV2");
 var logger_1 = require("../utils/logger");
+var events_1 = require("../../api/events");
 /**
  * Uploads a file to the network
  * @param config Environment config
@@ -84,3 +86,39 @@ function upload(config, bucketId, fileMeta, params, debug, actionState) {
     });
 }
 exports.upload = upload;
+function uploadV2(config, fileMeta, bucketId, params, debug, actionState, uploader) {
+    return __awaiter(this, void 0, void 0, function () {
+        var file, uploadResponses;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    file = new FileObjectUploadV2_1.FileObjectUploadV2(config, fileMeta, bucketId, debug, uploader);
+                    actionState.once(events_1.Events.Upload.Abort, function () {
+                        file.emit(events_1.Events.Upload.Abort);
+                        actionState.removeAllListeners();
+                    });
+                    return [4 /*yield*/, file.init()];
+                case 1:
+                    _a.sent();
+                    return [4 /*yield*/, file.checkBucketExistence()];
+                case 2:
+                    _a.sent();
+                    return [4 /*yield*/, file.stage()];
+                case 3:
+                    _a.sent();
+                    return [4 /*yield*/, file.upload(params.progressCallback)];
+                case 4:
+                    uploadResponses = _a.sent();
+                    logger_1.logger.debug('Upload finished. Creating bucket entry...');
+                    return [4 /*yield*/, file.createBucketEntry(uploadResponses)];
+                case 5:
+                    _a.sent();
+                    logger_1.logger.info('Uploaded file with id %s', file.getId());
+                    params.progressCallback(1, file.getSize(), file.getSize());
+                    params.finishedCallback(null, file.getId());
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.uploadV2 = uploadV2;

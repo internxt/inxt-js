@@ -69,7 +69,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.streamRequest = exports.request = void 0;
+exports.putStream = exports.get = exports.httpsStreamPostRequest = exports.streamRequest = exports.request = void 0;
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
 var http = __importStar(require("http"));
@@ -77,6 +77,8 @@ var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
+var api_1 = require("./api");
+var fetch = require('./node-fetch').fetch;
 function request(config, method, targetUrl, params, useProxy) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -154,3 +156,109 @@ function streamRequest(targetUrl, timeoutSeconds) {
     });
 }
 exports.streamRequest = streamRequest;
+function httpsStreamPostRequest(params, useProxy) {
+    if (useProxy === void 0) { useProxy = true; }
+    return __awaiter(this, void 0, void 0, function () {
+        var targetUrl, free, proxy, reqUrl;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    targetUrl = params.hostname;
+                    if (!useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    targetUrl = proxy.url + "/" + params.hostname;
+                    free = proxy.free;
+                    _a.label = 2;
+                case 2:
+                    reqUrl = new url.URL(targetUrl);
+                    return [2 /*return*/, new Promise(function (resolve, reject) {
+                            var req = https.request({
+                                protocol: 'https:',
+                                method: 'POST',
+                                hostname: reqUrl.hostname,
+                                path: reqUrl.pathname,
+                                headers: {
+                                    'Content-Type': 'application/octet-stream'
+                                }
+                            }, function (res) {
+                                var dataResponse = Buffer.alloc(0);
+                                res.on('error', function (err) {
+                                    if (free) {
+                                        free();
+                                    }
+                                    reject(err);
+                                });
+                                res.on('data', function (d) {
+                                    dataResponse = Buffer.concat([dataResponse, d]);
+                                });
+                                res.on('end', function () {
+                                    if (free) {
+                                        free();
+                                    }
+                                    if (res.statusCode && res.statusCode > 399) {
+                                        return reject(new Error(dataResponse.toString()));
+                                    }
+                                    resolve(dataResponse);
+                                });
+                            });
+                            params.source.pipe(req);
+                        })];
+            }
+        });
+    });
+}
+exports.httpsStreamPostRequest = httpsStreamPostRequest;
+function get(url, config) {
+    if (config === void 0) { config = { useProxy: false }; }
+    return __awaiter(this, void 0, void 0, function () {
+        var targetUrl, free, proxy;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    targetUrl = url;
+                    if (!config.useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    free = proxy.free;
+                    targetUrl = proxy.url + "/" + targetUrl;
+                    _a.label = 2;
+                case 2: return [2 /*return*/, axios_1.default.get(targetUrl).then(function (res) {
+                        if (free) {
+                            free();
+                        }
+                        return res.data;
+                    })];
+            }
+        });
+    });
+}
+exports.get = get;
+function putStream(url, content, config) {
+    if (config === void 0) { config = { useProxy: false }; }
+    return __awaiter(this, void 0, void 0, function () {
+        var targetUrl, free, proxy;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    targetUrl = url;
+                    if (!config.useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    free = proxy.free;
+                    targetUrl = proxy.url + "/" + targetUrl;
+                    _a.label = 2;
+                case 2: return [2 /*return*/, fetch(targetUrl, { method: api_1.Methods.Put, body: content }).then(function (res) {
+                        if (free) {
+                            free();
+                        }
+                        return res;
+                    })];
+            }
+        });
+    });
+}
+exports.putStream = putStream;

@@ -18,11 +18,11 @@ var stream_1 = require("stream");
 var crypto_1 = require("crypto");
 var EncryptStream = /** @class */ (function (_super) {
     __extends(EncryptStream, _super);
-    function EncryptStream(key, iv) {
+    function EncryptStream(key, iv, cipher) {
         var _this = _super.call(this) || this;
         _this.shards = [];
         _this.indexCounter = 0;
-        _this.cipher = crypto_1.createCipheriv('aes-256-ctr', key, iv);
+        _this.cipher = cipher !== null && cipher !== void 0 ? cipher : crypto_1.createCipheriv('aes-256-ctr', key, iv);
         return _this;
     }
     EncryptStream.prototype._transform = function (chunk, enc, cb) {

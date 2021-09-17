@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
+var stream_1 = require("stream");
 var fs_1 = require("fs");
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
@@ -17,11 +18,47 @@ var path_1 = require("path");
 var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var fileinfo_1 = require("./api/fileinfo");
 var api_1 = require("./services/api");
+var upload_2 = require("./lib/upload");
+var EmptyStrategy_1 = require("./lib/upload/EmptyStrategy");
 var utils = {
     generateFileKey: crypto_1.GenerateFileKey
 };
 var Environment = /** @class */ (function () {
     function Environment(config) {
+        var _this = this;
+        this.upload = function (bucketId, opts, strategyObj) {
+            var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
+            if (!_this.config.encryptionKey) {
+                opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+                return uploadState;
+            }
+            if (!bucketId) {
+                opts.finishedCallback(Error('Bucket id was not provided'), null);
+                return uploadState;
+            }
+            crypto_1.EncryptFilename(_this.config.encryptionKey, bucketId, opts.filename).then(function (encryptedFilename) {
+                logger_1.logger.debug('Filename %s encrypted is %s', opts.filename, encryptedFilename);
+                var fileMeta = { content: stream_1.Readable.from(''), size: 0, name: encryptedFilename };
+                logger_1.logger.debug('Using %s strategy', strategyObj.label);
+                var strategy = new EmptyStrategy_1.EmptyStrategy();
+                if (strategyObj.label === 'OneStreamOnly') {
+                    strategy = new upload_1.OneStreamStrategy(strategyObj.params);
+                }
+                if (strategyObj.label === 'MultipleStreams') {
+                    strategy = new upload_2.StreamFileSystemStrategy(strategyObj.params, logger_1.logger);
+                }
+                if (strategy instanceof EmptyStrategy_1.EmptyStrategy) {
+                    return opts.finishedCallback(new Error('Unknown upload strategy'), null);
+                }
+                return upload_1.uploadV2(_this.config, fileMeta, bucketId, opts, logger_1.logger, uploadState, strategy);
+            }).catch(function (err) {
+                if (err && err.message && err.message.includes('Upload aborted')) {
+                    return opts.finishedCallback(new Error('Process killed by user'), null);
+                }
+                opts.finishedCallback(err, null);
+            });
+            return uploadState;
+        };
         this.config = config;
         this.logger = logger_1.Logger.getInstance(1);
     }
@@ -157,8 +194,20 @@ var Environment = /** @class */ (function () {
      * @param params Store file params
      */
     Environment.prototype.storeFile = function (bucketId, filepath, params) {
+        var _this = this;
+        var _a, _b;
+        var desiredRamUsage = (_b = (_a = this.config.config) === null || _a === void 0 ? void 0 : _a.ramUsage) !== null && _b !== void 0 ? _b : 1024 * 1024 * 200; // 200Mb
         var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
+        var uploadStrategy = new upload_2.StreamFileSystemStrategy({ desiredRamUsage: desiredRamUsage, filepath: filepath }, logger_1.logger);
         var fileStat = fs_1.statSync(filepath);
+        if (!this.config.encryptionKey) {
+            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+            return uploadState;
+        }
+        if (!bucketId) {
+            params.finishedCallback(Error('Bucket id was not provided'), null);
+            return uploadState;
+        }
         if (fileStat.size === 0) {
             params.finishedCallback(Error('Can not upload a file with size 0'), null);
             return uploadState;
@@ -167,14 +216,29 @@ var Environment = /** @class */ (function () {
             this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
         }
         var filename = params.filename || path_1.basename(filepath);
-        var file = { content: fs_1.createReadStream(filepath), plainName: filename, size: fileStat.size };
-        return this.uploadStream(bucketId, file, params, uploadState);
+        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
+            .then(function (encryptedName) {
+            logger_1.logger.debug('Filename %s encrypted is %s', filename, encryptedName);
+            var fileMeta = { content: stream_1.Readable.from(''), size: fileStat.size, name: encryptedName };
+            return upload_1.uploadV2(_this.config, fileMeta, bucketId, params, _this.logger, uploadState, uploadStrategy);
+        }).then(function () {
+            _this.logger.info('Upload Success!');
+        }).catch(function (err) {
+            if (err && err.message && err.message.includes('Upload aborted')) {
+                return params.finishedCallback(new Error('Process killed by user'), null);
+            }
+            params.finishedCallback(err, null);
+        });
+        return uploadState;
+    };
+    Environment.prototype.uploadCancel = function (state) {
+        state.stop();
     };
     /**
-       * Uploads a file from a stream
-       * @param bucketId Bucket id where file is going to be stored
-       * @param params Store file params
-       */
+     * Uploads a file from a stream
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Store file params
+     */
     Environment.prototype.uploadStream = function (bucketId, file, params, givenUploadState) {
         var _this = this;
         var uploadState = givenUploadState !== null && givenUploadState !== void 0 ? givenUploadState : new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
