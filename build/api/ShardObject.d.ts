@@ -5,6 +5,7 @@ import { ContractNegotiated } from "../lib/contracts";
 import { ShardMeta } from "../lib/shardMeta";
 import { InxtApiI } from "../services/api";
 import { Shard } from "./shard";
+import AbortController from 'abort-controller';
 declare type PutUrl = string;
 export declare class ShardObject extends EventEmitter {
     private meta;
@@ -21,7 +22,7 @@ export declare class ShardObject extends EventEmitter {
     get index(): number;
     upload(content: Buffer): Promise<ShardMeta>;
     static requestPut(url: string): Promise<PutUrl>;
-    static putStream(url: PutUrl, content: Readable): Promise<any>;
+    static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any>;
     negotiateContract(): Promise<ContractNegotiated>;
     private sendShardToNode;
     abort(): void;

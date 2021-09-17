@@ -79,6 +79,7 @@ var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
 var api_1 = require("./api");
 var node_fetch_1 = __importDefault(require("node-fetch"));
+var error_1 = require("../lib/utils/error");
 function request(config, method, targetUrl, params, useProxy) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -236,7 +237,7 @@ function get(url, config) {
     });
 }
 exports.get = get;
-function putStream(url, content, config) {
+function putStream(url, content, config, controller) {
     if (config === void 0) { config = { useProxy: false }; }
     return __awaiter(this, void 0, void 0, function () {
         var targetUrl, free, proxy;
@@ -251,11 +252,16 @@ function putStream(url, content, config) {
                     free = proxy.free;
                     targetUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
-                case 2: return [2 /*return*/, node_fetch_1.default(targetUrl, { method: api_1.Methods.Put, body: content }).then(function (res) {
+                case 2: return [2 /*return*/, node_fetch_1.default(targetUrl, { method: api_1.Methods.Put, body: content, signal: controller && controller.signal }).then(function (res) {
                         if (free) {
                             free();
                         }
+                        if (res.status >= 400) {
+                            throw new Error("Server responded with status code " + res.status);
+                        }
                         return res;
+                    }).catch(function (err) {
+                        throw error_1.wrap('PutStreamError', err);
                     })];
             }
         });

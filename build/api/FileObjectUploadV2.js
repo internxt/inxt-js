@@ -182,7 +182,10 @@ var FileObjectUploadV2 = /** @class */ (function (_super) {
         this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
         this.uploader.setIv(this.iv);
         this.uploader.once(UploadStrategy_1.UploadEvents.Started, function () { return _this.logger.info('Upload started'); });
-        this.uploader.once(UploadStrategy_1.UploadEvents.Aborted, function () { return _this.uploader.removeAllListeners(); });
+        this.uploader.once(UploadStrategy_1.UploadEvents.Aborted, function () {
+            _this.uploader.abort();
+            _this.emit(UploadStrategy_1.UploadEvents.Error, new Error('Upload aborted'));
+        });
         var currentBytesUploaded = 0;
         this.uploader.on(UploadStrategy_1.UploadEvents.ShardUploadSuccess, function (message) {
             _this.logger.debug('Shard %s uploaded correctly. Size %s', message.hash, message.size);

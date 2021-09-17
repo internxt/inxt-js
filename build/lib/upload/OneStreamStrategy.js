@@ -48,6 +48,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OneStreamStrategy = void 0;
 var crypto_1 = require("crypto");
@@ -57,6 +60,7 @@ var merkleTreeStreams_1 = require("../merkleTreeStreams");
 var ShardObject_1 = require("../../api/ShardObject");
 var error_1 = require("../utils/error");
 var streams_1 = require("../streams");
+var abort_controller_1 = __importDefault(require("abort-controller"));
 var OneStreamStrategy = /** @class */ (function (_super) {
     __extends(OneStreamStrategy, _super);
     function OneStreamStrategy(params) {
@@ -79,7 +83,7 @@ var OneStreamStrategy = /** @class */ (function (_super) {
     };
     OneStreamStrategy.prototype.upload = function (negotiateContract) {
         return __awaiter(this, void 0, void 0, function () {
-            var merkleTree, shardMeta, contract, url, encrypter, progressNotifier, putUrl, uploadPipeline_1, err_1;
+            var merkleTree, shardMeta, contract, url, encrypter, progressNotifier, putUrl, uploadPipeline_1, controller_1, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -110,11 +114,13 @@ var OneStreamStrategy = /** @class */ (function (_super) {
                         uploadPipeline_1 = stream_1.pipeline(this.source.stream, encrypter, progressNotifier, function (err) {
                             if (err) {
                                 uploadPipeline_1.destroy();
-                                _this.emit(UploadStrategy_1.UploadEvents.Error, error_1.wrap('OneStreamStrategyUploadError', err));
+                                _this.emit(UploadStrategy_1.UploadEvents.Error, error_1.wrap('OneStreamStrategyError', err));
                             }
                         });
+                        controller_1 = new abort_controller_1.default();
                         this.addToAbortables(function () { return uploadPipeline_1.destroy(); });
-                        return [4 /*yield*/, ShardObject_1.ShardObject.putStream(putUrl, uploadPipeline_1)];
+                        this.addToAbortables(function () { return controller_1.abort(); });
+                        return [4 /*yield*/, ShardObject_1.ShardObject.putStream(putUrl, uploadPipeline_1, controller_1)];
                     case 3:
                         _a.sent();
                         this.emit(UploadStrategy_1.UploadEvents.Finished, { result: [shardMeta] });
@@ -123,7 +129,7 @@ var OneStreamStrategy = /** @class */ (function (_super) {
                         return [3 /*break*/, 5];
                     case 4:
                         err_1 = _a.sent();
-                        this.emit(UploadStrategy_1.UploadEvents.Error);
+                        this.emit(UploadStrategy_1.UploadEvents.Error, error_1.wrap('OneStreamStrategyError', err_1));
                         return [3 /*break*/, 5];
                     case 5: return [2 /*return*/];
                 }
@@ -135,9 +141,8 @@ var OneStreamStrategy = /** @class */ (function (_super) {
     };
     OneStreamStrategy.prototype.abort = function () {
         this.emit(UploadStrategy_1.UploadEvents.Aborted);
-        this.abortables.forEach(function (abortable) {
-            abortable.abort();
-        });
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
+        this.removeAllListeners();
     };
     return OneStreamStrategy;
 }(UploadStrategy_1.UploadStrategy));
