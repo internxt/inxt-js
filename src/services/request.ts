@@ -12,6 +12,7 @@ import { Methods } from './api';
 
 import fetch, { Response } from 'node-fetch';
 import { wrap } from '../lib/utils/error';
+import AbortController from 'abort-controller';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -158,7 +159,7 @@ export async function get<K>(url: string, config = { useProxy: false }): Promise
   });
 }
 
-export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }): Promise<K> {
+export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {
   let targetUrl = url;
   let free: undefined | (() => void);
 
@@ -168,7 +169,7 @@ export async function putStream<K>(url: string, content: Readable, config = { us
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return fetch(targetUrl, { method: Methods.Put, body: content }).then((res: Response) => {
+  return fetch(targetUrl, { method: Methods.Put, body: content, signal: controller && controller.signal }).then((res: Response) => {
     if (free) {
       free();
     }
@@ -177,7 +178,7 @@ export async function putStream<K>(url: string, content: Readable, config = { us
       throw new Error(`Server responded with status code ${res.status}`);
     }
 
-    return res.json();
+    return res as any;
   }).catch((err) => {
     throw wrap('PutStreamError', err);
   }); 

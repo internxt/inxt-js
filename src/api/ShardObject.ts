@@ -10,6 +10,7 @@ import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
 import { Shard } from "./shard";
 import { get, putStream } from "../services/request";
+import AbortController from 'abort-controller';
 
 type PutUrl = string;
 
@@ -90,8 +91,8 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
   } 
 
-  static putStream(url: PutUrl, content: Readable): Promise<any> {
-    return putStream(url, content);
+  static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
+    return putStream(url, content, { useProxy: false }, controller);
   }
 
   negotiateContract(): Promise<ContractNegotiated> {

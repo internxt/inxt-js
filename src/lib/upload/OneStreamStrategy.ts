@@ -9,6 +9,7 @@ import { ShardObject } from '../../api/ShardObject';
 import { ContractNegotiated } from '../contracts';
 import { wrap } from '../utils/error';
 import { Events as ProgressEvents, ProgressNotifier } from '../streams';
+import AbortController from 'abort-controller';
 
 interface Source {
   size: number;
@@ -78,9 +79,12 @@ export class OneStreamStrategy extends UploadStrategy {
         }
       });
 
-      this.addToAbortables(() => uploadPipeline.destroy());
+      const controller = new AbortController();
 
-      await ShardObject.putStream(putUrl, uploadPipeline);
+      this.addToAbortables(() => uploadPipeline.destroy());
+      this.addToAbortables(() => controller.abort());
+
+      await ShardObject.putStream(putUrl, uploadPipeline, controller);
 
       this.emit(UploadEvents.Finished, { result: [shardMeta] });
 
@@ -97,9 +101,8 @@ export class OneStreamStrategy extends UploadStrategy {
 
   abort(): void {
     this.emit(UploadEvents.Aborted);
-    this.abortables.forEach((abortable) => {
-      abortable.abort();
-    });
+    this.abortables.forEach((abortable) => abortable.abort());
+    this.removeAllListeners();
   }
 }
 

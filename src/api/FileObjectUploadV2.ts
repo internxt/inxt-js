@@ -150,7 +150,10 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     this.uploader.setIv(this.iv);
 
     this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
-    this.uploader.once(UploadEvents.Aborted, () => this.uploader.removeAllListeners());
+    this.uploader.once(UploadEvents.Aborted, () => {
+      this.uploader.abort();
+      this.emit(UploadEvents.Error, new Error('Upload aborted'));
+    });
 
     let currentBytesUploaded = 0;
     this.uploader.on(UploadEvents.ShardUploadSuccess, (message: ShardUploadSuccessMessage) => {
