@@ -5,6 +5,7 @@ import { Shard } from '../../api/shard';
 export enum DownloadEvents {
   Error = 'download-error',
   Start = 'download-start',
+  Ready = 'download-ready',
   Progress = 'download-progress',
   Abort = 'download-abort',
   Finish = 'download-finish'

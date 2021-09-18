@@ -4,7 +4,14 @@ import { createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
 import { OneStreamStrategy, upload, UploadFunction, UploadStrategyObject, uploadV2 } from './lib/upload';
-import { download } from './lib/download';
+import {
+  download,
+  DownloadFunction,
+  DownloadStrategyObject,
+  downloadV2,
+  OneStreamStrategy as DownloadOneStreamStrategy,
+  DownloadEmptyStrategy
+} from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
 import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
@@ -19,6 +26,7 @@ import { StreamFileSystemStrategy } from './lib/upload';
 import { UploadStrategy } from './lib/upload/UploadStrategy';
 import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 import { HashStream } from './lib/hasher';
+import { DownloadStrategy } from './lib/download/DownloadStrategy';
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
@@ -84,6 +92,10 @@ interface ResolveFileParams extends DownloadFileOptions {
 
 interface UploadOptions extends UploadFileOptions {
   filename: string;
+}
+
+export interface DownloadOptions extends DownloadFileOptions {
+  debug?: DebugCallback;
 }
 
 const utils = {
@@ -353,6 +365,47 @@ export class Environment {
     });
 
     return uploadState;
+  }
+
+  download: DownloadFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadStrategyObject) => {
+    const dowloadState = new ActionState(ActionTypes.Download);
+    const downloadState = new ActionState(ActionTypes.Download);
+
+    if (!this.config.encryptionKey) {
+      opts.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+
+      return downloadState;
+    }
+
+    if (!bucketId) {
+      opts.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+
+      return downloadState;
+    }
+
+    if (!fileId) {
+      opts.finishedCallback(Error('File id not provided'), null);
+
+      return downloadState;
+    }
+
+    if (opts.debug) {
+      this.logger = Logger.getDebugger(this.config.logLevel || 1, opts.debug);
+    }
+
+    let strategy: DownloadStrategy = new DownloadEmptyStrategy();
+
+    if (strategyObj.label === 'OneStreamOnly') {
+      strategy = new DownloadOneStreamStrategy();
+    }
+
+    downloadV2(this.config, bucketId, fileId, opts, this.logger, dowloadState, strategy).then((res) => {
+      opts.finishedCallback(null, res);
+    }).catch((err) => {
+      opts.finishedCallback(err, null);
+    });
+
+    return dowloadState;
   }
 
   uploadCancel(state: ActionState): void {

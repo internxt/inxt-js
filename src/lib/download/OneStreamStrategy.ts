@@ -1,8 +1,7 @@
 import { eachLimit } from "async";
 import { createDecipheriv } from "crypto";
 import Multistream from "multistream";
-import { pipeline, Readable, Writable } from "stream";
-import { promisify } from "util";
+import { pipeline, Readable } from "stream";
 
 import { Abortable } from "../../api/Abortable";
 import { Shard } from "../../api/shard";
@@ -11,21 +10,8 @@ import { getStream } from "../../services/request";
 import { wrap } from "../utils/error";
 import { DownloadEvents, DownloadStrategy } from "./DownloadStrategy";
 
-const pipelineAsync = promisify(pipeline);
-
-interface Params {
-  destination: Writable;
-}
-
 export class OneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
-  private destination: Writable;
-
-  constructor(params: Params) {
-    super();
-
-    this.destination = params.destination;
-  }
 
   async download(mirrors: Shard[]): Promise<void> {
     try {
@@ -57,11 +43,15 @@ export class OneStreamStrategy extends DownloadStrategy {
 
       this.abortables.push({ abort: () => muxer.destroy() });
 
-      await pipelineAsync(muxer, decipher, this.destination);
+      const decryptedStream = pipeline(muxer, decipher, (err) => {
+        if (err) {
+          this.emit(DownloadEvents.Error, wrap('OneStreamStrategyError', err));
+        }
+      });
 
-      this.emit(DownloadEvents.Finish);
-    } catch (err: any) {
-      this.emit(DownloadEvents.Error, wrap('OneStreamStrategyError', err));
+      this.emit(DownloadEvents.Ready, decryptedStream);
+    } catch (err) {
+      this.emit(DownloadEvents.Error, wrap('OneStreamStrategyError', err as Error));
     }
   }
 
@@ -72,9 +62,7 @@ export class OneStreamStrategy extends DownloadStrategy {
 }
 
 function getDownloadStream(shard: Shard): Promise<Readable> {
-  return ShardObject.requestGet(buildRequestUrlShard(shard)).then((getUrl) => {
-    return getStream(getUrl);
-  });
+  return ShardObject.requestGet(buildRequestUrlShard(shard)).then(getStream);
 }
 
 function buildRequestUrlShard(shard: Shard) {
