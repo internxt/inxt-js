@@ -1,5 +1,5 @@
 import { createWriteStream } from "fs";
-import { pipeline, Readable } from "stream";
+import { Readable } from "stream";
 import { logger } from "../lib/utils/logger";
 import { getEnvironment } from "./CommandInterface";
 
@@ -19,13 +19,9 @@ export async function downloadFile(fileId: string, path: string) {
           return reject(err);
         }
 
-        pipeline(downloadStream as Readable, createWriteStream(path), (err) => {
-          if (err) {
-            return reject(err);
-          }
-
-          resolve(null);
-        });
+        (downloadStream as Readable).pipe(createWriteStream(path))
+          .once('error', reject)
+          .once('finish', resolve)
       },
       debug: (msg: string) => {
         logger.debug('DEBUG', msg);

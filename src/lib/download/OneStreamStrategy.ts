@@ -1,7 +1,6 @@
 import { eachLimit } from "async";
 import { createDecipheriv } from "crypto";
-import Multistream from "multistream";
-import { pipeline, Readable } from "stream";
+import { Readable } from "stream";
 
 import { Abortable } from "../../api/Abortable";
 import { Shard } from "../../api/shard";
@@ -35,21 +34,44 @@ export class OneStreamStrategy extends DownloadStrategy {
       downloadStreamsRefs.sort((a, b) => a.index - b.index);
 
       const downloadPipeline = downloadStreamsRefs.map(ref => ref.stream);
-      const muxer = new Multistream(downloadPipeline);
 
       downloadPipeline.forEach(stream => {
         this.abortables.push({ abort: () => stream.destroy() });
       });
 
-      this.abortables.push({ abort: () => muxer.destroy() });
+      let lastWriteFinished = false;
 
-      const decryptedStream = pipeline(muxer, decipher, (err) => {
+      eachLimit(downloadPipeline, 1, (download, next) => {
+        download.on('data', (chunk) => {
+          if (!decipher.write(chunk)) {
+            lastWriteFinished = false;
+            decipher.once('drain', () => {
+              lastWriteFinished = true;
+              download.resume();
+            });
+            download.pause();
+          }
+        });
+        download.once('end', () => {
+          const lastWriteWatcherId = setInterval(() => {
+            if (lastWriteFinished) {
+              next();
+              clearInterval(lastWriteWatcherId);
+            }
+          }, 50);
+        });
+        download.once('error', next);
+      }, (err) => {
         if (err) {
           this.emit(DownloadEvents.Error, wrap('OneStreamStrategyError', err));
+
+          return;
         }
+
+        decipher.end();
       });
 
-      this.emit(DownloadEvents.Ready, decryptedStream);
+      this.emit(DownloadEvents.Ready, decipher);
     } catch (err) {
       this.emit(DownloadEvents.Error, wrap('OneStreamStrategyError', err as Error));
     }
