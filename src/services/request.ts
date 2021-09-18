@@ -159,6 +159,19 @@ export async function get<K>(url: string, config = { useProxy: false }): Promise
   });
 }
 
+export async function getStream(url: string, config = { useProxy: false }): Promise<Readable> {
+  let targetUrl = url;
+  let free: undefined | (() => void);
+
+  if (config.useProxy) {
+    const proxy = await getProxy();
+    free = proxy.free;
+    targetUrl = `${proxy.url}/${targetUrl}`;
+  }
+
+  return streamRequest(url);
+}
+
 export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {
   let targetUrl = url;
   let free: undefined | (() => void);
