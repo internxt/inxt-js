@@ -1,5 +1,4 @@
 import archiver from 'archiver';
-import { Command } from 'commander';
 import { Cipher, createCipheriv, randomBytes } from 'crypto';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
@@ -8,31 +7,11 @@ import { Environment, EnvironmentConfig } from '..';
 import { GenerateFileKey } from '../lib/crypto';
 import { HashStream } from '../lib/hasher';
 import { BytesCounter } from '../lib/streams';
-import { OneStreamStrategyObject, UploadOptions } from '../lib/upload';
+import { OneStreamStrategyObject } from '../lib/upload';
 import { logger } from '../lib/utils/logger';
 
 const pipelineAsync = promisify(pipeline);
 const archive = archiver('zip', { zlib: { level: 9 } });
-
-interface Options {
-  path: string
-}
-
-const program = new Command();
-const version = '0.0.1';
-
-program.version(version)
-program.command('upload-folder-zip');
-program.description('Upload a given folder zipped');
-program.option('-p, --path <folder_path>', 'folder path');
-program.parse(process.argv);
-
-const { path }: Options = program.opts();
-
-if (!path) {
-  logger.error('folder path not provided');
-  process.exit(-1);
-}
 
 function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment {
   const envConfig: EnvironmentConfig = {
@@ -54,10 +33,6 @@ function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment
   return new Environment(envConfig);
 }
 
-uploadFolder(path).finally(() => {
-  logger.info('Program finished');
-});
-
 function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ hash: string, size: number }> {
   const hasher = new HashStream();
   const counter = new BytesCounter();
@@ -75,7 +50,7 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
     })
 }
 
-async function uploadFolder(path: string) {
+export async function uploadFolder(path: string) {
   const encryptionKey = process.env.MNEMONIC;
   const bucketId = process.env.BUCKET_ID;
   const index = randomBytes(32);
@@ -91,7 +66,7 @@ async function uploadFolder(path: string) {
     network.config.bridgeUser,
     path
   );
-  
+
   const cipher = createCipheriv('aes-256-ctr', fileEncryptionKey, iv);
   const folderMeta = await getEncryptedFolderMeta(path, cipher);
 
