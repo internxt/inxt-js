@@ -61,6 +61,35 @@ var Environment = /** @class */ (function () {
             });
             return uploadState;
         };
+        this.download = function (bucketId, fileId, opts, strategyObj) {
+            var dowloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
+            var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
+            if (!_this.config.encryptionKey) {
+                opts.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
+                return downloadState;
+            }
+            if (!bucketId) {
+                opts.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
+                return downloadState;
+            }
+            if (!fileId) {
+                opts.finishedCallback(Error('File id not provided'), null);
+                return downloadState;
+            }
+            if (opts.debug) {
+                _this.logger = logger_1.Logger.getDebugger(_this.config.logLevel || 1, opts.debug);
+            }
+            var strategy = new download_1.DownloadEmptyStrategy();
+            if (strategyObj.label === 'OneStreamOnly') {
+                strategy = new download_1.OneStreamStrategy();
+            }
+            download_1.downloadV2(_this.config, bucketId, fileId, opts, _this.logger, dowloadState, strategy).then(function (res) {
+                opts.finishedCallback(null, res);
+            }).catch(function (err) {
+                opts.finishedCallback(err, null);
+            });
+            return dowloadState;
+        };
         this.config = config;
         this.logger = logger_1.Logger.getInstance(1);
     }

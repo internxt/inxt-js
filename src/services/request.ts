@@ -9,10 +9,9 @@ import { EnvironmentConfig } from '..';
 import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
 import { Methods } from './api';
-
-import fetch, { Response } from 'node-fetch';
 import { wrap } from '../lib/utils/error';
 import AbortController from 'abort-controller';
+import needle from 'needle';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -182,17 +181,18 @@ export async function putStream<K>(url: string, content: Readable, config = { us
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return fetch(targetUrl, { method: Methods.Put, body: content, signal: controller && controller.signal }).then((res: Response) => {
-    if (free) {
-      free();
-    }
+  const postReq = needle.put(targetUrl, content);
+  const responseBuffers: Buffer[] = [];
 
-    if (res.status >= 400) {
-      throw new Error(`Server responded with status code ${res.status}`);
-    }
+  return new Promise((resolve, reject) => {
+    postReq.on('data', (c) => {
+      responseBuffers.push(c);
+    });
 
-    return res as any;
-  }).catch((err) => {
-    throw wrap('PutStreamError', err);
-  }); 
+    postReq.once('error', reject);
+    postReq.once('end', () => {
+      console.log('RES', Buffer.concat(responseBuffers).toString())
+      resolve(null as unknown as K);
+    })
+  });
 }

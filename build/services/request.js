@@ -69,7 +69,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.putStream = exports.get = exports.httpsStreamPostRequest = exports.streamRequest = exports.request = void 0;
+exports.putStream = exports.getStream = exports.get = exports.httpsStreamPostRequest = exports.streamRequest = exports.request = void 0;
 var url = __importStar(require("url"));
 var https = __importStar(require("https"));
 var http = __importStar(require("http"));
@@ -77,9 +77,7 @@ var stream_1 = require("stream");
 var axios_1 = __importDefault(require("axios"));
 var crypto_1 = require("../lib/crypto");
 var proxy_1 = require("./proxy");
-var api_1 = require("./api");
-var node_fetch_1 = __importDefault(require("node-fetch"));
-var error_1 = require("../lib/utils/error");
+var needle_1 = __importDefault(require("needle"));
 function request(config, method, targetUrl, params, useProxy) {
     if (useProxy === void 0) { useProxy = true; }
     return __awaiter(this, void 0, void 0, function () {
@@ -237,7 +235,7 @@ function get(url, config) {
     });
 }
 exports.get = get;
-function putStream(url, content, config, controller) {
+function getStream(url, config) {
     if (config === void 0) { config = { useProxy: false }; }
     return __awaiter(this, void 0, void 0, function () {
         var targetUrl, free, proxy;
@@ -252,17 +250,40 @@ function putStream(url, content, config, controller) {
                     free = proxy.free;
                     targetUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
-                case 2: return [2 /*return*/, node_fetch_1.default(targetUrl, { method: api_1.Methods.Put, body: content, signal: controller && controller.signal }).then(function (res) {
-                        if (free) {
-                            free();
-                        }
-                        if (res.status >= 400) {
-                            throw new Error("Server responded with status code " + res.status);
-                        }
-                        return res;
-                    }).catch(function (err) {
-                        throw error_1.wrap('PutStreamError', err);
-                    })];
+                case 2: return [2 /*return*/, streamRequest(url)];
+            }
+        });
+    });
+}
+exports.getStream = getStream;
+function putStream(url, content, config, controller) {
+    if (config === void 0) { config = { useProxy: false }; }
+    return __awaiter(this, void 0, void 0, function () {
+        var targetUrl, free, proxy, postReq, responseBuffers;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    targetUrl = url;
+                    if (!config.useProxy) return [3 /*break*/, 2];
+                    return [4 /*yield*/, proxy_1.getProxy()];
+                case 1:
+                    proxy = _a.sent();
+                    free = proxy.free;
+                    targetUrl = proxy.url + "/" + targetUrl;
+                    _a.label = 2;
+                case 2:
+                    postReq = needle_1.default.put(targetUrl, content);
+                    responseBuffers = [];
+                    return [2 /*return*/, new Promise(function (resolve, reject) {
+                            postReq.on('data', function (c) {
+                                responseBuffers.push(c);
+                            });
+                            postReq.once('error', reject);
+                            postReq.once('end', function () {
+                                console.log('RES', Buffer.concat(responseBuffers).toString());
+                                resolve(null);
+                            });
+                        })];
             }
         });
     });

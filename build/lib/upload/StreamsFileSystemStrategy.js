@@ -177,7 +177,8 @@ var StreamFileSystemStrategy = /** @class */ (function (_super) {
                             return ShardObject_1.ShardObject.requestPut(url).then(function (putUrl) {
                                 _this.logger.debug('Streaming shard %s to %s', shardMeta === null || shardMeta === void 0 ? void 0 : shardMeta.hash, putUrl);
                                 return ShardObject_1.ShardObject.putStream(putUrl, source);
-                            }).then(function () {
+                            }).then(function (res) {
+                                console.log('res', res);
                                 _this.logger.debug('Shard %s uploaded correctly', shardMeta === null || shardMeta === void 0 ? void 0 : shardMeta.hash);
                                 cb();
                             }).catch(function (err) {

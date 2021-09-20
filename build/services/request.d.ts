@@ -13,6 +13,9 @@ export declare function httpsStreamPostRequest(params: PostStreamRequestParams, 
 export declare function get<K>(url: string, config?: {
     useProxy: boolean;
 }): Promise<K>;
+export declare function getStream(url: string, config?: {
+    useProxy: boolean;
+}): Promise<Readable>;
 export declare function putStream<K>(url: string, content: Readable, config?: {
     useProxy: boolean;
 }, controller?: AbortController): Promise<K>;

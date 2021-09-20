@@ -142,6 +142,9 @@ var ShardObject = /** @class */ (function (_super) {
     ShardObject.requestPut = function (url) {
         return request_1.get(url, { useProxy: true }).then(function (res) { return res.result; });
     };
+    ShardObject.requestGet = function (url) {
+        return request_1.get(url, { useProxy: true }).then(function (res) { return res.result; });
+    };
     ShardObject.putStream = function (url, content, controller) {
         return request_1.putStream(url, content, { useProxy: false }, controller);
     };

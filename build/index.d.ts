@@ -2,6 +2,7 @@
 import { Readable } from 'stream';
 import * as Winston from 'winston';
 import { UploadFunction } from './lib/upload';
+import { DownloadFunction } from './lib/download';
 import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
@@ -49,6 +50,9 @@ interface StoreFileParams extends UploadFileOptions {
     filename?: string;
 }
 interface ResolveFileParams extends DownloadFileOptions {
+    debug?: DebugCallback;
+}
+export interface DownloadOptions extends DownloadFileOptions {
     debug?: DebugCallback;
 }
 export declare class Environment {
@@ -130,6 +134,7 @@ export declare class Environment {
      */
     storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
     upload: UploadFunction;
+    download: DownloadFunction;
     uploadCancel(state: ActionState): void;
     /**
      * Uploads a file from a stream
