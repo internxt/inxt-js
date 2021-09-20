@@ -10,6 +10,7 @@ import {
   DownloadStrategyObject,
   downloadV2,
   OneStreamStrategy as DownloadOneStreamStrategy,
+  MultipleStreamsStrategy as DownloadMultipleStreamsStrategy,
   DownloadEmptyStrategy
 } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
@@ -397,6 +398,11 @@ export class Environment {
 
     if (strategyObj.label === 'OneStreamOnly') {
       strategy = new DownloadOneStreamStrategy();
+    }
+
+    if (strategyObj.label === 'MultipleStreams') {
+      console.log('multiple streams strategy');
+      strategy = new DownloadMultipleStreamsStrategy();
     }
 
     downloadV2(this.config, bucketId, fileId, opts, this.logger, dowloadState, strategy).then((res) => {
