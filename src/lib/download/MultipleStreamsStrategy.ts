@@ -165,11 +165,11 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
           //     cb();
           //   })
           // });
-          // const downloadStream = await getDownloadStream(mirror);
-          // const shardEncrypted = await bufferToStream(downloadStream);
+          const downloadStream = await getDownloadStream(mirror);
+          const shardEncrypted = await bufferToStream(downloadStream);
           // console.log('shard %s downloaded', mirror.index);
-          // downloadsBuffer.push({ index: mirror.index, content: shardEncrypted });
-          // cb();
+          downloadsBuffer.push({ index: mirror.index, content: shardEncrypted });
+          cb();
         } catch (err) {
           cb(err as Error);
         }
