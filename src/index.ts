@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import { createWriteStream, statSync } from 'fs';
 import * as Winston from 'winston';
 
-import { OneStreamStrategy, upload, UploadFunction, UploadStrategyObject, uploadV2 } from './lib/upload';
+import { OneStreamStrategy, OneStreamStrategyObject, MultipleStreamsStrategyObject, upload, uploadV2 } from './lib/upload';
 import {
   download,
   DownloadFunction,
@@ -28,6 +28,12 @@ import { UploadStrategy } from './lib/upload/UploadStrategy';
 import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 import { HashStream } from './lib/hasher';
 import { DownloadStrategy } from './lib/download/DownloadStrategy';
+
+export type UploadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
+
+export type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
+export type MultipleStreamsStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
+export type UploadFunction = OneStreamOnlyStrategyFunction & MultipleStreamsStrategyFunction;
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 

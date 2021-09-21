@@ -6,7 +6,11 @@ interface Source {
     hash: string;
     stream: Readable;
 }
-export interface Params extends UploadParams {
+export declare type OneStreamStrategyObject = {
+    label: 'OneStreamOnly';
+    params: Params;
+};
+interface Params extends UploadParams {
     source: Source;
 }
 export declare class OneStreamStrategy extends UploadStrategy {

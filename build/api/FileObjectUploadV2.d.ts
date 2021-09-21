@@ -1,13 +1,17 @@
 /// <reference types="node" />
-import { EventEmitter } from "stream";
+import { EventEmitter, Readable } from "stream";
 import winston from "winston";
 import { EnvironmentConfig, UploadProgressCallback } from "..";
 import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
 import { ShardMeta } from "../lib/shardMeta";
 import { CreateEntryFromFrameBody, CreateEntryFromFrameResponse, InxtApiI } from "../services/api";
 import { UploadStrategy } from "../lib/upload/UploadStrategy";
-import { FileMeta } from "./FileObjectUpload";
 import { Abortable } from "./Abortable";
+interface FileMeta {
+    size: number;
+    name: string;
+    content: Readable;
+}
 export declare class FileObjectUploadV2 extends EventEmitter implements FileObjectUploadProtocol, Abortable {
     private fileMeta;
     private config;
@@ -37,3 +41,4 @@ export declare class FileObjectUploadV2 extends EventEmitter implements FileObje
     isAborted(): boolean;
 }
 export declare function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody;
+export {};

@@ -14,7 +14,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploadStrategy = exports.UploadEvents = void 0;
-var stream_1 = require("stream");
+var events_1 = require("events");
 var UploadEvents;
 (function (UploadEvents) {
     UploadEvents["Error"] = "upload-error";
@@ -33,5 +33,5 @@ var UploadStrategy = /** @class */ (function (_super) {
         return _this;
     }
     return UploadStrategy;
-}(stream_1.EventEmitter));
+}(events_1.EventEmitter));
 exports.UploadStrategy = UploadStrategy;

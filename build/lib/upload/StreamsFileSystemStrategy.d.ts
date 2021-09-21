@@ -3,7 +3,11 @@ import { Readable } from 'stream';
 import { ShardMeta } from '../shardMeta';
 import { NegotiateContract, UploadParams, UploadStrategy } from './UploadStrategy';
 import { ContractNegotiated } from '../contracts';
-export interface Params extends UploadParams {
+export declare type MultipleStreamsStrategyObject = {
+    label: 'MultipleStreams';
+    params: Params;
+};
+interface Params extends UploadParams {
     filepath: string;
 }
 interface LocalShard {

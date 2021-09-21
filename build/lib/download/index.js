@@ -13,5 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./download"), exports);
 var OneStreamStrategy_1 = require("./OneStreamStrategy");
 Object.defineProperty(exports, "OneStreamStrategy", { enumerable: true, get: function () { return OneStreamStrategy_1.OneStreamStrategy; } });
+var MultipleStreamsStrategy_1 = require("./MultipleStreamsStrategy");
+Object.defineProperty(exports, "MultipleStreamsStrategy", { enumerable: true, get: function () { return MultipleStreamsStrategy_1.MultipleStreamsStrategy; } });
 var EmptyStrategy_1 = require("./EmptyStrategy");
 Object.defineProperty(exports, "DownloadEmptyStrategy", { enumerable: true, get: function () { return EmptyStrategy_1.EmptyStrategy; } });

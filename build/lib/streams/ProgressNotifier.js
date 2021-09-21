@@ -21,14 +21,14 @@ var Events;
 })(Events = exports.Events || (exports.Events = {}));
 var ProgressNotifier = /** @class */ (function (_super) {
     __extends(ProgressNotifier, _super);
-    function ProgressNotifier(totalBytes, opts) {
+    function ProgressNotifier(totalBytes, interval, opts) {
         var _this = _super.call(this, opts) || this;
         _this.readBytes = 0;
         _this.progressInterval = setInterval(function () {
             if (_this.readBytes > 0) {
                 _this.emit(Events.Progress, _this.readBytes / totalBytes);
             }
-        }, 10);
+        }, interval !== null && interval !== void 0 ? interval : 10);
         return _this;
     }
     ProgressNotifier.prototype._transform = function (chunk, enc, cb) {

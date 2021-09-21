@@ -8,14 +8,14 @@ export class ProgressNotifier extends Transform {
   private readBytes = 0;
   private progressInterval: NodeJS.Timeout;
 
-  constructor(totalBytes: number, opts?: TransformOptions) {
+  constructor(totalBytes: number, interval?: number, opts?: TransformOptions) {
     super(opts);
 
     this.progressInterval = setInterval(() => {
       if (this.readBytes > 0) {
         this.emit(Events.Progress, this.readBytes / totalBytes);
       }
-    }, 10);
+    }, interval ?? 10);
   }
 
   _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void) {

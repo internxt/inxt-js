@@ -6,7 +6,7 @@ export declare enum Events {
 export declare class ProgressNotifier extends Transform {
     private readBytes;
     private progressInterval;
-    constructor(totalBytes: number, opts?: TransformOptions);
+    constructor(totalBytes: number, interval?: number, opts?: TransformOptions);
     _transform(chunk: Buffer, enc: string, cb: (err: Error | null, data: Buffer) => void): void;
     _flush(cb: (err: Error | null) => void): void;
 }
