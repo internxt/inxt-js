@@ -1,12 +1,13 @@
-import { ErrorCallback, queue } from "async";
-import { createDecipheriv } from "crypto";
+import { ErrorCallback, queue, QueueObject } from "async";
+import { createDecipheriv, Decipher, randomBytes } from "crypto";
 import { Readable } from "stream";
 
 import { Abortable } from "../../api/Abortable";
+import { ExchangeReport } from "../../api/reports";
 import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
 import { getStream } from "../../services/request";
-import { BytesCounter, ProgressNotifier, Events as ProgressEvents } from "../streams";
+import { ProgressNotifier, Events as ProgressEvents } from "../streams";
 import { determineConcurrency } from "../utils";
 import { wrap } from "../utils/error";
 import { DownloadEvents, DownloadStrategy } from "./DownloadStrategy";
@@ -15,6 +16,7 @@ function getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readabl
   ShardObject.requestGet(buildRequestUrlShard(shard)).then(getStream).then((stream) => {
     cb(null, stream);
   }).catch((err) => {
+    console.log('err', err);
     cb(err, null);
   });
 }
@@ -28,126 +30,167 @@ function buildRequestUrlShard(shard: Shard) {
 
 export class MultipleStreamsStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
-  private downloadToDecryptBridge: { index: number, content: Buffer } [] = [];
+  private decryptBuffer: { index: number, content: Buffer }[] = [];
+  private currentShardIndex = 0;
+  private mirrors: Shard[] = [];
+  private downloadsProgress: number[] = [];
+  private decipher: Decipher;
+  private reports: ExchangeReport[] = [];
+
+  private queues: {
+    downloadQueue: QueueObject<Shard>;
+    decryptQueue: QueueObject<Buffer>;
+  };
 
   private progressCoefficients = {
-    download: 0.9,
-    decrypt: 0.1
+    download: 0.95,
+    decrypt: 0.05
   }
 
   constructor() {
     super();
 
+    this.queues = {
+      downloadQueue: queue(() => { }),
+      decryptQueue: queue(() => { })
+    }
+
     if ((this.progressCoefficients.download + this.progressCoefficients.decrypt) !== 1) {
       throw new Error('Progress coefficients are wrong');
     }
+
+    const progressIntervalId = setInterval(() => {
+      const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0);
+      this.emit(DownloadEvents.Progress, currentProgress * this.progressCoefficients.download);
+    }, 5000);
+
+    this.abortables.push({ abort: () => clearInterval(progressIntervalId) });
+
+    this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
+  }
+
+  private buildDownloadQueue(fileSize: number, concurrency = 1): QueueObject<Shard> {
+    let errored = false;
+
+    return queue((mirror: Shard, next: ErrorCallback<Error>) => {
+      // console.log('processing shard for mirror %s', mirror.index);
+      console.log('aqui llego');
+      getDownloadStream(mirror, (err, downloadStream) => {
+        // console.log('i got the download stream for mirror %s', mirror.index);
+        if (errored) {
+          return;
+        }
+        
+        if (err) {
+          // console.log('error getting download stream for mirror %s', mirror.index);
+          errored = true;
+          return next(err);
+        }
+
+        const progressNotifier = new ProgressNotifier(fileSize, 2000);
+
+        progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+          this.downloadsProgress[mirror.index] = progress;
+        });
+
+        downloadStream?.on('error', (err) => {
+          console.log('err', err);
+        });
+
+        bufferToStream((downloadStream as Readable).pipe(progressNotifier), (toBufferErr, res) => {
+          // console.log('i got the buffer for mirror %s', mirror.index);
+          if (errored) {
+            return;
+          }
+
+          if (toBufferErr) {
+            // console.log('error getting buffer to stream for mirror %s', mirror.index);
+            errored = true;
+            return next(toBufferErr);
+          }
+          this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
+
+          next();
+        });
+      });
+    }, concurrency);
   }
 
   async download(mirrors: Shard[]): Promise<void> {
-    const fileSize = mirrors.reduce((acumm, mirror) => mirror.size + acumm, 0);
-    const concurrency = determineConcurrency(200 * 1024 * 1024, fileSize);
-
-    console.log('there are %s mirrors for this file', mirrors.length);
-
-    console.log('concurrency', concurrency);
-
     try {
-      this.emit(DownloadEvents.Start);
+      if (this.fileEncryptionKey.length === 0 || this.iv.length === 0) {
+        throw new Error('Required decryption data not found');
+      }
 
-      const decipher = createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-      const downloadsBuffer: { index: number, content: Buffer } [] = [];
+      this.decipher = createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+      this.emit(DownloadEvents.Ready, this.decipher);
 
-      const decryptQueue = queue((encryptedShard: Buffer, cb: ErrorCallback<Error>) => {
-        if (decipher.write(encryptedShard)) {
-          return cb();
+      this.mirrors = mirrors;
+      this.mirrors.sort((mA, mB) => mA.index - mB.index);
+
+      this.downloadsProgress = new Array(mirrors.length).fill(0);
+
+      const fileSize = this.mirrors.reduce((acumm, mirror) => mirror.size + acumm, 0);
+      const concurrency = determineConcurrency(200 * 1024 * 1024, fileSize)
+
+      this.queues.decryptQueue = buildDecryptQueue(this.decipher);
+      this.queues.downloadQueue = this.buildDownloadQueue(fileSize, concurrency);
+
+      this.abortables.push({ abort: () => this.queues.downloadQueue.kill() });
+      this.abortables.push({ abort: () => this.queues.decryptQueue.kill() });
+      this.abortables.push({ abort: () => this.decryptBuffer = [] });
+
+      console.log('there are %s mirrors for this file', mirrors.length);
+      console.log('concurrency', concurrency);
+
+      this.queues.downloadQueue.push(mirrors, (err) => {
+        if (err) {
+          return this.handleError(err);
         }
-        decipher.once('drain', cb);
-      }, 1);
-
-      let currentShardIndex = 0;
-
-      const checkShardsPendingToDecrypt = () => {
-        let downloadedShardIndex = downloadsBuffer.findIndex(download => download.index === currentShardIndex);
-        const shardReady = downloadedShardIndex !== -1;
-
-        console.log('shard ready??', shardReady);
-
-        if (!shardReady) {
-          return;
-        }
-
-        console.log('currentshardIndex is %s', currentShardIndex);
-
-        let shardsAvailable = true;
-        let isLastShard = false;
-
-        while (shardsAvailable) {
-          downloadedShardIndex = downloadsBuffer.findIndex(d => d.index === currentShardIndex);
-          console.log('download found', downloadedShardIndex !== -1);
-
-          if (downloadedShardIndex !== -1) {
-            isLastShard = currentShardIndex === mirrors.length - 1;
-
-            console.log('is last shard', isLastShard);
-
-            decryptQueue.push(downloadsBuffer[downloadedShardIndex].content, isLastShard ? () => decipher.end() : () => null);
-            downloadsBuffer[downloadedShardIndex].content = Buffer.alloc(0);
-
-            currentShardIndex++;
-          } else {
-            shardsAvailable = false;
-          }
-        }   
-      };
-
-      const downloadsProgress: number[] = new Array(mirrors.length).fill(0);
-
-      setInterval(() => {
-        this.emit(DownloadEvents.Progress, (
-          downloadsProgress.reduce((acumm, progress) => acumm + progress, 0) * 
-          this.progressCoefficients.download
-        ));
-      }, 5000);
-
-      const contractsQueue = queue((mirror: Shard, next: ErrorCallback<Error>) => {
-        console.log('processing shard for mirror %s', mirror.index);
-        getDownloadStream(mirror, (err, downloadStream) => {
-          console.log('i got the download stream for mirror %s', mirror.index);
-          if (err) {
-            console.log(err);
-            console.log('error getting download stream for mirror %s', mirror.index);
-            return next(err);
-          }
-
-          const progressNotifier = new ProgressNotifier(fileSize, 2000);
-
-          progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
-            downloadsProgress[mirror.index] = progress;
-          });
-
-          bufferToStream((downloadStream as Readable).pipe(progressNotifier), (toStreamErr, res) => {
-            console.log('i got the buffer for mirror %s', mirror.index);
-            if (toStreamErr) {
-              console.log('error getting buffer to stream for mirror %s', mirror.index);
-              console.log(err);
-              return next(toStreamErr);
-            }
-            downloadsBuffer.push({ index: mirror.index, content: res as Buffer });
-
-            next();
-          });
-        });
-      }, concurrency);
-
-      mirrors.forEach(m => {
-        console.log('enqeueing mirror %s', m.index);
-        contractsQueue.push(m, () => checkShardsPendingToDecrypt())
+        this.checkShardsPendingToDecrypt(this.decipher);
       });
-
-      this.emit(DownloadEvents.Ready, decipher);
     } catch (err) {
-      console.log(err instanceof Error && err.stack);
-      this.emit(DownloadEvents.Error, wrap('MultipleStreamsStrategyError', err as Error));
+      this.handleError(err as Error);
+    }
+  }
+
+  handleError(err: Error) {
+    this.abortables.forEach((abortable) => abortable.abort());
+
+    this.decipher.emit('error', wrap('MultipleStreamsStreategy', err));
+  }
+
+  checkShardsPendingToDecrypt(decipher: Decipher) {
+    let downloadedShardIndex = this.decryptBuffer.findIndex(pendingDecrypt => pendingDecrypt.index === this.currentShardIndex);
+    const shardReady = downloadedShardIndex !== -1;
+
+    console.log('shard ready??', shardReady);
+
+    if (!shardReady) {
+      return;
+    }
+
+    console.log('currentshardIndex is %s', this.currentShardIndex);
+
+    let shardsAvailable = true;
+    let isLastShard = false;
+
+    while (shardsAvailable) {
+      downloadedShardIndex = this.decryptBuffer.findIndex(pendingDecrypt => pendingDecrypt.index === this.currentShardIndex);
+      console.log('download found?', downloadedShardIndex !== -1);
+
+      if (downloadedShardIndex !== -1) {
+        isLastShard = this.currentShardIndex === this.mirrors.length - 1;
+
+        console.log('is last shard', isLastShard);
+
+        this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? () => decipher.end() : () => null);
+        this.decryptBuffer[downloadedShardIndex].content = Buffer.alloc(0);
+
+        this.currentShardIndex++;
+      } else {
+        shardsAvailable = false;
+      }
     }
   }
 
@@ -157,15 +200,19 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   }
 }
 
+function buildDecryptQueue(decipher: Decipher): QueueObject<Buffer> {
+  return queue((encryptedShard: Buffer, cb: ErrorCallback<Error>) => {
+    if (decipher.write(encryptedShard)) {
+      return cb();
+    }
+    decipher.once('drain', cb);
+  }, 1);
+}
+
 function bufferToStream(r: Readable, cb: (err: Error | null, res: Buffer | null) => void): void {
   const buffers: Buffer[] = [];
 
   r.on('data', buffers.push.bind(buffers));
-  r.once('error', (err) => {
-    console.log('err', err);
-    cb(err, null);
-  });
-  r.once('end', () => {
-    cb(null, Buffer.concat(buffers));
-  });
+  r.once('error', (err) => cb(err, null));
+  r.once('end', () => cb(null, Buffer.concat(buffers)));
 }

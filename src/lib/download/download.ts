@@ -58,7 +58,7 @@ export async function downloadV2(config: EnvironmentConfig, bucketId: string, fi
     file.emit(DOWNLOAD_CANCELLED);
   });
 
-  return file.getInfo().then(file.getMirrors.bind(file)).then(file.download.bind(file));
+  return file.getInfo().then(() => file.getMirrors()).then(() => file.download());
 }
 
 function handleProgress(fl: FileObject, progressCb: DownloadProgressCallback) {
