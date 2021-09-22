@@ -90,6 +90,7 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 fileSize = mirrors.reduce(function (acumm, mirror) { return mirror.size + acumm; }, 0);
                 concurrency = utils_1.determineConcurrency(200 * 1024 * 1024, fileSize);
+                console.log('there are %s mirrors for this file', mirrors.length);
                 console.log('concurrency', concurrency);
                 try {
                     this.emit(DownloadStrategy_1.DownloadEvents.Start);
@@ -137,6 +138,8 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                         getDownloadStream(mirror, function (err, downloadStream) {
                             console.log('i got the download stream for mirror %s', mirror.index);
                             if (err) {
+                                console.log(err);
+                                console.log('error getting download stream for mirror %s', mirror.index);
                                 return next(err);
                             }
                             var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
@@ -146,16 +149,19 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                             bufferToStream(downloadStream.pipe(progressNotifier), function (toStreamErr, res) {
                                 console.log('i got the buffer for mirror %s', mirror.index);
                                 if (toStreamErr) {
+                                    console.log('error getting buffer to stream for mirror %s', mirror.index);
+                                    console.log(err);
                                     return next(toStreamErr);
                                 }
                                 downloadsBuffer_1.push({ index: mirror.index, content: res });
-                                progressNotifier.destroy();
-                                downloadStream.destroy();
                                 next();
                             });
                         });
-                    }, Math.round(concurrency / 2));
-                    mirrors.forEach(function (m) { return contractsQueue_1.push(m, function () { return checkShardsPendingToDecrypt_1(); }); });
+                    }, concurrency);
+                    mirrors.forEach(function (m) {
+                        console.log('enqeueing mirror %s', m.index);
+                        contractsQueue_1.push(m, function () { return checkShardsPendingToDecrypt_1(); });
+                    });
                     this.emit(DownloadStrategy_1.DownloadEvents.Ready, decipher_1);
                 }
                 catch (err) {
@@ -180,5 +186,7 @@ function bufferToStream(r, cb) {
         console.log('err', err);
         cb(err, null);
     });
-    r.once('end', function () { return cb(null, Buffer.concat(buffers)); });
+    r.once('end', function () {
+        cb(null, Buffer.concat(buffers));
+    });
 }

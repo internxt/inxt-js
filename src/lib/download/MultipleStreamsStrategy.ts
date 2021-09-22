@@ -28,6 +28,8 @@ function buildRequestUrlShard(shard: Shard) {
 
 export class MultipleStreamsStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
+  private downloadToDecryptBridge: { index: number, content: Buffer } [] = [];
+
   private progressCoefficients = {
     download: 0.9,
     decrypt: 0.1
@@ -44,6 +46,8 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   async download(mirrors: Shard[]): Promise<void> {
     const fileSize = mirrors.reduce((acumm, mirror) => mirror.size + acumm, 0);
     const concurrency = determineConcurrency(200 * 1024 * 1024, fileSize);
+
+    console.log('there are %s mirrors for this file', mirrors.length);
 
     console.log('concurrency', concurrency);
 
@@ -110,6 +114,8 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
         getDownloadStream(mirror, (err, downloadStream) => {
           console.log('i got the download stream for mirror %s', mirror.index);
           if (err) {
+            console.log(err);
+            console.log('error getting download stream for mirror %s', mirror.index);
             return next(err);
           }
 
@@ -122,18 +128,21 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
           bufferToStream((downloadStream as Readable).pipe(progressNotifier), (toStreamErr, res) => {
             console.log('i got the buffer for mirror %s', mirror.index);
             if (toStreamErr) {
+              console.log('error getting buffer to stream for mirror %s', mirror.index);
+              console.log(err);
               return next(toStreamErr);
             }
             downloadsBuffer.push({ index: mirror.index, content: res as Buffer });
-            progressNotifier.destroy();
-            (downloadStream as Readable).destroy();
 
             next();
           });
         });
-      }, Math.round(concurrency / 2));
+      }, concurrency);
 
-      mirrors.forEach(m => contractsQueue.push(m, () => checkShardsPendingToDecrypt()));
+      mirrors.forEach(m => {
+        console.log('enqeueing mirror %s', m.index);
+        contractsQueue.push(m, () => checkShardsPendingToDecrypt())
+      });
 
       this.emit(DownloadEvents.Ready, decipher);
     } catch (err) {
@@ -156,5 +165,7 @@ function bufferToStream(r: Readable, cb: (err: Error | null, res: Buffer | null)
     console.log('err', err);
     cb(err, null);
   });
-  r.once('end', () => cb(null, Buffer.concat(buffers)));
+  r.once('end', () => {
+    cb(null, Buffer.concat(buffers));
+  });
 }
