@@ -11,6 +11,7 @@ export declare class MultipleStreamsStrategy extends DownloadStrategy {
     private downloadsProgress;
     private decipher;
     private config;
+    private progressIntervalId;
     private queues;
     private progressCoefficients;
     constructor(config: EnvironmentConfig);

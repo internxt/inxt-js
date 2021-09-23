@@ -38,6 +38,8 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   private decipher: Decipher;
   private config: EnvironmentConfig;
 
+  private progressIntervalId: NodeJS.Timeout; 
+
   private queues: {
     downloadQueue: QueueObject<Shard>;
     decryptQueue: QueueObject<Buffer>;
@@ -62,12 +64,12 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
       throw new Error('Progress coefficients are wrong');
     }
 
-    const progressIntervalId = setInterval(() => {
+    this.progressIntervalId = setInterval(() => {
       const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0);
       this.emit(DownloadEvents.Progress, currentProgress * this.progressCoefficients.download);
     }, 5000);
 
-    this.abortables.push({ abort: () => clearInterval(progressIntervalId) });
+    this.abortables.push({ abort: () => clearInterval(this.progressIntervalId) });
 
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
   }
@@ -193,7 +195,10 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
 
         // console.log('is last shard', isLastShard);
 
-        this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? () => decipher.end() : () => null);
+        this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? () => {
+          clearInterval(this.progressIntervalId);
+          decipher.end();
+        } : () => null);
         this.decryptBuffer[downloadedShardIndex].content = Buffer.alloc(0);
 
         this.currentShardIndex++;

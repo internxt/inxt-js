@@ -92,11 +92,11 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
         if ((_this.progressCoefficients.download + _this.progressCoefficients.decrypt) !== 1) {
             throw new Error('Progress coefficients are wrong');
         }
-        var progressIntervalId = setInterval(function () {
+        _this.progressIntervalId = setInterval(function () {
             var currentProgress = _this.downloadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0);
             _this.emit(DownloadStrategy_1.DownloadEvents.Progress, currentProgress * _this.progressCoefficients.download);
         }, 5000);
-        _this.abortables.push({ abort: function () { return clearInterval(progressIntervalId); } });
+        _this.abortables.push({ abort: function () { return clearInterval(_this.progressIntervalId); } });
         _this.decipher = crypto_1.createDecipheriv('aes-256-ctr', crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         return _this;
     }
@@ -114,7 +114,8 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                     return;
                 }
                 if (err) {
-                    // console.log('error getting download stream for mirror %s', mirror.index);
+                    console.log('error getting download stream for mirror %s', mirror.index);
+                    console.log(err);
                     exchangeReport.DownloadError();
                     exchangeReport.sendReport().catch(function () { });
                     errored = true;
@@ -132,7 +133,8 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                     if (toBufferErr) {
                         exchangeReport.DownloadError();
                         exchangeReport.sendReport().catch(function () { });
-                        // console.log('error getting buffer to stream for mirror %s', mirror.index);
+                        console.log('error getting buffer to stream for mirror %s', mirror.index);
+                        console.log(err);
                         errored = true;
                         return next(toBufferErr);
                     }
@@ -204,7 +206,10 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
             if (downloadedShardIndex !== -1) {
                 isLastShard = this.currentShardIndex === this.mirrors.length - 1;
                 // console.log('is last shard', isLastShard);
-                this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? function () { return decipher.end(); } : function () { return null; });
+                this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? function () {
+                    clearInterval(_this.progressIntervalId);
+                    decipher.end();
+                } : function () { return null; });
                 this.decryptBuffer[downloadedShardIndex].content = Buffer.alloc(0);
                 this.currentShardIndex++;
             }
