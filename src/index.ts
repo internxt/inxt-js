@@ -408,7 +408,7 @@ export class Environment {
 
     if (strategyObj.label === 'MultipleStreams') {
       console.log('multiple streams strategy');
-      strategy = new DownloadMultipleStreamsStrategy();
+      strategy = new DownloadMultipleStreamsStrategy(this.config);
     }
 
     downloadV2(this.config, bucketId, fileId, opts, this.logger, dowloadState, strategy).then((res) => {

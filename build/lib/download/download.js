@@ -92,7 +92,7 @@ function downloadV2(config, bucketId, fileId, options, debug, state, strategy) {
             state.on(constants_1.DOWNLOAD_CANCELLED, function () {
                 file.emit(constants_1.DOWNLOAD_CANCELLED);
             });
-            return [2 /*return*/, file.getInfo().then(file.getMirrors.bind(file)).then(file.download.bind(file))];
+            return [2 /*return*/, file.getInfo().then(function () { return file.getMirrors(); }).then(function () { return file.download(); })];
         });
     });
 }

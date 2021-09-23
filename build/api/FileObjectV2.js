@@ -193,12 +193,8 @@ var FileObjectV2 = /** @class */ (function (_super) {
         this.downloader.setFileEncryptionKey(fk);
         this.downloader.once(DownloadStrategy_1.DownloadEvents.Abort, function () { return _this.downloader.emit(DownloadStrategy_1.DownloadEvents.Error, new Error('Download aborted')); });
         this.downloader.on(DownloadStrategy_1.DownloadEvents.Progress, function (progress) { return _this.emit(DownloadStrategy_1.DownloadEvents.Progress, progress); });
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
             _this.downloader.once(DownloadStrategy_1.DownloadEvents.Ready, resolve);
-            _this.downloader.once(DownloadStrategy_1.DownloadEvents.Error, function (err) {
-                reject(err);
-                _this.removeAllListeners();
-            });
             _this.downloader.download(_this.rawShards.filter(function (s) { return !s.parity; }));
         });
     };

@@ -52,6 +52,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MultipleStreamsStrategy = void 0;
 var async_1 = require("async");
 var crypto_1 = require("crypto");
+var reports_1 = require("../../api/reports");
 var ShardObject_1 = require("../../api/ShardObject");
 var request_1 = require("../../services/request");
 var streams_1 = require("../streams");
@@ -62,6 +63,7 @@ function getDownloadStream(shard, cb) {
     ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(request_1.getStream).then(function (stream) {
         cb(null, stream);
     }).catch(function (err) {
+        console.log('err', err);
         cb(err, null);
     });
 }
@@ -71,106 +73,145 @@ function buildRequestUrlShard(shard) {
 }
 var MultipleStreamsStrategy = /** @class */ (function (_super) {
     __extends(MultipleStreamsStrategy, _super);
-    function MultipleStreamsStrategy() {
+    function MultipleStreamsStrategy(config) {
         var _this = _super.call(this) || this;
         _this.abortables = [];
+        _this.decryptBuffer = [];
+        _this.currentShardIndex = 0;
+        _this.mirrors = [];
+        _this.downloadsProgress = [];
         _this.progressCoefficients = {
-            download: 0.9,
-            decrypt: 0.1
+            download: 0.95,
+            decrypt: 0.05
+        };
+        _this.config = config;
+        _this.queues = {
+            downloadQueue: async_1.queue(function () { }),
+            decryptQueue: async_1.queue(function () { })
         };
         if ((_this.progressCoefficients.download + _this.progressCoefficients.decrypt) !== 1) {
             throw new Error('Progress coefficients are wrong');
         }
+        var progressIntervalId = setInterval(function () {
+            var currentProgress = _this.downloadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0);
+            _this.emit(DownloadStrategy_1.DownloadEvents.Progress, currentProgress * _this.progressCoefficients.download);
+        }, 5000);
+        _this.abortables.push({ abort: function () { return clearInterval(progressIntervalId); } });
+        _this.decipher = crypto_1.createDecipheriv('aes-256-ctr', crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         return _this;
     }
+    MultipleStreamsStrategy.prototype.buildDownloadQueue = function (fileSize, concurrency) {
+        var _this = this;
+        if (concurrency === void 0) { concurrency = 1; }
+        var errored = false;
+        return async_1.queue(function (mirror, next) {
+            // console.log('processing shard for mirror %s', mirror.index);
+            // console.log('aqui llego');
+            getDownloadStream(mirror, function (err, downloadStream) {
+                var exchangeReport = new reports_1.ExchangeReport(_this.config);
+                // console.log('i got the download stream for mirror %s', mirror.index);
+                if (errored) {
+                    return;
+                }
+                if (err) {
+                    // console.log('error getting download stream for mirror %s', mirror.index);
+                    exchangeReport.DownloadError();
+                    exchangeReport.sendReport().catch(function () { });
+                    errored = true;
+                    return next(err);
+                }
+                var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
+                progressNotifier.on(streams_1.Events.Progress, function (progress) {
+                    _this.downloadsProgress[mirror.index] = progress;
+                });
+                bufferToStream(downloadStream.pipe(progressNotifier), function (toBufferErr, res) {
+                    // console.log('i got the buffer for mirror %s', mirror.index);
+                    if (errored) {
+                        return;
+                    }
+                    if (toBufferErr) {
+                        exchangeReport.DownloadError();
+                        exchangeReport.sendReport().catch(function () { });
+                        // console.log('error getting buffer to stream for mirror %s', mirror.index);
+                        errored = true;
+                        return next(toBufferErr);
+                    }
+                    exchangeReport.DownloadOk();
+                    exchangeReport.sendReport().then(function (res) {
+                        console.log('report sent', res);
+                    }).catch(function () { });
+                    _this.decryptBuffer.push({ index: mirror.index, content: res });
+                    next();
+                });
+            });
+        }, concurrency);
+    };
     MultipleStreamsStrategy.prototype.download = function (mirrors) {
         return __awaiter(this, void 0, void 0, function () {
-            var fileSize, concurrency, decipher_1, downloadsBuffer_1, decryptQueue_1, currentShardIndex_1, checkShardsPendingToDecrypt_1, downloadsProgress_1, contractsQueue_1;
+            var fileSize, concurrency;
             var _this = this;
             return __generator(this, function (_a) {
-                fileSize = mirrors.reduce(function (acumm, mirror) { return mirror.size + acumm; }, 0);
-                concurrency = utils_1.determineConcurrency(200 * 1024 * 1024, fileSize);
-                console.log('there are %s mirrors for this file', mirrors.length);
-                console.log('concurrency', concurrency);
                 try {
-                    this.emit(DownloadStrategy_1.DownloadEvents.Start);
-                    decipher_1 = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                    downloadsBuffer_1 = [];
-                    decryptQueue_1 = async_1.queue(function (encryptedShard, cb) {
-                        if (decipher_1.write(encryptedShard)) {
-                            return cb();
+                    if (this.fileEncryptionKey.length === 0 || this.iv.length === 0) {
+                        throw new Error('Required decryption data not found');
+                    }
+                    this.decipher = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+                    this.emit(DownloadStrategy_1.DownloadEvents.Ready, this.decipher);
+                    this.mirrors = mirrors;
+                    this.mirrors.sort(function (mA, mB) { return mA.index - mB.index; });
+                    this.downloadsProgress = new Array(mirrors.length).fill(0);
+                    fileSize = this.mirrors.reduce(function (acumm, mirror) { return mirror.size + acumm; }, 0);
+                    concurrency = utils_1.determineConcurrency(200 * 1024 * 1024, fileSize);
+                    this.queues.decryptQueue = buildDecryptQueue(this.decipher);
+                    this.queues.downloadQueue = this.buildDownloadQueue(fileSize, concurrency);
+                    this.abortables.push({ abort: function () { return _this.queues.downloadQueue.kill(); } });
+                    this.abortables.push({ abort: function () { return _this.queues.decryptQueue.kill(); } });
+                    this.abortables.push({ abort: function () { return _this.decryptBuffer = []; } });
+                    console.log('there are %s mirrors for this file', mirrors.length);
+                    console.log('concurrency', concurrency);
+                    this.queues.downloadQueue.push(mirrors, function (err) {
+                        if (err) {
+                            return _this.handleError(err);
                         }
-                        decipher_1.once('drain', cb);
-                    }, 1);
-                    currentShardIndex_1 = 0;
-                    checkShardsPendingToDecrypt_1 = function () {
-                        var downloadedShardIndex = downloadsBuffer_1.findIndex(function (download) { return download.index === currentShardIndex_1; });
-                        var shardReady = downloadedShardIndex !== -1;
-                        console.log('shard ready??', shardReady);
-                        if (!shardReady) {
-                            return;
-                        }
-                        console.log('currentshardIndex is %s', currentShardIndex_1);
-                        var shardsAvailable = true;
-                        var isLastShard = false;
-                        while (shardsAvailable) {
-                            downloadedShardIndex = downloadsBuffer_1.findIndex(function (d) { return d.index === currentShardIndex_1; });
-                            console.log('download found', downloadedShardIndex !== -1);
-                            if (downloadedShardIndex !== -1) {
-                                isLastShard = currentShardIndex_1 === mirrors.length - 1;
-                                console.log('is last shard', isLastShard);
-                                decryptQueue_1.push(downloadsBuffer_1[downloadedShardIndex].content, isLastShard ? function () { return decipher_1.end(); } : function () { return null; });
-                                downloadsBuffer_1[downloadedShardIndex].content = Buffer.alloc(0);
-                                currentShardIndex_1++;
-                            }
-                            else {
-                                shardsAvailable = false;
-                            }
-                        }
-                    };
-                    downloadsProgress_1 = new Array(mirrors.length).fill(0);
-                    setInterval(function () {
-                        _this.emit(DownloadStrategy_1.DownloadEvents.Progress, (downloadsProgress_1.reduce(function (acumm, progress) { return acumm + progress; }, 0) *
-                            _this.progressCoefficients.download));
-                    }, 5000);
-                    contractsQueue_1 = async_1.queue(function (mirror, next) {
-                        console.log('processing shard for mirror %s', mirror.index);
-                        getDownloadStream(mirror, function (err, downloadStream) {
-                            console.log('i got the download stream for mirror %s', mirror.index);
-                            if (err) {
-                                console.log(err);
-                                console.log('error getting download stream for mirror %s', mirror.index);
-                                return next(err);
-                            }
-                            var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
-                            progressNotifier.on(streams_1.Events.Progress, function (progress) {
-                                downloadsProgress_1[mirror.index] = progress;
-                            });
-                            bufferToStream(downloadStream.pipe(progressNotifier), function (toStreamErr, res) {
-                                console.log('i got the buffer for mirror %s', mirror.index);
-                                if (toStreamErr) {
-                                    console.log('error getting buffer to stream for mirror %s', mirror.index);
-                                    console.log(err);
-                                    return next(toStreamErr);
-                                }
-                                downloadsBuffer_1.push({ index: mirror.index, content: res });
-                                next();
-                            });
-                        });
-                    }, concurrency);
-                    mirrors.forEach(function (m) {
-                        console.log('enqeueing mirror %s', m.index);
-                        contractsQueue_1.push(m, function () { return checkShardsPendingToDecrypt_1(); });
+                        _this.checkShardsPendingToDecrypt(_this.decipher);
                     });
-                    this.emit(DownloadStrategy_1.DownloadEvents.Ready, decipher_1);
                 }
                 catch (err) {
-                    console.log(err instanceof Error && err.stack);
-                    this.emit(DownloadStrategy_1.DownloadEvents.Error, error_1.wrap('MultipleStreamsStrategyError', err));
+                    this.handleError(err);
                 }
                 return [2 /*return*/];
             });
         });
+    };
+    MultipleStreamsStrategy.prototype.handleError = function (err) {
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
+        this.decipher.emit('error', error_1.wrap('MultipleStreamsStreategy', err));
+    };
+    MultipleStreamsStrategy.prototype.checkShardsPendingToDecrypt = function (decipher) {
+        var _this = this;
+        var downloadedShardIndex = this.decryptBuffer.findIndex(function (pendingDecrypt) { return pendingDecrypt.index === _this.currentShardIndex; });
+        var shardReady = downloadedShardIndex !== -1;
+        // console.log('shard ready??', shardReady);
+        if (!shardReady) {
+            return;
+        }
+        // console.log('currentshardIndex is %s', this.currentShardIndex);
+        var shardsAvailable = true;
+        var isLastShard = false;
+        while (shardsAvailable) {
+            downloadedShardIndex = this.decryptBuffer.findIndex(function (pendingDecrypt) { return pendingDecrypt.index === _this.currentShardIndex; });
+            // console.log('download found?', downloadedShardIndex !== -1);
+            if (downloadedShardIndex !== -1) {
+                isLastShard = this.currentShardIndex === this.mirrors.length - 1;
+                // console.log('is last shard', isLastShard);
+                this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? function () { return decipher.end(); } : function () { return null; });
+                this.decryptBuffer[downloadedShardIndex].content = Buffer.alloc(0);
+                this.currentShardIndex++;
+            }
+            else {
+                shardsAvailable = false;
+            }
+        }
     };
     MultipleStreamsStrategy.prototype.abort = function () {
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
@@ -179,14 +220,17 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
     return MultipleStreamsStrategy;
 }(DownloadStrategy_1.DownloadStrategy));
 exports.MultipleStreamsStrategy = MultipleStreamsStrategy;
+function buildDecryptQueue(decipher) {
+    return async_1.queue(function (encryptedShard, cb) {
+        if (decipher.write(encryptedShard)) {
+            return cb();
+        }
+        decipher.once('drain', cb);
+    }, 1);
+}
 function bufferToStream(r, cb) {
     var buffers = [];
     r.on('data', buffers.push.bind(buffers));
-    r.once('error', function (err) {
-        console.log('err', err);
-        cb(err, null);
-    });
-    r.once('end', function () {
-        cb(null, Buffer.concat(buffers));
-    });
+    r.once('error', function (err) { return cb(err, null); });
+    r.once('end', function () { return cb(null, Buffer.concat(buffers)); });
 }
