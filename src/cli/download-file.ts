@@ -68,9 +68,7 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
               return reject(err);
             }
             resolve(null);
-          }).once('finish', () => {
-            console.log('hola')
-          })
+          });
         },
         debug: (msg: string) => {
           logger.debug('DEBUG', msg);
@@ -89,7 +87,6 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
 
     process.exit(0);
   } catch (err) {
-    console.log('aqui estoyyyy')
     logger.error('Error downloading file %s', err.message);
 
     process.exit(1);

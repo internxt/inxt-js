@@ -406,7 +406,6 @@ export class Environment {
     }
 
     if (strategyObj.label === 'MultipleStreams') {
-      console.log('multiple streams strategy');
       strategy = new DownloadMultipleStreamsStrategy(this.config);
     }
 
