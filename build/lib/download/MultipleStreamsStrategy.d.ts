@@ -16,6 +16,9 @@ export declare class MultipleStreamsStrategy extends DownloadStrategy {
     private queues;
     private progressCoefficients;
     constructor(config: EnvironmentConfig);
+    private startProgressInterval;
+    private stopProgressInterval;
+    private addAbortable;
     private buildDownloadQueue;
     download(mirrors: Shard[]): Promise<void>;
     handleError(err: Error): void;

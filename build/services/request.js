@@ -129,10 +129,6 @@ function streamRequest(targetUrl, timeoutSeconds) {
         };
         return uriParts.protocol === 'http:' ? http.get(requestOpts) : https.get(requestOpts);
     }
-    // return new Promise((resolve, reject) => {
-    //   const downloader = _createDownloadStream();
-    //   downloader.once('response', resolve).once('error', reject);
-    // })
     return new stream_1.Readable({
         read: function () {
             var _this = this;
@@ -144,18 +140,11 @@ function streamRequest(targetUrl, timeoutSeconds) {
                     });
                 }
                 this.once('signal', function (message) {
-                    console.log('signal', message);
                     if (message === 'Destroy request') {
                         downloader === null || downloader === void 0 ? void 0 : downloader.destroy();
                     }
                     _this.destroy();
                 });
-                // this.once('pause', () => {
-                //   downloader?.destroy();
-                //   if (downloader?.destroyed) {
-                //     console.log('downloader is destroyed!!');
-                //   }
-                // })
                 downloader.on('response', function (res) {
                     res
                         .on('data', _this.push.bind(_this))
@@ -255,19 +244,24 @@ exports.get = get;
 function getStream(url, config) {
     if (config === void 0) { config = { useProxy: false }; }
     return __awaiter(this, void 0, void 0, function () {
-        var targetUrl, free, proxy;
+        var targetUrl, free, proxy, getStream;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     targetUrl = url;
-                    if (!(config.useProxy || process.env.NODE_ENV !== 'production' || true)) return [3 /*break*/, 2];
+                    if (!(config.useProxy || process.env.NODE_ENV !== 'production')) return [3 /*break*/, 2];
                     return [4 /*yield*/, proxy_1.getProxy()];
                 case 1:
                     proxy = _a.sent();
                     free = proxy.free;
                     targetUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
-                case 2: return [2 /*return*/, streamRequest(targetUrl)];
+                case 2:
+                    getStream = streamRequest(targetUrl);
+                    if (free) {
+                        free();
+                    }
+                    return [2 /*return*/, getStream];
             }
         });
     });
