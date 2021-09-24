@@ -101,9 +101,6 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
           }
           
           if (err) {
-            console.log('error getting download stream for mirror %s', mirror.index);
-            console.log(err);
-
             reportError(report);
             return nextTry(err);
           }
@@ -123,9 +120,6 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
             }
   
             if (toBufferErr) {
-              console.log('error getting buffer to stream for mirror %s', mirror.index);
-              console.log(err);
-
               reportError(report);
               return nextTry(toBufferErr);
             }
@@ -181,9 +175,6 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
       this.addAbortable(() => this.queues.downloadQueue.kill());
       this.addAbortable(() => this.queues.decryptQueue.kill());
 
-      console.log('there are %s mirrors for this file', mirrors.length);
-      console.log('concurrency', concurrency);
-
       this.queues.downloadQueue.push(mirrors, (err) => {
         if (this.aborted) {
           return;
@@ -208,25 +199,18 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
     let downloadedShardIndex = this.decryptBuffer.findIndex(pendingDecrypt => pendingDecrypt.index === this.currentShardIndex);
     const shardReady = downloadedShardIndex !== -1;
 
-    // console.log('shard ready??', shardReady);
-
     if (!shardReady) {
       return;
     }
-
-    // console.log('currentshardIndex is %s', this.currentShardIndex);
 
     let shardsAvailable = true;
     let isLastShard = false;
 
     while (shardsAvailable) {
       downloadedShardIndex = this.decryptBuffer.findIndex(pendingDecrypt => pendingDecrypt.index === this.currentShardIndex);
-      // console.log('download found?', downloadedShardIndex !== -1);
 
       if (downloadedShardIndex !== -1) {
         isLastShard = this.currentShardIndex === this.mirrors.length - 1;
-
-        // console.log('is last shard', isLastShard);
 
         this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? () => {
           this.stopProgressInterval();

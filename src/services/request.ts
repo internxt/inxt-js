@@ -170,13 +170,19 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
   let targetUrl = url;
   let free: undefined | (() => void);
 
-  if (config.useProxy || process.env.NODE_ENV !== 'production' || true) {
+  if (config.useProxy || process.env.NODE_ENV !== 'production') {
     const proxy = await getProxy();
     free = proxy.free;
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return streamRequest(targetUrl);
+  const getStream = streamRequest(targetUrl);
+
+  if (free) {
+    free();
+  }
+
+  return getStream;
 }
 
 export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {
