@@ -1,6 +1,6 @@
-import { ErrorCallback, queue, QueueObject } from "async";
+import { ErrorCallback, queue, QueueObject, retry } from "async";
 import { createDecipheriv, Decipher, randomBytes } from "crypto";
-import { Readable } from "stream";
+import { pipeline, Readable } from "stream";
 import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
@@ -9,6 +9,7 @@ import { ExchangeReport } from "../../api/reports";
 import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
 import { getStream } from "../../services/request";
+import { HashStream } from "../hasher";
 import { ProgressNotifier, Events as ProgressEvents } from "../streams";
 import { determineConcurrency } from "../utils";
 import { wrap } from "../utils/error";
@@ -40,7 +41,7 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   private config: EnvironmentConfig;
   private aborted = false;
 
-  private progressIntervalId: NodeJS.Timeout; 
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {}); 
 
   private queues: { 
     downloadQueue: QueueObject<Shard>, 
@@ -64,74 +65,92 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
       throw new Error('Progress coefficients are wrong');
     }
 
+    this.startProgressInterval();
+
+    this.addAbortable(() => this.stopProgressInterval());
+    this.addAbortable(() => this.decryptBuffer = []);
+
+    this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
+  }
+
+  private startProgressInterval() {
     this.progressIntervalId = setInterval(() => {
       const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0);
       this.emit(Events.Download.Progress, currentProgress * this.progressCoefficients.download);
     }, 5000);
+  }
 
-    this.abortables.push({ abort: () => clearInterval(this.progressIntervalId) });
-    this.abortables.push({ abort: () => this.decryptBuffer = [] });
+  private stopProgressInterval() {
+    clearInterval(this.progressIntervalId);
+  }
 
-    this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
+  private addAbortable(abort: () => any) {
+    this.abortables.push({ abort });
   }
 
   private buildDownloadQueue(fileSize: number, concurrency = 1): QueueObject<Shard> {
     let alreadyErrored = false;
 
     return queue((mirror: Shard, next: ErrorCallback<Error>) => {
-      // console.log('processing shard for mirror %s', mirror.index);
-      // console.log('aqui llego');
-      getDownloadStream(mirror, (err, downloadStream) => {
-        console.log('downloadStream Err', err);
-        const exchangeReport = new ExchangeReport(this.config);
-        // console.log('i got the download stream for mirror %s', mirror.index);
+      retry({ times: 3, interval: 500 }, (nextTry) => {
+        const report = buildReport(this.config, mirror);
 
-        this.abortables.push({ 
-          abort: () => {
-            downloadStream?.emit('signal', 'Destroy request')
-          } 
+        getDownloadStream(mirror, (err, downloadStream) => {
+          if (this.aborted || alreadyErrored) {
+            return nextTry(null);
+          }
+          
+          if (err) {
+            console.log('error getting download stream for mirror %s', mirror.index);
+            console.log(err);
+
+            reportError(report);
+            return nextTry(err);
+          }
+
+          this.addAbortable(() => downloadStream?.emit('signal', 'Destroy request'));
+  
+          const progressNotifier = new ProgressNotifier(fileSize, 2000);
+          const hasher = new HashStream();
+  
+          progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+            this.downloadsProgress[mirror.index] = progress;
+          });
+  
+          bufferToStream((downloadStream as Readable).pipe(progressNotifier).pipe(hasher), (toBufferErr, res) => {
+            if (this.aborted || alreadyErrored) {
+              return nextTry(null);
+            }
+  
+            if (toBufferErr) {
+              console.log('error getting buffer to stream for mirror %s', mirror.index);
+              console.log(err);
+
+              reportError(report);
+              return nextTry(toBufferErr);
+            }
+
+            const hash = hasher.getHash().toString('hex');
+
+            if (hash !== mirror.hash) {
+              reportError(report);
+              return nextTry(new Error(`Hash for shard ${mirror.hash} do not match`));
+            }
+
+            reportOk(report);
+
+            this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
+
+            nextTry(null);
+          });
         });
-
-        if (alreadyErrored || this.aborted) {
-          return next();
-        }
-        
+      }, (err: Error | null | undefined) => {
         if (err) {
-          console.log('error getting download stream for mirror %s', mirror.index);
-          console.log(err);
-          exchangeReport.DownloadError();
-          exchangeReport.sendReport().catch(() => {});
           alreadyErrored = true;
           return next(err);
-        }
+        } 
 
-        const progressNotifier = new ProgressNotifier(fileSize, 2000);
-
-        progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
-          this.downloadsProgress[mirror.index] = progress;
-        });
-
-        bufferToStream((downloadStream as Readable).pipe(progressNotifier), (toBufferErr, res) => {
-          // console.log('i got the buffer for mirror %s', mirror.index);
-          if (alreadyErrored || this.aborted) {
-            return next();
-          }
-
-          if (toBufferErr) {
-            exchangeReport.DownloadError();
-            exchangeReport.sendReport().catch(() => {});
-            console.log('error getting buffer to stream for mirror %s', mirror.index);
-            console.log(err);
-            alreadyErrored = true;
-            return next(toBufferErr);
-          }
-
-          exchangeReport.DownloadOk();
-          exchangeReport.sendReport().catch(() => {});
-          this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
-
-          next();
-        });
+        next();
       });
     }, concurrency);
   }
@@ -159,8 +178,8 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
       this.queues.decryptQueue = buildDecryptQueue(this.decipher);
       this.queues.downloadQueue = this.buildDownloadQueue(fileSize, concurrency);
 
-      this.abortables.push({ abort: () => this.queues.downloadQueue.kill() });
-      this.abortables.push({ abort: () => this.queues.decryptQueue.kill() });
+      this.addAbortable(() => this.queues.downloadQueue.kill());
+      this.addAbortable(() => this.queues.decryptQueue.kill());
 
       console.log('there are %s mirrors for this file', mirrors.length);
       console.log('concurrency', concurrency);
@@ -210,7 +229,7 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
         // console.log('is last shard', isLastShard);
 
         this.queues.decryptQueue.push(this.decryptBuffer[downloadedShardIndex].content, isLastShard ? () => {
-          clearInterval(this.progressIntervalId);
+          this.stopProgressInterval();
           decipher.end();
         } : () => null);
         this.decryptBuffer[downloadedShardIndex].content = Buffer.alloc(0);
@@ -243,4 +262,24 @@ function bufferToStream(r: Readable, cb: (err: Error | null, res: Buffer | null)
   r.on('data', buffers.push.bind(buffers));
   r.once('error', (err) => cb(err, null));
   r.once('end', () => cb(null, Buffer.concat(buffers)));
+}
+
+function buildReport(config: EnvironmentConfig, mirror: Shard) {
+  const report = new ExchangeReport(config);
+
+  report.params.exchangeStart = new Date();
+  report.params.farmerId = mirror.farmer.nodeID;
+  report.params.dataHash = mirror.hash;
+
+  return report;
+}
+
+function reportError(report: ExchangeReport) {
+  report.DownloadError();
+  report.sendReport().catch(() => {});
+}
+
+function reportOk(report: ExchangeReport) {
+  report.DownloadOk();
+  report.sendReport().catch(() => {});
 }
