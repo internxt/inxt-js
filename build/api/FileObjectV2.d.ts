@@ -25,6 +25,7 @@ export declare class FileObjectV2 extends EventEmitter {
     private debug;
     private api;
     private downloader;
+    private abortables;
     constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger, downloader: DownloadStrategy);
     setFileEncryptionKey(key: Buffer): void;
     setFileToken(token: string): void;

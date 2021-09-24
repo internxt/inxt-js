@@ -70,6 +70,14 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
           });
         }
 
+        this.once('signal', (message: string) => {
+          if (message === 'Destroy request') {
+            downloader?.destroy();
+          }
+
+          this.destroy();
+        });
+
         downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))

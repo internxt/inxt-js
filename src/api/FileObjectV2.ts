@@ -11,11 +11,13 @@ import { FileInfo, GetFileInfo, GetFileMirrors, ReplacePointer } from "./fileinf
 import { EnvironmentConfig } from "..";
 import { Shard } from "./shard";
 import { logger } from '../lib/utils/logger';
-import { DEFAULT_INXT_MIRRORS, DOWNLOAD_CANCELLED } from './constants';
+import { DEFAULT_INXT_MIRRORS } from './constants';
 import { wrap } from '../lib/utils/error';
 import { ShardObject } from './ShardObject';
 import { Bridge, InxtApiI } from '../services/api';
-import { DownloadEvents, DownloadStrategy } from '../lib/download/DownloadStrategy';
+import { DownloadStrategy } from '../lib/download/DownloadStrategy';
+import { Events } from './events';
+import { Abortable } from './Abortable';
 
 export class FileObjectV2 extends EventEmitter {
   shards: ShardObject[] = [];
@@ -41,6 +43,7 @@ export class FileObjectV2 extends EventEmitter {
   private api: InxtApiI;
 
   private downloader: DownloadStrategy;
+  private abortables: Abortable[] = [];
 
   constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger, downloader: DownloadStrategy) {
     super();
@@ -54,8 +57,10 @@ export class FileObjectV2 extends EventEmitter {
     this.api = new Bridge(config);
 
     this.downloader = downloader;
+    
+    this.abortables.push({ abort: () => downloader.abort() });
 
-    this.once(DOWNLOAD_CANCELLED, this.abort.bind(this));
+    this.once(Events.Download.Abort, this.abort.bind(this));
   }
 
   setFileEncryptionKey(key: Buffer): void {
@@ -68,7 +73,7 @@ export class FileObjectV2 extends EventEmitter {
 
   checkIfIsAborted() {
     if (this.isAborted()) {
-      throw new Error('Download aborted');
+      this.emit(Events.Download.Error, new Error('Download aborted'));
     }
   }
 
@@ -150,6 +155,8 @@ export class FileObjectV2 extends EventEmitter {
   }
 
   download(): Promise<Readable> {
+    this.checkIfIsAborted();
+
     if (!this.fileInfo) {
       throw new Error('Undefined fileInfo');
     }
@@ -160,18 +167,20 @@ export class FileObjectV2 extends EventEmitter {
     this.downloader.setIv(iv);
     this.downloader.setFileEncryptionKey(fk);
 
-    this.downloader.once(DownloadEvents.Abort, () => this.downloader.emit(DownloadEvents.Error, new Error('Download aborted')));
-    this.downloader.on(DownloadEvents.Progress, (progress) => this.emit(DownloadEvents.Progress, progress));
+    this.downloader.once(Events.Download.Abort, () => this.downloader.emit(Events.Download.Error, new Error('Download aborted')));
+    this.downloader.on(Events.Download.Progress, (progress) => this.emit(Events.Download.Progress, progress));
 
-    return new Promise((resolve) => {
-      this.downloader.once(DownloadEvents.Ready, resolve);
+    return new Promise((resolve, reject) => {
+      this.downloader.once(Events.Download.Ready, resolve);
+      this.downloader.once(Events.Download.Error, reject);
       this.downloader.download(this.rawShards.filter(s => !s.parity));
     });
   }
 
   abort(): void {
-    this.debug.info('Aborting file upload');
+    this.debug.info('Aborting file download');
     this.aborted = true;
+    this.abortables.forEach((abortable) => abortable.abort());
   }
 
   isAborted(): boolean {

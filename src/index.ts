@@ -375,7 +375,6 @@ export class Environment {
   }
 
   download: DownloadFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadStrategyObject) => {
-    const dowloadState = new ActionState(ActionTypes.Download);
     const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
@@ -411,13 +410,17 @@ export class Environment {
       strategy = new DownloadMultipleStreamsStrategy(this.config);
     }
 
-    downloadV2(this.config, bucketId, fileId, opts, this.logger, dowloadState, strategy).then((res) => {
+    downloadV2(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);
     }).catch((err) => {
       opts.finishedCallback(err, null);
     });
 
-    return dowloadState;
+    return downloadState;
+  }
+
+  downloadCancel(state: ActionState): void {
+    state.stop();
   }
 
   uploadCancel(state: ActionState): void {

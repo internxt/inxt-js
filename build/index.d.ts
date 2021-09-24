@@ -142,6 +142,7 @@ export declare class Environment {
     storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
     upload: UploadFunction;
     download: DownloadFunction;
+    downloadCancel(state: ActionState): void;
     uploadCancel(state: ActionState): void;
     /**
      * Uploads a file from a stream

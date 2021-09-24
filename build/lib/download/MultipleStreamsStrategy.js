@@ -52,6 +52,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MultipleStreamsStrategy = void 0;
 var async_1 = require("async");
 var crypto_1 = require("crypto");
+var events_1 = require("../../api/events");
 var reports_1 = require("../../api/reports");
 var ShardObject_1 = require("../../api/ShardObject");
 var request_1 = require("../../services/request");
@@ -80,45 +81,53 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
         _this.currentShardIndex = 0;
         _this.mirrors = [];
         _this.downloadsProgress = [];
+        _this.aborted = false;
+        _this.queues = {
+            downloadQueue: async_1.queue(function () { }),
+            decryptQueue: async_1.queue(function () { })
+        };
         _this.progressCoefficients = {
             download: 0.95,
             decrypt: 0.05
         };
         _this.config = config;
-        _this.queues = {
-            downloadQueue: async_1.queue(function () { }),
-            decryptQueue: async_1.queue(function () { })
-        };
         if ((_this.progressCoefficients.download + _this.progressCoefficients.decrypt) !== 1) {
             throw new Error('Progress coefficients are wrong');
         }
         _this.progressIntervalId = setInterval(function () {
             var currentProgress = _this.downloadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0);
-            _this.emit(DownloadStrategy_1.DownloadEvents.Progress, currentProgress * _this.progressCoefficients.download);
+            _this.emit(events_1.Events.Download.Progress, currentProgress * _this.progressCoefficients.download);
         }, 5000);
         _this.abortables.push({ abort: function () { return clearInterval(_this.progressIntervalId); } });
+        _this.abortables.push({ abort: function () { return _this.decryptBuffer = []; } });
         _this.decipher = crypto_1.createDecipheriv('aes-256-ctr', crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         return _this;
     }
     MultipleStreamsStrategy.prototype.buildDownloadQueue = function (fileSize, concurrency) {
         var _this = this;
         if (concurrency === void 0) { concurrency = 1; }
-        var errored = false;
+        var alreadyErrored = false;
         return async_1.queue(function (mirror, next) {
             // console.log('processing shard for mirror %s', mirror.index);
             // console.log('aqui llego');
             getDownloadStream(mirror, function (err, downloadStream) {
+                console.log('downloadStream Err', err);
                 var exchangeReport = new reports_1.ExchangeReport(_this.config);
                 // console.log('i got the download stream for mirror %s', mirror.index);
-                if (errored) {
-                    return;
+                _this.abortables.push({
+                    abort: function () {
+                        downloadStream === null || downloadStream === void 0 ? void 0 : downloadStream.emit('signal', 'Destroy request');
+                    }
+                });
+                if (alreadyErrored || _this.aborted) {
+                    return next();
                 }
                 if (err) {
                     console.log('error getting download stream for mirror %s', mirror.index);
                     console.log(err);
                     exchangeReport.DownloadError();
                     exchangeReport.sendReport().catch(function () { });
-                    errored = true;
+                    alreadyErrored = true;
                     return next(err);
                 }
                 var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
@@ -127,21 +136,19 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                 });
                 bufferToStream(downloadStream.pipe(progressNotifier), function (toBufferErr, res) {
                     // console.log('i got the buffer for mirror %s', mirror.index);
-                    if (errored) {
-                        return;
+                    if (alreadyErrored || _this.aborted) {
+                        return next();
                     }
                     if (toBufferErr) {
                         exchangeReport.DownloadError();
                         exchangeReport.sendReport().catch(function () { });
                         console.log('error getting buffer to stream for mirror %s', mirror.index);
                         console.log(err);
-                        errored = true;
+                        alreadyErrored = true;
                         return next(toBufferErr);
                     }
                     exchangeReport.DownloadOk();
-                    exchangeReport.sendReport().then(function (res) {
-                        console.log('report sent', res);
-                    }).catch(function () { });
+                    exchangeReport.sendReport().catch(function () { });
                     _this.decryptBuffer.push({ index: mirror.index, content: res });
                     next();
                 });
@@ -158,7 +165,9 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                         throw new Error('Required decryption data not found');
                     }
                     this.decipher = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                    this.emit(DownloadStrategy_1.DownloadEvents.Ready, this.decipher);
+                    this.emit(events_1.Events.Download.Ready, this.decipher);
+                    // As we emit the decipher asap, the decipher should be used as the error channel
+                    this.once(events_1.Events.Download.Error, function (err) { return _this.decipher.emit('error', err); });
                     this.mirrors = mirrors;
                     this.mirrors.sort(function (mA, mB) { return mA.index - mB.index; });
                     this.downloadsProgress = new Array(mirrors.length).fill(0);
@@ -168,10 +177,12 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                     this.queues.downloadQueue = this.buildDownloadQueue(fileSize, concurrency);
                     this.abortables.push({ abort: function () { return _this.queues.downloadQueue.kill(); } });
                     this.abortables.push({ abort: function () { return _this.queues.decryptQueue.kill(); } });
-                    this.abortables.push({ abort: function () { return _this.decryptBuffer = []; } });
                     console.log('there are %s mirrors for this file', mirrors.length);
                     console.log('concurrency', concurrency);
                     this.queues.downloadQueue.push(mirrors, function (err) {
+                        if (_this.aborted) {
+                            return;
+                        }
                         if (err) {
                             return _this.handleError(err);
                         }
@@ -220,7 +231,7 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
     };
     MultipleStreamsStrategy.prototype.abort = function () {
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
-        this.emit(DownloadStrategy_1.DownloadEvents.Abort);
+        this.emit(events_1.Events.Download.Abort);
     };
     return MultipleStreamsStrategy;
 }(DownloadStrategy_1.DownloadStrategy));

@@ -129,6 +129,10 @@ function streamRequest(targetUrl, timeoutSeconds) {
         };
         return uriParts.protocol === 'http:' ? http.get(requestOpts) : https.get(requestOpts);
     }
+    // return new Promise((resolve, reject) => {
+    //   const downloader = _createDownloadStream();
+    //   downloader.once('response', resolve).once('error', reject);
+    // })
     return new stream_1.Readable({
         read: function () {
             var _this = this;
@@ -139,6 +143,19 @@ function streamRequest(targetUrl, timeoutSeconds) {
                         downloader === null || downloader === void 0 ? void 0 : downloader.destroy(Error("Request timeouted after " + timeoutSeconds + " seconds"));
                     });
                 }
+                this.once('signal', function (message) {
+                    console.log('signal', message);
+                    if (message === 'Destroy request') {
+                        downloader === null || downloader === void 0 ? void 0 : downloader.destroy();
+                    }
+                    _this.destroy();
+                });
+                // this.once('pause', () => {
+                //   downloader?.destroy();
+                //   if (downloader?.destroyed) {
+                //     console.log('downloader is destroyed!!');
+                //   }
+                // })
                 downloader.on('response', function (res) {
                     res
                         .on('data', _this.push.bind(_this))

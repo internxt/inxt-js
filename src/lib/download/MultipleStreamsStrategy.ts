@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
+import { Events } from "../../api/events";
 import { ExchangeReport } from "../../api/reports";
 import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
@@ -11,7 +12,7 @@ import { getStream } from "../../services/request";
 import { ProgressNotifier, Events as ProgressEvents } from "../streams";
 import { determineConcurrency } from "../utils";
 import { wrap } from "../utils/error";
-import { DownloadEvents, DownloadStrategy } from "./DownloadStrategy";
+import { DownloadStrategy } from "./DownloadStrategy";
 
 function getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void {
   ShardObject.requestGet(buildRequestUrlShard(shard)).then(getStream).then((stream) => {
@@ -37,12 +38,16 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   private downloadsProgress: number[] = [];
   private decipher: Decipher;
   private config: EnvironmentConfig;
+  private aborted = false;
 
   private progressIntervalId: NodeJS.Timeout; 
 
-  private queues: {
-    downloadQueue: QueueObject<Shard>;
-    decryptQueue: QueueObject<Buffer>;
+  private queues: { 
+    downloadQueue: QueueObject<Shard>, 
+    decryptQueue: QueueObject<Buffer> 
+  } = {
+    downloadQueue: queue(() => { }),
+    decryptQueue: queue(() => { }) 
   };
 
   private progressCoefficients = {
@@ -55,43 +60,48 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
 
     this.config = config;
 
-    this.queues = {
-      downloadQueue: queue(() => { }),
-      decryptQueue: queue(() => { })
-    }
-
     if ((this.progressCoefficients.download + this.progressCoefficients.decrypt) !== 1) {
       throw new Error('Progress coefficients are wrong');
     }
 
     this.progressIntervalId = setInterval(() => {
       const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0);
-      this.emit(DownloadEvents.Progress, currentProgress * this.progressCoefficients.download);
+      this.emit(Events.Download.Progress, currentProgress * this.progressCoefficients.download);
     }, 5000);
 
     this.abortables.push({ abort: () => clearInterval(this.progressIntervalId) });
+    this.abortables.push({ abort: () => this.decryptBuffer = [] });
 
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
   }
 
   private buildDownloadQueue(fileSize: number, concurrency = 1): QueueObject<Shard> {
-    let errored = false;
+    let alreadyErrored = false;
 
     return queue((mirror: Shard, next: ErrorCallback<Error>) => {
       // console.log('processing shard for mirror %s', mirror.index);
       // console.log('aqui llego');
       getDownloadStream(mirror, (err, downloadStream) => {
+        console.log('downloadStream Err', err);
         const exchangeReport = new ExchangeReport(this.config);
         // console.log('i got the download stream for mirror %s', mirror.index);
-        if (errored) {
-          return;
+
+        this.abortables.push({ 
+          abort: () => {
+            downloadStream?.emit('signal', 'Destroy request')
+          } 
+        });
+
+        if (alreadyErrored || this.aborted) {
+          return next();
         }
         
         if (err) {
-          // console.log('error getting download stream for mirror %s', mirror.index);
+          console.log('error getting download stream for mirror %s', mirror.index);
+          console.log(err);
           exchangeReport.DownloadError();
           exchangeReport.sendReport().catch(() => {});
-          errored = true;
+          alreadyErrored = true;
           return next(err);
         }
 
@@ -103,22 +113,21 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
 
         bufferToStream((downloadStream as Readable).pipe(progressNotifier), (toBufferErr, res) => {
           // console.log('i got the buffer for mirror %s', mirror.index);
-          if (errored) {
-            return;
+          if (alreadyErrored || this.aborted) {
+            return next();
           }
 
           if (toBufferErr) {
             exchangeReport.DownloadError();
             exchangeReport.sendReport().catch(() => {});
-            // console.log('error getting buffer to stream for mirror %s', mirror.index);
-            errored = true;
+            console.log('error getting buffer to stream for mirror %s', mirror.index);
+            console.log(err);
+            alreadyErrored = true;
             return next(toBufferErr);
           }
 
           exchangeReport.DownloadOk();
-          exchangeReport.sendReport().then((res) => {
-            console.log('report sent', res);
-          }).catch(() => {});
+          exchangeReport.sendReport().catch(() => {});
           this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
 
           next();
@@ -134,7 +143,10 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
       }
 
       this.decipher = createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-      this.emit(DownloadEvents.Ready, this.decipher);
+      this.emit(Events.Download.Ready, this.decipher);
+
+      // As we emit the decipher asap, the decipher should be used as the error channel
+      this.once(Events.Download.Error, (err) => this.decipher.emit('error', err));
 
       this.mirrors = mirrors;
       this.mirrors.sort((mA, mB) => mA.index - mB.index);
@@ -149,12 +161,14 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
 
       this.abortables.push({ abort: () => this.queues.downloadQueue.kill() });
       this.abortables.push({ abort: () => this.queues.decryptQueue.kill() });
-      this.abortables.push({ abort: () => this.decryptBuffer = [] });
 
       console.log('there are %s mirrors for this file', mirrors.length);
       console.log('concurrency', concurrency);
 
       this.queues.downloadQueue.push(mirrors, (err) => {
+        if (this.aborted) {
+          return;
+        }
         if (err) {
           return this.handleError(err);
         }
@@ -210,7 +224,7 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
 
   abort(): void {
     this.abortables.forEach((abortable) => abortable.abort());
-    this.emit(DownloadEvents.Abort);
+    this.emit(Events.Download.Abort);
   }
 }
 

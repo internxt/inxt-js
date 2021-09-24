@@ -81,7 +81,7 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
       });
   
       process.on('SIGINT', () => {
-        network.resolveFileCancel(state);
+        network.downloadCancel(state);
       });
     });
 
@@ -90,7 +90,7 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
     process.exit(0);
   } catch (err) {
     console.log('aqui estoyyyy')
-    logger.error('Error uploading file %s', err.message);
+    logger.error('Error downloading file %s', err.message);
 
     process.exit(1);
   }
