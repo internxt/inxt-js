@@ -16,7 +16,7 @@ import { wrap } from "../utils/error";
 import { DownloadStrategy } from "./DownloadStrategy";
 
 function getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard)).then(getStream).then((stream) => {
+  ShardObject.requestGet(buildRequestUrlShard(shard)).then((url: string) => getStream(url, { useProxy: true })).then((stream) => {
     cb(null, stream);
   }).catch((err) => {
     console.log('err', err);

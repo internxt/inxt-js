@@ -62,7 +62,7 @@ var utils_1 = require("../utils");
 var error_1 = require("../utils/error");
 var DownloadStrategy_1 = require("./DownloadStrategy");
 function getDownloadStream(shard, cb) {
-    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(request_1.getStream).then(function (stream) {
+    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(function (url) { return request_1.getStream(url, { useProxy: true }); }).then(function (stream) {
         cb(null, stream);
     }).catch(function (err) {
         console.log('err', err);

@@ -83,7 +83,6 @@ var Environment = /** @class */ (function () {
                 strategy = new download_1.OneStreamStrategy();
             }
             if (strategyObj.label === 'MultipleStreams') {
-                console.log('multiple streams strategy');
                 strategy = new download_1.MultipleStreamsStrategy(_this.config);
             }
             download_1.downloadV2(_this.config, bucketId, fileId, opts, _this.logger, downloadState, strategy).then(function (res) {

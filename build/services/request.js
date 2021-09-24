@@ -249,7 +249,7 @@ function getStream(url, config) {
             switch (_a.label) {
                 case 0:
                     targetUrl = url;
-                    if (!(config.useProxy || process.env.NODE_ENV !== 'production')) return [3 /*break*/, 2];
+                    if (!config.useProxy) return [3 /*break*/, 2];
                     return [4 /*yield*/, proxy_1.getProxy()];
                 case 1:
                     proxy = _a.sent();
