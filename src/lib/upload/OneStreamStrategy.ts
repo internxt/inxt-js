@@ -17,7 +17,9 @@ interface Source {
   stream: Readable;
 }
 
-export interface Params extends UploadParams {
+export type OneStreamStrategyObject = { label: 'OneStreamOnly', params: Params };
+
+interface Params extends UploadParams {
   source: Source;
 }
 

@@ -62,7 +62,6 @@ var Environment = /** @class */ (function () {
             return uploadState;
         };
         this.download = function (bucketId, fileId, opts, strategyObj) {
-            var dowloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
             var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
             if (!_this.config.encryptionKey) {
                 opts.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
@@ -83,12 +82,16 @@ var Environment = /** @class */ (function () {
             if (strategyObj.label === 'OneStreamOnly') {
                 strategy = new download_1.OneStreamStrategy();
             }
-            download_1.downloadV2(_this.config, bucketId, fileId, opts, _this.logger, dowloadState, strategy).then(function (res) {
+            if (strategyObj.label === 'MultipleStreams') {
+                console.log('multiple streams strategy');
+                strategy = new download_1.MultipleStreamsStrategy(_this.config);
+            }
+            download_1.downloadV2(_this.config, bucketId, fileId, opts, _this.logger, downloadState, strategy).then(function (res) {
                 opts.finishedCallback(null, res);
             }).catch(function (err) {
                 opts.finishedCallback(err, null);
             });
-            return dowloadState;
+            return downloadState;
         };
         this.config = config;
         this.logger = logger_1.Logger.getInstance(1);
@@ -261,6 +264,9 @@ var Environment = /** @class */ (function () {
             params.finishedCallback(err, null);
         });
         return uploadState;
+    };
+    Environment.prototype.downloadCancel = function (state) {
+        state.stop();
     };
     Environment.prototype.uploadCancel = function (state) {
         state.stop();

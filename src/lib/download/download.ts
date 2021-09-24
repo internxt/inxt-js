@@ -9,6 +9,7 @@ import { ActionState } from '../../api/ActionState';
 import { DOWNLOAD_CANCELLED } from '../../api/constants';
 import { FileObjectV2 } from '../../api/FileObjectV2';
 import { DownloadEvents, DownloadStrategy } from './DownloadStrategy';
+import { Events } from '../../api/events';
 
 export async function download(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, debug: Winston.Logger, state: ActionState): Promise<Readable> {
   const file = new FileObject(config, bucketId, fileId, debug);
@@ -41,6 +42,10 @@ export async function download(config: EnvironmentConfig, bucketId: string, file
 export async function downloadV2(config: EnvironmentConfig, bucketId: string, fileId: string, options: DownloadFileOptions, debug: Winston.Logger, state: ActionState, strategy: DownloadStrategy): Promise<Readable> {
   const file = new FileObjectV2(config, bucketId, fileId, debug, strategy);
 
+  state.once(Events.Download.Abort, () => {
+    file.emit(Events.Download.Abort);
+  });
+
   file.on(DownloadEvents.Progress, (progress) => options.progressCallback(progress, 0, 0));
 
   // TODO: Move this to the concrete strategy
@@ -54,11 +59,7 @@ export async function downloadV2(config: EnvironmentConfig, bucketId: string, fi
     file.setFileToken(options.fileToken);
   }
 
-  state.on(DOWNLOAD_CANCELLED, () => {
-    file.emit(DOWNLOAD_CANCELLED);
-  });
-
-  return file.getInfo().then(file.getMirrors.bind(file)).then(file.download.bind(file));
+  return file.getInfo().then(() => file.getMirrors()).then(() => file.download());
 }
 
 function handleProgress(fl: FileObject, progressCb: DownloadProgressCallback) {

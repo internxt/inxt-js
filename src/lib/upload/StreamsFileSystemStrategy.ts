@@ -18,7 +18,9 @@ import { Tap } from '../TapStream';
 import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
 
-export interface Params extends UploadParams {
+export type MultipleStreamsStrategyObject = { label: 'MultipleStreams', params: Params };
+
+interface Params extends UploadParams {
   filepath: string;
 }
 

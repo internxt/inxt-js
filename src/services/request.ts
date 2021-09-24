@@ -70,6 +70,14 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
           });
         }
 
+        this.once('signal', (message: string) => {
+          if (message === 'Destroy request') {
+            downloader?.destroy();
+          }
+
+          this.destroy();
+        });
+
         downloader.on('response', (res: IncomingMessage) => {
           res
             .on('data', this.push.bind(this))
@@ -162,13 +170,19 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
   let targetUrl = url;
   let free: undefined | (() => void);
 
-  if (config.useProxy) {
+  if (config.useProxy || process.env.NODE_ENV !== 'production') {
     const proxy = await getProxy();
     free = proxy.free;
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return streamRequest(url);
+  const getStream = streamRequest(targetUrl);
+
+  if (free) {
+    free();
+  }
+
+  return getStream;
 }
 
 export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {

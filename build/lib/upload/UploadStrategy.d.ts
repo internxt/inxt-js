@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { EventEmitter } from 'stream';
+import { EventEmitter } from 'events';
 import { Abortable } from '../../api/Abortable';
 import { ContractNegotiated } from '../contracts';
 import { ShardMeta } from '../shardMeta';

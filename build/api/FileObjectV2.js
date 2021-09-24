@@ -63,7 +63,7 @@ var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
 var api_1 = require("../services/api");
-var DownloadStrategy_1 = require("../lib/download/DownloadStrategy");
+var events_2 = require("./events");
 var FileObjectV2 = /** @class */ (function (_super) {
     __extends(FileObjectV2, _super);
     function FileObjectV2(config, bucketId, fileId, debug, downloader) {
@@ -74,6 +74,7 @@ var FileObjectV2 = /** @class */ (function (_super) {
         _this.final_length = -1;
         _this.totalSizeWithECs = 0;
         _this.aborted = false;
+        _this.abortables = [];
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
@@ -82,7 +83,8 @@ var FileObjectV2 = /** @class */ (function (_super) {
         _this.decipher = new decryptstream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         _this.api = new api_1.Bridge(config);
         _this.downloader = downloader;
-        _this.once(constants_1.DOWNLOAD_CANCELLED, _this.abort.bind(_this));
+        _this.abortables.push({ abort: function () { return downloader.abort(); } });
+        _this.once(events_2.Events.Download.Abort, _this.abort.bind(_this));
         return _this;
     }
     FileObjectV2.prototype.setFileEncryptionKey = function (key) {
@@ -93,7 +95,7 @@ var FileObjectV2 = /** @class */ (function (_super) {
     };
     FileObjectV2.prototype.checkIfIsAborted = function () {
         if (this.isAborted()) {
-            throw new Error('Download aborted');
+            this.emit(events_2.Events.Download.Error, new Error('Download aborted'));
         }
     };
     FileObjectV2.prototype.getInfo = function () {
@@ -184,6 +186,7 @@ var FileObjectV2 = /** @class */ (function (_super) {
     };
     FileObjectV2.prototype.download = function () {
         var _this = this;
+        this.checkIfIsAborted();
         if (!this.fileInfo) {
             throw new Error('Undefined fileInfo');
         }
@@ -191,20 +194,18 @@ var FileObjectV2 = /** @class */ (function (_super) {
         var iv = Buffer.from(this.fileInfo.index, 'hex').slice(0, 16);
         this.downloader.setIv(iv);
         this.downloader.setFileEncryptionKey(fk);
-        this.downloader.once(DownloadStrategy_1.DownloadEvents.Abort, function () { return _this.downloader.emit(DownloadStrategy_1.DownloadEvents.Error, new Error('Download aborted')); });
-        this.downloader.on(DownloadStrategy_1.DownloadEvents.Progress, function (progress) { return _this.emit(DownloadStrategy_1.DownloadEvents.Progress, progress); });
+        this.downloader.once(events_2.Events.Download.Abort, function () { return _this.downloader.emit(events_2.Events.Download.Error, new Error('Download aborted')); });
+        this.downloader.on(events_2.Events.Download.Progress, function (progress) { return _this.emit(events_2.Events.Download.Progress, progress); });
         return new Promise(function (resolve, reject) {
-            _this.downloader.once(DownloadStrategy_1.DownloadEvents.Ready, resolve);
-            _this.downloader.once(DownloadStrategy_1.DownloadEvents.Error, function (err) {
-                reject(err);
-                _this.removeAllListeners();
-            });
+            _this.downloader.once(events_2.Events.Download.Ready, resolve);
+            _this.downloader.once(events_2.Events.Download.Error, reject);
             _this.downloader.download(_this.rawShards.filter(function (s) { return !s.parity; }));
         });
     };
     FileObjectV2.prototype.abort = function () {
-        this.debug.info('Aborting file upload');
+        this.debug.info('Aborting file download');
         this.aborted = true;
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
     };
     FileObjectV2.prototype.isAborted = function () {
         return this.aborted;

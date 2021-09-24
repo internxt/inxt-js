@@ -1,13 +1,17 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
 import * as Winston from 'winston';
-import { UploadFunction } from './lib/upload';
+import { OneStreamStrategyObject, MultipleStreamsStrategyObject } from './lib/upload';
 import { DownloadFunction } from './lib/download';
 import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
 import { WebDownloadFileOptions } from './api/adapters/Web';
 import { FileInfo } from './api/fileinfo';
 import { HashStream } from './lib/hasher';
+export declare type UploadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
+export declare type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
+export declare type MultipleStreamsStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
+export declare type UploadFunction = OneStreamOnlyStrategyFunction & MultipleStreamsStrategyFunction;
 export declare type OnlyErrorCallback = (err: Error | null) => void;
 export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
@@ -51,6 +55,9 @@ interface StoreFileParams extends UploadFileOptions {
 }
 interface ResolveFileParams extends DownloadFileOptions {
     debug?: DebugCallback;
+}
+interface UploadOptions extends UploadFileOptions {
+    filename: string;
 }
 export interface DownloadOptions extends DownloadFileOptions {
     debug?: DebugCallback;
@@ -135,6 +142,7 @@ export declare class Environment {
     storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
     upload: UploadFunction;
     download: DownloadFunction;
+    downloadCancel(state: ActionState): void;
     uploadCancel(state: ActionState): void;
     /**
      * Uploads a file from a stream

@@ -42,6 +42,7 @@ var FileObject_1 = require("../../api/FileObject");
 var constants_1 = require("../../api/constants");
 var FileObjectV2_1 = require("../../api/FileObjectV2");
 var DownloadStrategy_1 = require("./DownloadStrategy");
+var events_2 = require("../../api/events");
 function download(config, bucketId, fileId, options, debug, state) {
     return __awaiter(this, void 0, void 0, function () {
         var file;
@@ -79,6 +80,9 @@ function downloadV2(config, bucketId, fileId, options, debug, state, strategy) {
         var file;
         return __generator(this, function (_a) {
             file = new FileObjectV2_1.FileObjectV2(config, bucketId, fileId, debug, strategy);
+            state.once(events_2.Events.Download.Abort, function () {
+                file.emit(events_2.Events.Download.Abort);
+            });
             file.on(DownloadStrategy_1.DownloadEvents.Progress, function (progress) { return options.progressCallback(progress, 0, 0); });
             // TODO: Move this to the concrete strategy
             if (options.fileEncryptionKey) {
@@ -89,10 +93,7 @@ function downloadV2(config, bucketId, fileId, options, debug, state, strategy) {
                 debug.info('Using file token %s to download', options.fileToken);
                 file.setFileToken(options.fileToken);
             }
-            state.on(constants_1.DOWNLOAD_CANCELLED, function () {
-                file.emit(constants_1.DOWNLOAD_CANCELLED);
-            });
-            return [2 /*return*/, file.getInfo().then(file.getMirrors.bind(file)).then(file.download.bind(file))];
+            return [2 /*return*/, file.getInfo().then(function () { return file.getMirrors(); }).then(function () { return file.download(); })];
         });
     });
 }

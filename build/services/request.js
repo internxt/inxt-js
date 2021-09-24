@@ -139,6 +139,12 @@ function streamRequest(targetUrl, timeoutSeconds) {
                         downloader === null || downloader === void 0 ? void 0 : downloader.destroy(Error("Request timeouted after " + timeoutSeconds + " seconds"));
                     });
                 }
+                this.once('signal', function (message) {
+                    if (message === 'Destroy request') {
+                        downloader === null || downloader === void 0 ? void 0 : downloader.destroy();
+                    }
+                    _this.destroy();
+                });
                 downloader.on('response', function (res) {
                     res
                         .on('data', _this.push.bind(_this))
@@ -238,19 +244,24 @@ exports.get = get;
 function getStream(url, config) {
     if (config === void 0) { config = { useProxy: false }; }
     return __awaiter(this, void 0, void 0, function () {
-        var targetUrl, free, proxy;
+        var targetUrl, free, proxy, getStream;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     targetUrl = url;
-                    if (!config.useProxy) return [3 /*break*/, 2];
+                    if (!(config.useProxy || process.env.NODE_ENV !== 'production')) return [3 /*break*/, 2];
                     return [4 /*yield*/, proxy_1.getProxy()];
                 case 1:
                     proxy = _a.sent();
                     free = proxy.free;
                     targetUrl = proxy.url + "/" + targetUrl;
                     _a.label = 2;
-                case 2: return [2 /*return*/, streamRequest(url)];
+                case 2:
+                    getStream = streamRequest(targetUrl);
+                    if (free) {
+                        free();
+                    }
+                    return [2 /*return*/, getStream];
             }
         });
     });

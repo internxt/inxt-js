@@ -11,7 +11,5 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./upload"), exports);
-var OneStreamStrategy_1 = require("./OneStreamStrategy");
-Object.defineProperty(exports, "OneStreamStrategy", { enumerable: true, get: function () { return OneStreamStrategy_1.OneStreamStrategy; } });
-var StreamsFileSystemStrategy_1 = require("./StreamsFileSystemStrategy");
-Object.defineProperty(exports, "StreamFileSystemStrategy", { enumerable: true, get: function () { return StreamsFileSystemStrategy_1.StreamFileSystemStrategy; } });
+__exportStar(require("./OneStreamStrategy"), exports);
+__exportStar(require("./StreamsFileSystemStrategy"), exports);

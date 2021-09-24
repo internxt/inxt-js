@@ -41,8 +41,6 @@ var constants_1 = require("../../api/constants");
 var FileObjectUpload_1 = require("../../api/FileObjectUpload");
 var FileObjectUploadV2_1 = require("../../api/FileObjectUploadV2");
 var logger_1 = require("../utils/logger");
-var UploadStrategy_1 = require("./UploadStrategy");
-var events_1 = require("../../api/events");
 /**
  * Uploads a file to the network
  * @param config Environment config
@@ -93,33 +91,32 @@ function uploadV2(config, fileMeta, bucketId, params, debug, actionState, upload
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    file = new FileObjectUploadV2_1.FileObjectUploadV2(config, fileMeta, bucketId, debug, uploader);
-                    actionState.once(events_1.Events.Upload.Abort, function () {
-                        file.emit(events_1.Events.Upload.Abort);
-                        actionState.removeAllListeners();
-                    });
-                    file.on(UploadStrategy_1.UploadEvents.Progress, function (progress) {
-                        params.progressCallback(progress, 0, 0);
-                    });
-                    return [4 /*yield*/, file.init()];
-                case 1:
-                    _a.sent();
-                    return [4 /*yield*/, file.checkBucketExistence()];
-                case 2:
-                    _a.sent();
+                    file = new FileObjectUploadV2_1.FileObjectUploadV2();
+                    // actionState.once(Events.Upload.Abort, () => {
+                    //   file.emit(Events.Upload.Abort);
+                    //   actionState.removeAllListeners();
+                    // });
+                    // file.on(UploadEvents.Progress, (progress) => {
+                    //   params.progressCallback(progress, 0, 0);
+                    // });
+                    // await file.init();
+                    // await file.checkBucketExistence();
                     return [4 /*yield*/, file.stage()];
-                case 3:
+                case 1:
+                    // actionState.once(Events.Upload.Abort, () => {
+                    //   file.emit(Events.Upload.Abort);
+                    //   actionState.removeAllListeners();
+                    // });
+                    // file.on(UploadEvents.Progress, (progress) => {
+                    //   params.progressCallback(progress, 0, 0);
+                    // });
+                    // await file.init();
+                    // await file.checkBucketExistence();
                     _a.sent();
                     return [4 /*yield*/, file.upload(params.progressCallback)];
-                case 4:
+                case 2:
                     uploadResponses = _a.sent();
                     logger_1.logger.debug('Upload finished. Creating bucket entry...');
-                    return [4 /*yield*/, file.createBucketEntry(uploadResponses)];
-                case 5:
-                    _a.sent();
-                    logger_1.logger.info('Uploaded file with id %s', file.getId());
-                    params.progressCallback(1, file.getSize(), file.getSize());
-                    params.finishedCallback(null, file.getId());
                     return [2 /*return*/];
             }
         });

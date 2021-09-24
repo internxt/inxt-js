@@ -1,7 +1,7 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
-import { downloadFile } from './download-file';
-import { uploadFile } from './upload-file';
+import { downloadFile, downloadFileParallel } from './download-file';
+// import { uploadFile } from './upload-file';
 import { uploadFolder } from './upload-folder-zip';
 
 function notifyProgramFinished(programName: string) {
@@ -10,14 +10,14 @@ function notifyProgramFinished(programName: string) {
   };
 }
 
-export const uploadFileCommand = buildCommand({
-  version: '0.0.1',
-  command: 'upload-file <path>',
-  description: 'Upload a file',
-  options: []
-}).action((path) => {
-  uploadFile(path).finally(notifyProgramFinished('upload-file'));
-});
+// export const uploadFileCommand = buildCommand({
+//   version: '0.0.1',
+//   command: 'upload-file <path>',
+//   description: 'Upload a file',
+//   options: []
+// }).action((path) => {
+//   uploadFile(path).finally(notifyProgramFinished('upload-file'));
+// });
 
 export const uploadFolderZipCommand = buildCommand({
   version: '0.0.1',
@@ -30,11 +30,20 @@ export const uploadFolderZipCommand = buildCommand({
 
 export const downloadFileCommand = buildCommand({
   version: '0.0.1',
-  command: 'download-file <fileId> <path>',
+  command: 'download-file <fileId> <path> [downloadStrategy]',
   description: 'Download a file',
   options: []
 }).action((fileId, path) => {
   downloadFile(fileId, path).finally(notifyProgramFinished('download-file'));
+});
+
+export const downloadFileCommandParallel = buildCommand({
+  version: '0.0.1',
+  command: 'download-file-parallel <fileId> <path>',
+  description: 'Download a file',
+  options: []
+}).action((fileId, path) => {
+  downloadFileParallel(fileId, path).finally(notifyProgramFinished('download-file-parallel'));
 });
 
 // export const downloadFolderZippedCommand = buildCommand({
