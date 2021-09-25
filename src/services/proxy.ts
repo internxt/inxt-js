@@ -21,6 +21,8 @@ export class ProxyBalancer {
       await wait(500);
     }
 
+    proxiesAvailable.sort((pA, pB) => pA.requests() - pB.requests());
+
     return proxiesAvailable[0];
   }
 

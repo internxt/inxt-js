@@ -77,7 +77,9 @@ var ProxyBalancer = /** @class */ (function () {
                     case 2:
                         _a.sent();
                         return [3 /*break*/, 1];
-                    case 3: return [2 /*return*/, proxiesAvailable[0]];
+                    case 3:
+                        proxiesAvailable.sort(function (pA, pB) { return pA.requests() - pB.requests(); });
+                        return [2 /*return*/, proxiesAvailable[0]];
                 }
             });
         });
