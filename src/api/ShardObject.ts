@@ -8,8 +8,8 @@ import { ShardMeta } from "../lib/shardMeta";
 import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
-import { Shard } from "./shard";
-import { get, putStream } from "../services/request";
+import { buildRequestUrl, Shard } from "./shard";
+import { get, getStream, putStream } from "../services/request";
 import AbortController from 'abort-controller';
 
 type PutUrl = string;
@@ -92,12 +92,22 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
   }
 
-  static requestGet(url: string): Promise<GetUrl> {
-    return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
+  static requestGet(url: string, useProxy = true): Promise<GetUrl> {
+    return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
   static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
     return putStream(url, content, { useProxy: false }, controller);
+  }
+
+  static getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void {
+    ShardObject.requestGet(buildRequestUrl(shard)).then((url: string) => {
+      return getStream(url, { useProxy: true });
+    }).then((stream) => {
+      cb(null, stream);
+    }).catch((err) => {
+      cb(err, null);
+    });
   }
 
   negotiateContract(): Promise<ContractNegotiated> {

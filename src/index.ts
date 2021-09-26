@@ -1,26 +1,24 @@
 import blobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createWriteStream, statSync } from 'fs';
+import { statSync } from 'fs';
 import * as Winston from 'winston';
+import { basename } from 'path';
 
 import { OneStreamStrategy, OneStreamStrategyObject, MultipleStreamsStrategyObject, upload, uploadV2 } from './lib/upload';
 import {
   download,
   DownloadFunction,
   DownloadStrategyObject,
-  downloadV2,
   OneStreamStrategy as DownloadOneStreamStrategy,
   MultipleStreamsStrategy as DownloadMultipleStreamsStrategy,
   DownloadEmptyStrategy
 } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
-import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
+import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
-import { adapt as webAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
-import { basename } from 'path';
-import streamToBlob from 'stream-to-blob';
+
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
 import { StreamFileSystemStrategy } from './lib/upload';
@@ -91,10 +89,6 @@ interface UploadFileParams {
 interface StoreFileParams extends UploadFileOptions {
   debug?: DebugCallback;
   filename?: string;
-}
-
-interface ResolveFileParams extends DownloadFileOptions {
-  debug?: DebugCallback;
 }
 
 interface UploadOptions extends UploadFileOptions {
@@ -216,33 +210,6 @@ export class Environment {
 
   setEncryptionKey(newEncryptionKey: string): void {
     this.config.encryptionKey = newEncryptionKey;
-  }
-
-  downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState {
-    const downloadState = new ActionState(ActionTypes.Download);
-
-    if (!options.fileEncryptionKey && !this.config.encryptionKey) {
-      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!bucketId) {
-      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    download(this.config, bucketId, fileId, webAdapter(options), this.logger, downloadState)
-      .then((downloadStream) => {
-        return streamToBlob(downloadStream, 'application/octet-stream');
-      }).then((blob) => {
-        options.finishedCallback(null, blob);
-      }).catch((err) => {
-        options.finishedCallback(err, null);
-      });
-
-    return downloadState;
   }
 
   /**
@@ -409,7 +376,7 @@ export class Environment {
       strategy = new DownloadMultipleStreamsStrategy(this.config);
     }
 
-    downloadV2(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
+    download(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);
     }).catch((err) => {
       opts.finishedCallback(err, null);
@@ -475,75 +442,6 @@ export class Environment {
   storeFileCancel(state: ActionState): void {
     state.stop();
   }
-
-  /**
-   * Downloads a file, returns state object
-   * @param bucketId Bucket id where file is
-   * @param fileId Id of the file to be downloaded
-   * @param filePath File path where the file maybe already is
-   * @param options Options for resolve file case
-   */
-  resolveFile(bucketId: string, fileId: string, filepath: string, params: ResolveFileParams): ActionState {
-    const downloadState = new ActionState(ActionTypes.Download);
-
-    if (!this.config.encryptionKey) {
-      params.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!bucketId) {
-      params.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!fileId) {
-      params.finishedCallback(Error('File id not provided'), null);
-
-      return downloadState;
-    }
-
-    if (params.debug) {
-      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-    }
-
-    const destination = createWriteStream(filepath);
-
-    downloadState.once(DOWNLOAD_CANCELLED, () => {
-      destination.emit('error', new Error('Process killed by user'));
-    });
-
-    destination.once('error', (err) => {
-      destination.destroy();
-      params.finishedCallback(err, null);
-    });
-
-    destination.once('finish', () => {
-      destination.destroy();
-      params.finishedCallback(null, null);
-    });
-
-    download(this.config, bucketId, fileId, params, this.logger, downloadState)
-      .then((fileStream) => {
-        fileStream.on('error', (err) => destination.emit('error', err));
-        fileStream.pipe(destination);
-      }).catch((err) => {
-        destination.destroy();
-        params.finishedCallback(err, null);
-      });
-
-    return downloadState;
-  }
-
-  /**
-   * Cancels the download
-   * @param state Download file state at the moment
-   */
-  resolveFileCancel(state: ActionState): void {
-    state.stop();
-  }
-
 }
 
 export interface EnvironmentConfig {

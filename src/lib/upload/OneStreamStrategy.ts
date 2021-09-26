@@ -6,10 +6,10 @@ import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from '.
 import { generateMerkleTree } from '../merkleTreeStreams';
 import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
-import { ContractNegotiated } from '../contracts';
 import { wrap } from '../utils/error';
 import { Events as ProgressEvents, ProgressNotifier } from '../streams';
 import AbortController from 'abort-controller';
+import { Contract } from '../../api';
 
 interface Source {
   size: number;
@@ -64,7 +64,7 @@ export class OneStreamStrategy extends UploadStrategy {
       };
 
       const contract = await negotiateContract(shardMeta);
-      const url = buildUrlFromContract(contract);
+      const url = Contract.buildRequestUrl(contract);
 
       const encrypter = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const progressNotifier = new ProgressNotifier(this.source.size);
@@ -106,10 +106,6 @@ export class OneStreamStrategy extends UploadStrategy {
     this.abortables.forEach((abortable) => abortable.abort());
     this.removeAllListeners();
   }
-}
-
-function buildUrlFromContract(contract: ContractNegotiated) {
-  return `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${contract.hash}`;
 }
 
 function cleanEventEmitters(emitters: EventEmitter[]) {

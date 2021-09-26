@@ -3,6 +3,7 @@ import { ActionState } from '../../api/ActionState';
 
 export * from './download';
 
+export { DownloadStrategy, DownloadEvents } from './DownloadStrategy';
 export { OneStreamStrategy } from './OneStreamStrategy';
 export { MultipleStreamsStrategy } from './MultipleStreamsStrategy';
 export { EmptyStrategy as DownloadEmptyStrategy } from './EmptyStrategy';

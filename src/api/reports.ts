@@ -1,5 +1,6 @@
 import { request } from "../services/request";
 import { EnvironmentConfig } from "..";
+import { Shard } from "./shard";
 
 export interface ExchangeReportParams {
   dataHash: string | null;
@@ -106,5 +107,25 @@ export class ExchangeReport {
   UploadError() {
     this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
     this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_UPLOAD_ERROR;
+  }
+
+  static build(config: EnvironmentConfig, mirror: Shard) {
+    const report = new ExchangeReport(config);
+
+    report.params.exchangeStart = new Date();
+    report.params.farmerId = mirror.farmer.nodeID;
+    report.params.dataHash = mirror.hash;
+
+    return report; 
+  }
+  
+  error() {
+    this.DownloadError();
+    this.sendReport().catch(() => {});
+  }
+
+  success() {
+    this.DownloadOk();
+    this.sendReport().catch(() => {});
   }
 }
