@@ -52,6 +52,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OneStreamStrategy = void 0;
 var async_1 = require("async");
 var crypto_1 = require("crypto");
+var events_1 = require("../../api/events");
 var ShardObject_1 = require("../../api/ShardObject");
 var request_1 = require("../../services/request");
 var error_1 = require("../utils/error");
@@ -59,87 +60,120 @@ var DownloadStrategy_1 = require("./DownloadStrategy");
 var OneStreamStrategy = /** @class */ (function (_super) {
     __extends(OneStreamStrategy, _super);
     function OneStreamStrategy() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super.call(this) || this;
         _this.abortables = [];
+        _this.internalBuffer = [];
+        _this.decipher = crypto_1.createDecipheriv('aes-256-ctr', crypto_1.randomBytes(32), crypto_1.randomBytes(16));
         return _this;
     }
     OneStreamStrategy.prototype.download = function (mirrors) {
         return __awaiter(this, void 0, void 0, function () {
-            var decipher_1, downloadStreamsRefs_1, downloadPipeline, lastWriteFinished_1, err_1;
+            var concurrency, lastShardIndexDecrypted_1, downloadTask, downloadQueue_1, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        this.emit(DownloadStrategy_1.DownloadEvents.Start);
-                        decipher_1 = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                        downloadStreamsRefs_1 = [];
-                        return [4 /*yield*/, async_1.eachLimit(mirrors, 6, function (mirror, next) {
-                                getDownloadStream(mirror).then(function (downloadStream) {
-                                    downloadStreamsRefs_1.push({
-                                        index: mirror.index,
-                                        stream: downloadStream
-                                    });
-                                    next();
-                                }).catch(function (err) {
-                                    next(err);
+                        console.time('download');
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        this.emit(events_1.Events.Download.Start);
+                        this.decipher = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+                        this.emit(events_1.Events.Download.Ready, this.decipher);
+                        mirrors.sort(function (mA, mb) { return mA.index - mb.index; });
+                        concurrency = 10;
+                        lastShardIndexDecrypted_1 = -1;
+                        downloadTask = function (mirror, cb) {
+                            getDownloadStream(mirror, function (err, shardStream) {
+                                console.log('Got stream for mirror %s', mirror.index);
+                                if (err) {
+                                    return cb(err);
+                                }
+                                _this.handleShard(mirror.index, shardStream, function (downloadErr) {
+                                    console.log('Stream handled for mirror %s', mirror.index);
+                                    if (downloadErr) {
+                                        return cb(downloadErr);
+                                    }
+                                    var waitingInterval = setInterval(function () {
+                                        if (lastShardIndexDecrypted_1 !== mirror.index - 1) {
+                                            return;
+                                        }
+                                        clearInterval(waitingInterval);
+                                        _this.decryptShard(mirror.index, function (decryptErr) {
+                                            console.log('Decrypting shard for mirror %s', mirror.index);
+                                            if (decryptErr) {
+                                                return cb(decryptErr);
+                                            }
+                                            lastShardIndexDecrypted_1++;
+                                            cb(null);
+                                        });
+                                    }, 50);
+                                });
+                            });
+                        };
+                        downloadQueue_1 = async_1.queue(downloadTask, concurrency);
+                        return [4 /*yield*/, async_1.eachLimit(mirrors, concurrency, function (mirror, cb) {
+                                downloadQueue_1.push(mirror, function (err) {
+                                    if (err) {
+                                        return cb(err);
+                                    }
+                                    _this.internalBuffer[mirror.index] = Buffer.alloc(0);
+                                    cb();
                                 });
                             })];
-                    case 1:
-                        _a.sent();
-                        downloadStreamsRefs_1.sort(function (a, b) { return a.index - b.index; });
-                        downloadPipeline = downloadStreamsRefs_1.map(function (ref) { return ref.stream; });
-                        downloadPipeline.forEach(function (stream) {
-                            _this.abortables.push({ abort: function () { return stream.destroy(); } });
-                        });
-                        lastWriteFinished_1 = false;
-                        async_1.eachLimit(downloadPipeline, 1, function (download, next) {
-                            download.on('data', function (chunk) {
-                                if (!decipher_1.write(chunk)) {
-                                    lastWriteFinished_1 = false;
-                                    decipher_1.once('drain', function () {
-                                        lastWriteFinished_1 = true;
-                                        download.resume();
-                                    });
-                                    download.pause();
-                                }
-                            });
-                            download.once('end', function () {
-                                var lastWriteWatcherId = setInterval(function () {
-                                    if (lastWriteFinished_1) {
-                                        next();
-                                        clearInterval(lastWriteWatcherId);
-                                    }
-                                }, 50);
-                            });
-                            download.once('error', next);
-                        }, function (err) {
-                            if (err) {
-                                _this.emit(DownloadStrategy_1.DownloadEvents.Error, error_1.wrap('OneStreamStrategyError', err));
-                                return;
-                            }
-                            decipher_1.end();
-                        });
-                        this.emit(DownloadStrategy_1.DownloadEvents.Ready, decipher_1);
-                        return [3 /*break*/, 3];
                     case 2:
+                        _a.sent();
+                        console.timeEnd('download');
+                        return [3 /*break*/, 4];
+                    case 3:
                         err_1 = _a.sent();
-                        this.emit(DownloadStrategy_1.DownloadEvents.Error, error_1.wrap('OneStreamStrategyError', err_1));
-                        return [3 /*break*/, 3];
-                    case 3: return [2 /*return*/];
+                        this.handleError(err_1);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
                 }
             });
         });
     };
+    OneStreamStrategy.prototype.decryptShard = function (index, cb) {
+        if (this.decipher.write(this.internalBuffer[index])) {
+            return cb(null);
+        }
+        this.decipher.once('drain', cb);
+    };
+    OneStreamStrategy.prototype.handleShard = function (index, stream, cb) {
+        var _this = this;
+        var errored = false;
+        var shardBuffers = [];
+        stream.on('data', shardBuffers.push.bind(shardBuffers));
+        stream.once('error', function (err) {
+            errored = true;
+            console.log('err', err);
+            cb(err);
+        }).once('end', function () {
+            if (errored) {
+                return;
+            }
+            _this.internalBuffer[index] = Buffer.concat(shardBuffers);
+            cb(null);
+        });
+    };
+    OneStreamStrategy.prototype.handleError = function (err) {
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
+        this.decipher.emit('error', error_1.wrap('OneStreamStrategy', err));
+    };
     OneStreamStrategy.prototype.abort = function () {
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
-        this.emit(DownloadStrategy_1.DownloadEvents.Abort);
+        this.emit(events_1.Events.Download.Abort);
     };
     return OneStreamStrategy;
 }(DownloadStrategy_1.DownloadStrategy));
 exports.OneStreamStrategy = OneStreamStrategy;
-function getDownloadStream(shard) {
-    return ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(request_1.getStream);
+function getDownloadStream(shard, cb) {
+    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard), false).then(request_1.getStream).then(function (stream) {
+        cb(null, stream);
+    }).catch(function (err) {
+        cb(err, null);
+    });
 }
 function buildRequestUrlShard(shard) {
     var _a = shard.farmer, address = _a.address, port = _a.port;

@@ -16,3 +16,4 @@ export interface Shard {
     };
     operation: string;
 }
+export declare function buildRequestUrl(shard: Shard): string;

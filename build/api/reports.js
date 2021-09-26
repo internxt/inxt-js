@@ -68,6 +68,21 @@ var ExchangeReport = /** @class */ (function () {
         this.params.exchangeResultCode = ExchangeReport.INXT_REPORT_FAILURE;
         this.params.exchangeResultMessage = ExchangeReport.INXT_REPORT_UPLOAD_ERROR;
     };
+    ExchangeReport.build = function (config, mirror) {
+        var report = new ExchangeReport(config);
+        report.params.exchangeStart = new Date();
+        report.params.farmerId = mirror.farmer.nodeID;
+        report.params.dataHash = mirror.hash;
+        return report;
+    };
+    ExchangeReport.prototype.error = function () {
+        this.DownloadError();
+        this.sendReport().catch(function () { });
+    };
+    ExchangeReport.prototype.success = function () {
+        this.DownloadOk();
+        this.sendReport().catch(function () { });
+    };
     ExchangeReport.INXT_REPORT_SUCCESS = 1000;
     ExchangeReport.INXT_REPORT_FAILURE = 1100;
     ExchangeReport.INXT_REPORT_SHARD_UPLOADED = 'SHARD_UPLOADED';

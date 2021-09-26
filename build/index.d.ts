@@ -5,7 +5,6 @@ import { OneStreamStrategyObject, MultipleStreamsStrategyObject } from './lib/up
 import { DownloadFunction } from './lib/download';
 import { GenerateFileKey } from './lib/crypto';
 import { ActionState } from './api/ActionState';
-import { WebDownloadFileOptions } from './api/adapters/Web';
 import { FileInfo } from './api/fileinfo';
 import { HashStream } from './lib/hasher';
 export declare type UploadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
@@ -52,9 +51,6 @@ interface UploadFileParams {
 interface StoreFileParams extends UploadFileOptions {
     debug?: DebugCallback;
     filename?: string;
-}
-interface ResolveFileParams extends DownloadFileOptions {
-    debug?: DebugCallback;
 }
 interface UploadOptions extends UploadFileOptions {
     filename: string;
@@ -127,7 +123,6 @@ export declare class Environment {
      */
     listFiles(bucketId: string, cb: ListFilesCallback): void;
     setEncryptionKey(newEncryptionKey: string): void;
-    downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState;
     /**
      * Uploads a file from a web browser
      * @param bucketId Bucket id where file is going to be stored
@@ -159,19 +154,6 @@ export declare class Environment {
      * @param {ActionState} state Upload state
      */
     storeFileCancel(state: ActionState): void;
-    /**
-     * Downloads a file, returns state object
-     * @param bucketId Bucket id where file is
-     * @param fileId Id of the file to be downloaded
-     * @param filePath File path where the file maybe already is
-     * @param options Options for resolve file case
-     */
-    resolveFile(bucketId: string, fileId: string, filepath: string, params: ResolveFileParams): ActionState;
-    /**
-     * Cancels the download
-     * @param state Download file state at the moment
-     */
-    resolveFileCancel(state: ActionState): void;
 }
 export interface EnvironmentConfig {
     bridgeUrl?: string;

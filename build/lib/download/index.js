@@ -11,6 +11,9 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./download"), exports);
+var DownloadStrategy_1 = require("./DownloadStrategy");
+Object.defineProperty(exports, "DownloadStrategy", { enumerable: true, get: function () { return DownloadStrategy_1.DownloadStrategy; } });
+Object.defineProperty(exports, "DownloadEvents", { enumerable: true, get: function () { return DownloadStrategy_1.DownloadEvents; } });
 var OneStreamStrategy_1 = require("./OneStreamStrategy");
 Object.defineProperty(exports, "OneStreamStrategy", { enumerable: true, get: function () { return OneStreamStrategy_1.OneStreamStrategy; } });
 var MultipleStreamsStrategy_1 = require("./MultipleStreamsStrategy");

@@ -7,15 +7,13 @@ exports.Environment = void 0;
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
 var stream_1 = require("stream");
 var fs_1 = require("fs");
+var path_1 = require("path");
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
 var crypto_1 = require("./lib/crypto");
 var constants_1 = require("./api/constants");
 var ActionState_1 = require("./api/ActionState");
-var Web_1 = require("./api/adapters/Web");
 var logger_1 = require("./lib/utils/logger");
-var path_1 = require("path");
-var stream_to_blob_1 = __importDefault(require("stream-to-blob"));
 var fileinfo_1 = require("./api/fileinfo");
 var api_1 = require("./services/api");
 var upload_2 = require("./lib/upload");
@@ -85,7 +83,7 @@ var Environment = /** @class */ (function () {
             if (strategyObj.label === 'MultipleStreams') {
                 strategy = new download_1.MultipleStreamsStrategy(_this.config);
             }
-            download_1.downloadV2(_this.config, bucketId, fileId, opts, _this.logger, downloadState, strategy).then(function (res) {
+            download_1.download(_this.config, bucketId, fileId, opts, _this.logger, downloadState, strategy).then(function (res) {
                 opts.finishedCallback(null, res);
             }).catch(function (err) {
                 opts.finishedCallback(err, null);
@@ -181,26 +179,6 @@ var Environment = /** @class */ (function () {
     };
     Environment.prototype.setEncryptionKey = function (newEncryptionKey) {
         this.config.encryptionKey = newEncryptionKey;
-    };
-    Environment.prototype.downloadFile = function (bucketId, fileId, options) {
-        var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
-        if (!options.fileEncryptionKey && !this.config.encryptionKey) {
-            options.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        if (!bucketId) {
-            options.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        download_1.download(this.config, bucketId, fileId, Web_1.adapt(options), this.logger, downloadState)
-            .then(function (downloadStream) {
-            return stream_to_blob_1.default(downloadStream, 'application/octet-stream');
-        }).then(function (blob) {
-            options.finishedCallback(null, blob);
-        }).catch(function (err) {
-            options.finishedCallback(err, null);
-        });
-        return downloadState;
     };
     /**
      * Uploads a file from a web browser
@@ -307,59 +285,6 @@ var Environment = /** @class */ (function () {
      * @param {ActionState} state Upload state
      */
     Environment.prototype.storeFileCancel = function (state) {
-        state.stop();
-    };
-    /**
-     * Downloads a file, returns state object
-     * @param bucketId Bucket id where file is
-     * @param fileId Id of the file to be downloaded
-     * @param filePath File path where the file maybe already is
-     * @param options Options for resolve file case
-     */
-    Environment.prototype.resolveFile = function (bucketId, fileId, filepath, params) {
-        var downloadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Download);
-        if (!this.config.encryptionKey) {
-            params.finishedCallback(Error(constants_1.ENCRYPTION_KEY_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        if (!bucketId) {
-            params.finishedCallback(Error(constants_1.BUCKET_ID_NOT_PROVIDED), null);
-            return downloadState;
-        }
-        if (!fileId) {
-            params.finishedCallback(Error('File id not provided'), null);
-            return downloadState;
-        }
-        if (params.debug) {
-            this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
-        }
-        var destination = fs_1.createWriteStream(filepath);
-        downloadState.once(constants_1.DOWNLOAD_CANCELLED, function () {
-            destination.emit('error', new Error('Process killed by user'));
-        });
-        destination.once('error', function (err) {
-            destination.destroy();
-            params.finishedCallback(err, null);
-        });
-        destination.once('finish', function () {
-            destination.destroy();
-            params.finishedCallback(null, null);
-        });
-        download_1.download(this.config, bucketId, fileId, params, this.logger, downloadState)
-            .then(function (fileStream) {
-            fileStream.on('error', function (err) { return destination.emit('error', err); });
-            fileStream.pipe(destination);
-        }).catch(function (err) {
-            destination.destroy();
-            params.finishedCallback(err, null);
-        });
-        return downloadState;
-    };
-    /**
-     * Cancels the download
-     * @param state Download file state at the moment
-     */
-    Environment.prototype.resolveFileCancel = function (state) {
         state.stop();
     };
     Environment.utils = utils;

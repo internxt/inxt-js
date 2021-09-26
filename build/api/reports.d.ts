@@ -1,4 +1,5 @@
 import { EnvironmentConfig } from "..";
+import { Shard } from "./shard";
 export interface ExchangeReportParams {
     dataHash: string | null;
     reporterId: string;
@@ -32,4 +33,7 @@ export declare class ExchangeReport {
     DownloadError(): void;
     UploadOk(): void;
     UploadError(): void;
+    static build(config: EnvironmentConfig, mirror: Shard): ExchangeReport;
+    error(): void;
+    success(): void;
 }

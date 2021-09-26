@@ -48,31 +48,22 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MultipleStreamsStrategy = void 0;
 var async_1 = require("async");
 var crypto_1 = require("crypto");
-var events_1 = require("../../api/events");
+var events_1 = __importDefault(require("events"));
+var events_2 = require("../../api/events");
 var reports_1 = require("../../api/reports");
 var ShardObject_1 = require("../../api/ShardObject");
-var request_1 = require("../../services/request");
 var hasher_1 = require("../hasher");
 var streams_1 = require("../streams");
 var utils_1 = require("../utils");
 var error_1 = require("../utils/error");
 var DownloadStrategy_1 = require("./DownloadStrategy");
-function getDownloadStream(shard, cb) {
-    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(function (url) { return request_1.getStream(url, { useProxy: true }); }).then(function (stream) {
-        cb(null, stream);
-    }).catch(function (err) {
-        console.log('err', err);
-        cb(err, null);
-    });
-}
-function buildRequestUrlShard(shard) {
-    var _a = shard.farmer, address = _a.address, port = _a.port;
-    return "http://" + address + ":" + port + "/download/link/" + shard.hash;
-}
 var MultipleStreamsStrategy = /** @class */ (function (_super) {
     __extends(MultipleStreamsStrategy, _super);
     function MultipleStreamsStrategy(config) {
@@ -106,7 +97,7 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
         var _this = this;
         this.progressIntervalId = setInterval(function () {
             var currentProgress = _this.downloadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0);
-            _this.emit(events_1.Events.Download.Progress, currentProgress * _this.progressCoefficients.download);
+            _this.emit(events_2.Events.Download.Progress, currentProgress * _this.progressCoefficients.download);
         }, 5000);
     };
     MultipleStreamsStrategy.prototype.stopProgressInterval = function () {
@@ -115,53 +106,62 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
     MultipleStreamsStrategy.prototype.addAbortable = function (abort) {
         this.abortables.push({ abort: abort });
     };
+    MultipleStreamsStrategy.prototype.buildDownloadTask = function (fileSize, abortSignal) {
+        var _this = this;
+        var shouldStop = false;
+        abortSignal.once('abort', function () {
+            shouldStop = true;
+        });
+        return function (mirror, cb) {
+            var report = reports_1.ExchangeReport.build(_this.config, mirror);
+            ShardObject_1.ShardObject.getDownloadStream(mirror, function (err, downloadStream) {
+                if (shouldStop) {
+                    return cb(null);
+                }
+                if (err) {
+                    report.error();
+                    return cb(err);
+                }
+                _this.addAbortable(function () { return downloadStream === null || downloadStream === void 0 ? void 0 : downloadStream.emit('signal', 'Destroy request'); });
+                var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
+                var hasher = new hasher_1.HashStream();
+                progressNotifier.on(streams_1.Events.Progress, function (progress) {
+                    _this.downloadsProgress[mirror.index] = progress;
+                });
+                var downloadPipeline = downloadStream.pipe(progressNotifier).pipe(hasher);
+                bufferToStream(downloadPipeline, function (toBufferErr, res) {
+                    if (shouldStop) {
+                        return cb(null);
+                    }
+                    if (toBufferErr) {
+                        report.error();
+                        return cb(toBufferErr);
+                    }
+                    var hash = hasher.getHash().toString('hex');
+                    if (hash !== mirror.hash) {
+                        report.error();
+                        return cb(new Error("Hash for shard " + mirror.hash + " do not match"));
+                    }
+                    report.success();
+                    _this.decryptBuffer.push({ index: mirror.index, content: res });
+                    cb(null);
+                });
+            });
+        };
+    };
     MultipleStreamsStrategy.prototype.buildDownloadQueue = function (fileSize, concurrency) {
         var _this = this;
         if (concurrency === void 0) { concurrency = 1; }
-        var alreadyErrored = false;
-        return async_1.queue(function (mirror, next) {
+        var task = function (mirror, next) {
             async_1.retry({ times: 3, interval: 500 }, function (nextTry) {
-                var report = buildReport(_this.config, mirror);
-                getDownloadStream(mirror, function (err, downloadStream) {
-                    if (_this.aborted || alreadyErrored) {
-                        return nextTry(null);
-                    }
-                    if (err) {
-                        reportError(report);
-                        return nextTry(err);
-                    }
-                    _this.addAbortable(function () { return downloadStream === null || downloadStream === void 0 ? void 0 : downloadStream.emit('signal', 'Destroy request'); });
-                    var progressNotifier = new streams_1.ProgressNotifier(fileSize, 2000);
-                    var hasher = new hasher_1.HashStream();
-                    progressNotifier.on(streams_1.Events.Progress, function (progress) {
-                        _this.downloadsProgress[mirror.index] = progress;
-                    });
-                    bufferToStream(downloadStream.pipe(progressNotifier).pipe(hasher), function (toBufferErr, res) {
-                        if (_this.aborted || alreadyErrored) {
-                            return nextTry(null);
-                        }
-                        if (toBufferErr) {
-                            reportError(report);
-                            return nextTry(toBufferErr);
-                        }
-                        var hash = hasher.getHash().toString('hex');
-                        if (hash !== mirror.hash) {
-                            reportError(report);
-                            return nextTry(new Error("Hash for shard " + mirror.hash + " do not match"));
-                        }
-                        reportOk(report);
-                        _this.decryptBuffer.push({ index: mirror.index, content: res });
-                        nextTry(null);
-                    });
-                });
-            }, function (err) {
-                if (err) {
-                    alreadyErrored = true;
-                    return next(err);
-                }
+                _this.buildDownloadTask(fileSize, new events_1.default())(mirror, nextTry);
+            }).then(function () {
                 next();
+            }).catch(function (err) {
+                next(err);
             });
-        }, concurrency);
+        };
+        return async_1.queue(task, concurrency);
     };
     MultipleStreamsStrategy.prototype.download = function (mirrors) {
         return __awaiter(this, void 0, void 0, function () {
@@ -173,9 +173,9 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
                         throw new Error('Required decryption data not found');
                     }
                     this.decipher = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                    this.emit(events_1.Events.Download.Ready, this.decipher);
+                    this.emit(events_2.Events.Download.Ready, this.decipher);
                     // As we emit the decipher asap, the decipher should be used as the error channel
-                    this.once(events_1.Events.Download.Error, function (err) { return _this.decipher.emit('error', err); });
+                    this.once(events_2.Events.Download.Error, function (err) { return _this.decipher.emit('error', err); });
                     this.mirrors = mirrors;
                     this.mirrors.sort(function (mA, mB) { return mA.index - mB.index; });
                     this.downloadsProgress = new Array(mirrors.length).fill(0);
@@ -233,7 +233,7 @@ var MultipleStreamsStrategy = /** @class */ (function (_super) {
     };
     MultipleStreamsStrategy.prototype.abort = function () {
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
-        this.emit(events_1.Events.Download.Abort);
+        this.emit(events_2.Events.Download.Abort);
     };
     return MultipleStreamsStrategy;
 }(DownloadStrategy_1.DownloadStrategy));
@@ -251,19 +251,4 @@ function bufferToStream(r, cb) {
     r.on('data', buffers.push.bind(buffers));
     r.once('error', function (err) { return cb(err, null); });
     r.once('end', function () { return cb(null, Buffer.concat(buffers)); });
-}
-function buildReport(config, mirror) {
-    var report = new reports_1.ExchangeReport(config);
-    report.params.exchangeStart = new Date();
-    report.params.farmerId = mirror.farmer.nodeID;
-    report.params.dataHash = mirror.hash;
-    return report;
-}
-function reportError(report) {
-    report.DownloadError();
-    report.sendReport().catch(function () { });
-}
-function reportOk(report) {
-    report.DownloadOk();
-    report.sendReport().catch(function () { });
 }
