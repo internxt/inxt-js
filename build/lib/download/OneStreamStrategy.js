@@ -138,7 +138,7 @@ var OneStreamStrategy = /** @class */ (function (_super) {
                                             });
                                         }, 50);
                                     });
-                                });
+                                }, _this.config.useProxy);
                             }, function (err) {
                                 if (err) {
                                     return cb(err);
@@ -229,8 +229,9 @@ var OneStreamStrategy = /** @class */ (function (_super) {
     return OneStreamStrategy;
 }(DownloadStrategy_1.DownloadStrategy));
 exports.OneStreamStrategy = OneStreamStrategy;
-function getDownloadStream(shard, cb) {
-    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard), false).then(request_1.getStream).then(function (stream) {
+function getDownloadStream(shard, cb, useProxy) {
+    if (useProxy === void 0) { useProxy = false; }
+    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then(function (url) { return request_1.getStream(url, { useProxy: useProxy }); }).then(function (stream) {
         cb(null, stream);
     }).catch(function (err) {
         cb(err, null);

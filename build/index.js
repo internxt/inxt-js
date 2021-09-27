@@ -115,10 +115,7 @@ var Environment = /** @class */ (function () {
             if (opts.debug) {
                 _this.logger = logger_1.Logger.getDebugger(_this.config.logLevel || 1, opts.debug);
             }
-            var strategy = new download_1.DownloadEmptyStrategy();
-            if (strategyObj.label === 'OneStreamOnly') {
-                strategy = new download_1.OneStreamStrategy(_this.config, _this.logger);
-            }
+            var strategy = new download_1.OneStreamStrategy(_this.config, _this.logger);
             download_1.download(_this.config, bucketId, fileId, opts, _this.logger, downloadState, strategy).then(function (res) {
                 opts.finishedCallback(null, res);
             }).catch(function (err) {
