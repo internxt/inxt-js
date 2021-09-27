@@ -369,7 +369,7 @@ export class Environment {
     let strategy: DownloadStrategy = new DownloadEmptyStrategy();
 
     if (strategyObj.label === 'OneStreamOnly') {
-      strategy = new DownloadOneStreamStrategy();
+      strategy = new DownloadOneStreamStrategy(this.config);
     }
 
     if (strategyObj.label === 'MultipleStreams') {

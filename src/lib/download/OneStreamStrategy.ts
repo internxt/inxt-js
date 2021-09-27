@@ -1,12 +1,15 @@
 import { eachLimit, queue } from "async";
 import { createDecipheriv, Decipher, randomBytes } from "crypto";
 import { Readable } from "stream";
+import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
 import { Events } from "../../api/events";
+import { ExchangeReport } from "../../api/reports";
 import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
 import { getStream } from "../../services/request";
+import { HashStream } from "../hasher";
 import { wrap } from "../utils/error";
 import { DownloadStrategy } from "./DownloadStrategy";
 
@@ -14,10 +17,12 @@ export class OneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
   private decipher: Decipher;
   private internalBuffer: Buffer[] = [];
+  private config: EnvironmentConfig;
 
-  constructor() {
+  constructor(config: EnvironmentConfig) {
     super();
 
+    this.config = config;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
   }
 
@@ -31,7 +36,7 @@ export class OneStreamStrategy extends DownloadStrategy {
 
       mirrors.sort((mA, mb) => mA.index - mb.index);
 
-      let concurrency = 10;
+      let concurrency = 1;
 
       let lastShardIndexDecrypted = -1;
 
@@ -43,7 +48,7 @@ export class OneStreamStrategy extends DownloadStrategy {
             return cb(err);
           }
 
-          this.handleShard(mirror.index, shardStream as Readable, (downloadErr) => {
+          this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
             console.log('Stream handled for mirror %s', mirror.index);
             if (downloadErr) {
               return cb(downloadErr);
@@ -95,21 +100,33 @@ export class OneStreamStrategy extends DownloadStrategy {
     this.decipher.once('drain', cb);
   }
 
-  private handleShard(index: number, stream: Readable, cb: (err: Error | null | undefined) => void) {
+  private handleShard(shard: Shard, stream: Readable, cb: (err: Error | null | undefined) => void) {
     let errored = false;
 
     const shardBuffers: Buffer[] = [];
+    const exchangeReport = ExchangeReport.build(this.config, shard);
+    const hasher = new HashStream();
+    const downloadPipeline = stream.pipe(hasher);
 
-    stream.on('data', shardBuffers.push.bind(shardBuffers));
-    stream.once('error', (err) => {
+    downloadPipeline.on('data', shardBuffers.push.bind(shardBuffers));
+    downloadPipeline.once('error', (err) => {
       errored = true;
-      console.log('err', err);
+      exchangeReport.error();
       cb(err);
     }).once('end', () => {
       if (errored) {
         return;
       }
-      this.internalBuffer[index] = Buffer.concat(shardBuffers);
+
+      const hash = hasher.getHash().toString('hex');
+
+      if (hash !== shard.hash) {
+        exchangeReport.error();
+        return cb(new Error(`Hash for downloaded shard ${shard.hash} does not match`));
+      }
+      exchangeReport.success();
+
+      this.internalBuffer[shard.index] = Buffer.concat(shardBuffers);
       cb(null);
     });
   }
