@@ -1,4 +1,4 @@
-import { eachLimit, queue } from "async";
+import { eachLimit, queue, retry } from "async";
 import { createDecipheriv, Decipher, randomBytes } from "crypto";
 import { Readable } from "stream";
 import { EnvironmentConfig } from "../..";
@@ -41,36 +41,43 @@ export class OneStreamStrategy extends DownloadStrategy {
       let lastShardIndexDecrypted = -1;
 
       const downloadTask = (mirror: Shard, cb: (err: Error | null | undefined) => void) => {
-        getDownloadStream(mirror, (err, shardStream) => {
-          console.log('Got stream for mirror %s', mirror.index);
-
+        retry({ times: 3, interval: 500 }, (nextTry) => {
+          getDownloadStream(mirror, (err, shardStream) => {
+            console.log('Got stream for mirror %s', mirror.index);
+  
+            if (err) {
+              return nextTry(err);
+            }
+  
+            this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
+              console.log('Stream handled for mirror %s', mirror.index);
+              if (downloadErr) {
+                return nextTry(downloadErr);
+              }
+  
+              const waitingInterval = setInterval(() => {
+                if (lastShardIndexDecrypted !== mirror.index - 1) {
+                  return;
+                }
+  
+                clearInterval(waitingInterval);
+  
+                this.decryptShard(mirror.index, (decryptErr) => {
+                  console.log('Decrypting shard for mirror %s', mirror.index);
+                  if (decryptErr) {
+                    return nextTry(decryptErr);
+                  }
+                  lastShardIndexDecrypted++;
+                  nextTry(null);
+                });
+              }, 50);
+            });
+          });
+        }, (err: Error | null | undefined) => {
           if (err) {
             return cb(err);
           }
-
-          this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
-            console.log('Stream handled for mirror %s', mirror.index);
-            if (downloadErr) {
-              return cb(downloadErr);
-            }
-
-            const waitingInterval = setInterval(() => {
-              if (lastShardIndexDecrypted !== mirror.index - 1) {
-                return;
-              }
-
-              clearInterval(waitingInterval);
-
-              this.decryptShard(mirror.index, (decryptErr) => {
-                console.log('Decrypting shard for mirror %s', mirror.index);
-                if (decryptErr) {
-                  return cb(decryptErr);
-                }
-                lastShardIndexDecrypted++;
-                cb(null);
-              });
-            }, 50);
-          });
+          cb(null);
         });
       };
 
