@@ -5,7 +5,7 @@ import { logger } from "../lib/utils/logger";
 import { getEnvironment } from "./CommandInterface";
 
 export async function downloadFile(fileId: string, path: string) {
-  logger.info('Donwloading file %s', fileId);
+  logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();
   const bucketId = process.env.BUCKET_ID;
@@ -45,7 +45,7 @@ export async function downloadFile(fileId: string, path: string) {
 
     process.exit(0);
   } catch (err) {
-    logger.error('Error uploading file %s', err.message);
+    logger.error('Error downloading file %s', err.message);
 
     process.exit(1);
   }
@@ -55,6 +55,7 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
   logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();
+  network.config.download = { concurrency: 10 };
   const bucketId = process.env.BUCKET_ID;
 
   try {
@@ -79,7 +80,7 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
           logger.debug('DEBUG', msg);
         }
       }, {
-        label: 'MultipleStreams',
+        label: 'OneStreamOnly',
         params: {}
       });
 
