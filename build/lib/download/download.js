@@ -47,7 +47,6 @@ function download(config, bucketId, fileId, options, debug, state, strategy) {
             file = new FileObject_1.FileObject(config, bucketId, fileId, debug, strategy);
             state.once(events_1.Events.Download.Abort, function () { return file.emit(events_1.Events.Download.Abort); });
             file.on(DownloadStrategy_1.DownloadEvents.Progress, function (progress) { return options.progressCallback(progress, 0, 0); });
-            // TODO: Allow this to be injected in FileObject
             if (options.fileEncryptionKey) {
                 file.setFileEncryptionKey(options.fileEncryptionKey);
             }

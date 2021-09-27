@@ -23,7 +23,6 @@ export async function download(
 
   file.on(DownloadEvents.Progress, (progress) => options.progressCallback(progress, 0, 0));
 
-  // TODO: Allow this to be injected in FileObject
   if (options.fileEncryptionKey) {
     file.setFileEncryptionKey(options.fileEncryptionKey);
   }

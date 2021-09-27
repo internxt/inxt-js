@@ -26,14 +26,16 @@ export class OneStreamStrategy extends DownloadStrategy {
   private aborted = false;
   private logger: winston.Logger;
 
-  constructor(config: EnvironmentConfig, logger: winston.Logger, concurrency = 1) {
+  constructor(config: EnvironmentConfig, logger: winston.Logger) {
     super();
 
     this.config = config;
     this.logger = logger;
-    this.concurrency = concurrency;
+    this.concurrency = this.config.download?.concurrency ?? 1;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
     this.startProgressInterval();
+
+    this.logger.debug('Using %s concurrent requests', this.concurrency);
 
     this.addAbortable(() => this.stopProgressInterval());
     this.addAbortable(() => this.internalBuffer = []);
