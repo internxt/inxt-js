@@ -1,6 +1,7 @@
 import { eachLimit, queue, retry } from "async";
 import { createDecipheriv, Decipher, randomBytes } from "crypto";
 import { Readable } from "stream";
+import winston from "winston";
 import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
@@ -20,12 +21,17 @@ export class OneStreamStrategy extends DownloadStrategy {
   private downloadsProgress: number[] = [];
   private decipher: Decipher;
   private config: EnvironmentConfig;
+  private concurrency: number;
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
+  private aborted = false;
+  private logger: winston.Logger;
 
-  constructor(config: EnvironmentConfig) {
+  constructor(config: EnvironmentConfig, logger: winston.Logger, concurrency = 1) {
     super();
 
     this.config = config;
+    this.logger = logger;
+    this.concurrency = concurrency;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
     this.startProgressInterval();
 
@@ -63,21 +69,20 @@ export class OneStreamStrategy extends DownloadStrategy {
 
       mirrors.sort((mA, mb) => mA.index - mb.index);
 
-      let concurrency = 1;
-
       let lastShardIndexDecrypted = -1;
 
       const downloadTask = (mirror: Shard, cb: (err: Error | null | undefined) => void) => {
         retry({ times: 3, interval: 500 }, (nextTry) => {
           getDownloadStream(mirror, (err, shardStream) => {
-            console.log('Got stream for mirror %s', mirror.index);
+            this.logger.debug('Got stream for mirror %s', mirror.index);
   
             if (err) {
               return nextTry(err);
             }
   
             this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
-              console.log('Stream handled for mirror %s', mirror.index);
+              this.logger.debug('Stream handled for mirror %s', mirror.index);
+
               if (downloadErr) {
                 return nextTry(downloadErr);
               }
@@ -88,9 +93,10 @@ export class OneStreamStrategy extends DownloadStrategy {
                 }
   
                 clearInterval(waitingInterval);
-  
+
                 this.decryptShard(mirror.index, (decryptErr) => {
-                  console.log('Decrypting shard for mirror %s', mirror.index);
+                  this.logger.debug('Decrypting shard for mirror %s', mirror.index);
+
                   if (decryptErr) {
                     return nextTry(decryptErr);
                   }
@@ -108,11 +114,14 @@ export class OneStreamStrategy extends DownloadStrategy {
         });
       };
 
-      const downloadQueue = queue(downloadTask, concurrency);
+      const downloadQueue = queue(downloadTask, this.concurrency);
 
       this.addAbortable(() => downloadQueue.kill());
 
-      await eachLimit(mirrors, concurrency, (mirror, cb) => {
+      await eachLimit(mirrors, this.concurrency, (mirror, cb) => {
+        if (this.aborted) {
+          return cb();
+        }
         downloadQueue.push(mirror, (err) => {
           if (err) {
             return cb(err);
@@ -188,6 +197,7 @@ export class OneStreamStrategy extends DownloadStrategy {
   }
 
   abort(): void {
+    this.aborted = true;
     this.abortables.forEach((abortable) => abortable.abort());
     this.emit(Events.Download.Abort);
   }
