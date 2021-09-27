@@ -10,29 +10,56 @@ import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
 import { getStream } from "../../services/request";
 import { HashStream } from "../hasher";
+import { ProgressNotifier, Events as ProgressEvents } from "../streams";
 import { wrap } from "../utils/error";
 import { DownloadStrategy } from "./DownloadStrategy";
 
 export class OneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
-  private decipher: Decipher;
   private internalBuffer: Buffer[] = [];
+  private downloadsProgress: number[] = [];
+  private decipher: Decipher;
   private config: EnvironmentConfig;
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
 
   constructor(config: EnvironmentConfig) {
     super();
 
     this.config = config;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
+    this.startProgressInterval();
+
+    this.addAbortable(() => this.stopProgressInterval());
+    this.addAbortable(() => this.internalBuffer = []);
+  }
+
+  private startProgressInterval() {
+    this.progressIntervalId = setInterval(() => {
+      const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.downloadsProgress.length;
+      this.emit(Events.Download.Progress, currentProgress);
+    }, 5000);
+  }
+
+  private stopProgressInterval() {
+    clearInterval(this.progressIntervalId);
+  }
+
+  private addAbortable(abort: () => any) {
+    this.abortables.push({ abort });
   }
 
   async download(mirrors: Shard[]): Promise<void> {
-    console.time('download');
     try {
-      this.emit(Events.Download.Start);
+      if (this.fileEncryptionKey.length === 0 || this.iv.length === 0) {
+        throw new Error('Required decryption data not found');
+      }
 
+      this.downloadsProgress = new Array(mirrors.length).fill(0);
       this.decipher = createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+
+      this.emit(Events.Download.Start);
       this.emit(Events.Download.Ready, this.decipher);
+      this.once(Events.Download.Error, (err) => this.decipher.emit('error', err));
 
       mirrors.sort((mA, mb) => mA.index - mb.index);
 
@@ -83,20 +110,31 @@ export class OneStreamStrategy extends DownloadStrategy {
 
       const downloadQueue = queue(downloadTask, concurrency);
 
+      this.addAbortable(() => downloadQueue.kill());
+
       await eachLimit(mirrors, concurrency, (mirror, cb) => {
         downloadQueue.push(mirror, (err) => {
           if (err) {
             return cb(err);
           }
           this.internalBuffer[mirror.index] = Buffer.alloc(0);
+
+          const isLastShard = mirror.index === mirrors.length - 1;
+          if (isLastShard) {
+            this.cleanup();
+            this.emit(Events.Download.Progress, 1);
+            this.decipher.end();
+          }
           cb();
         });
       });
-
-      console.timeEnd('download');
     } catch (err) {
       this.handleError(err as Error);
     }
+  }
+
+  private cleanup(): void {
+    this.stopProgressInterval();
   }
 
   private decryptShard(index: number, cb: (err: Error | null | undefined) => void) {
@@ -112,8 +150,13 @@ export class OneStreamStrategy extends DownloadStrategy {
 
     const shardBuffers: Buffer[] = [];
     const exchangeReport = ExchangeReport.build(this.config, shard);
+    const progressNotifier = new ProgressNotifier(shard.size, 2000);
     const hasher = new HashStream();
-    const downloadPipeline = stream.pipe(hasher);
+    const downloadPipeline = stream.pipe(progressNotifier).pipe(hasher);
+
+    progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+      this.downloadsProgress[shard.index] = progress;
+    })
 
     downloadPipeline.on('data', shardBuffers.push.bind(shardBuffers));
     downloadPipeline.once('error', (err) => {
