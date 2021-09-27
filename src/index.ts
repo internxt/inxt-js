@@ -366,11 +366,7 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, opts.debug);
     }
 
-    let strategy: DownloadStrategy = new DownloadEmptyStrategy();
-
-    if (strategyObj.label === 'OneStreamOnly') {
-      strategy = new DownloadOneStreamStrategy(this.config, this.logger);
-    }
+    const strategy: DownloadStrategy = new DownloadOneStreamStrategy(this.config, this.logger);
 
     download(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);

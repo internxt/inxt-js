@@ -16,6 +16,6 @@ export type MultipleStreamsStrategyLabel = 'MultipleStreams';
 export type MultipleStreamsStrategyObject = { label: MultipleStreamsStrategyLabel, params: { }};
 export type MultipleStreamsStrategyFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
 
-export type DownloadStrategyLabel = OneStreamStrategyLabel & MultipleStreamsStrategyLabel;
+export type DownloadStrategyLabel = OneStreamStrategyLabel;
 export type DownloadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
 export type DownloadFunction = OneStreamStrategyFunction & MultipleStreamsStrategyFunction;

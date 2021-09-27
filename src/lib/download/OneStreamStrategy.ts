@@ -107,7 +107,7 @@ export class OneStreamStrategy extends DownloadStrategy {
                 });
               }, 50);
             });
-          });
+          }, this.config.useProxy);
         }, (err: Error | null | undefined) => {
           if (err) {
             return cb(err);
@@ -205,8 +205,8 @@ export class OneStreamStrategy extends DownloadStrategy {
   }
 }
 
-function getDownloadStream(shard: Shard, cb: (err: Error | null | undefined, stream: Readable | null) => void): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard), false).then(getStream).then((stream) => {
+function getDownloadStream(shard: Shard, cb: (err: Error | null | undefined, stream: Readable | null) => void, useProxy = false): void {
+  ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then((url) => getStream(url, { useProxy })).then((stream) => {
     cb(null, stream);
   }).catch((err) => {
     cb(err, null);
