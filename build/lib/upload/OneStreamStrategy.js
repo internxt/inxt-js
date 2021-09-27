@@ -61,6 +61,7 @@ var ShardObject_1 = require("../../api/ShardObject");
 var error_1 = require("../utils/error");
 var streams_1 = require("../streams");
 var abort_controller_1 = __importDefault(require("abort-controller"));
+var api_1 = require("../../api");
 var OneStreamStrategy = /** @class */ (function (_super) {
     __extends(OneStreamStrategy, _super);
     function OneStreamStrategy(params) {
@@ -102,7 +103,7 @@ var OneStreamStrategy = /** @class */ (function (_super) {
                         return [4 /*yield*/, negotiateContract(shardMeta)];
                     case 1:
                         contract = _a.sent();
-                        url = buildUrlFromContract(contract);
+                        url = api_1.Contract.buildRequestUrl(contract);
                         encrypter = crypto_1.createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
                         progressNotifier = new streams_1.ProgressNotifier(this.source.size);
                         progressNotifier.on(streams_1.Events.Progress, function (progress) {
@@ -147,9 +148,6 @@ var OneStreamStrategy = /** @class */ (function (_super) {
     return OneStreamStrategy;
 }(UploadStrategy_1.UploadStrategy));
 exports.OneStreamStrategy = OneStreamStrategy;
-function buildUrlFromContract(contract) {
-    return "http://" + contract.farmer.address + ":" + contract.farmer.port + "/upload/link/" + contract.hash;
-}
 function cleanEventEmitters(emitters) {
     emitters.forEach(function (e) { return e.removeAllListeners(); });
 }

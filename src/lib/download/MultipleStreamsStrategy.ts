@@ -1,6 +1,7 @@
 import { ErrorCallback, queue, QueueObject, retry } from "async";
 import { createDecipheriv, Decipher, randomBytes } from "crypto";
-import { pipeline, Readable } from "stream";
+import EventEmitter from "events";
+import { Readable } from "stream";
 import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
@@ -8,28 +9,11 @@ import { Events } from "../../api/events";
 import { ExchangeReport } from "../../api/reports";
 import { Shard } from "../../api/shard";
 import { ShardObject } from "../../api/ShardObject";
-import { getStream } from "../../services/request";
 import { HashStream } from "../hasher";
 import { ProgressNotifier, Events as ProgressEvents } from "../streams";
 import { determineConcurrency } from "../utils";
 import { wrap } from "../utils/error";
 import { DownloadStrategy } from "./DownloadStrategy";
-
-function getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard)).then((url: string) => getStream(url, { useProxy: true })).then((stream) => {
-    cb(null, stream);
-  }).catch((err) => {
-    console.log('err', err);
-    cb(err, null);
-  });
-}
-
-function buildRequestUrlShard(shard: Shard) {
-  const { address, port } = shard.farmer;
-
-  return `http://${address}:${port}/download/link/${shard.hash}`;
-}
-
 
 export class MultipleStreamsStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
@@ -41,15 +25,15 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
   private config: EnvironmentConfig;
   private aborted = false;
 
-  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {}); 
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
 
-  private queues: { 
-    downloadQueue: QueueObject<Shard>, 
-    decryptQueue: QueueObject<Buffer> 
+  private queues: {
+    downloadQueue: QueueObject<Shard>,
+    decryptQueue: QueueObject<Buffer>
   } = {
-    downloadQueue: queue(() => { }),
-    decryptQueue: queue(() => { }) 
-  };
+      downloadQueue: queue(() => { }),
+      decryptQueue: queue(() => { })
+    };
 
   private progressCoefficients = {
     download: 0.95,
@@ -88,65 +72,76 @@ export class MultipleStreamsStrategy extends DownloadStrategy {
     this.abortables.push({ abort });
   }
 
-  private buildDownloadQueue(fileSize: number, concurrency = 1): QueueObject<Shard> {
-    let alreadyErrored = false;
+  private buildDownloadTask(fileSize: number, abortSignal: EventEmitter) {
+    let shouldStop = false;
 
-    return queue((mirror: Shard, next: ErrorCallback<Error>) => {
-      retry({ times: 3, interval: 500 }, (nextTry) => {
-        const report = buildReport(this.config, mirror);
+    abortSignal.once('abort', () => {
+      shouldStop = true;
+    });
 
-        getDownloadStream(mirror, (err, downloadStream) => {
-          if (this.aborted || alreadyErrored) {
-            return nextTry(null);
-          }
-          
-          if (err) {
-            reportError(report);
-            return nextTry(err);
-          }
+    return (mirror: Shard, cb: (err: Error | null | undefined) => void) => {
+      const report = ExchangeReport.build(this.config, mirror);
 
-          this.addAbortable(() => downloadStream?.emit('signal', 'Destroy request'));
-  
-          const progressNotifier = new ProgressNotifier(fileSize, 2000);
-          const hasher = new HashStream();
-  
-          progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
-            this.downloadsProgress[mirror.index] = progress;
-          });
-  
-          bufferToStream((downloadStream as Readable).pipe(progressNotifier).pipe(hasher), (toBufferErr, res) => {
-            if (this.aborted || alreadyErrored) {
-              return nextTry(null);
-            }
-  
-            if (toBufferErr) {
-              reportError(report);
-              return nextTry(toBufferErr);
-            }
+      ShardObject.getDownloadStream(mirror, (err, downloadStream) => {
+        if (shouldStop) {
+          return cb(null);
+        }
 
-            const hash = hasher.getHash().toString('hex');
-
-            if (hash !== mirror.hash) {
-              reportError(report);
-              return nextTry(new Error(`Hash for shard ${mirror.hash} do not match`));
-            }
-
-            reportOk(report);
-
-            this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
-
-            nextTry(null);
-          });
-        });
-      }, (err: Error | null | undefined) => {
         if (err) {
-          alreadyErrored = true;
-          return next(err);
-        } 
+          report.error();
+          return cb(err);
+        }
 
-        next();
+        this.addAbortable(() => downloadStream?.emit('signal', 'Destroy request'));
+
+        const progressNotifier = new ProgressNotifier(fileSize, 2000);
+        const hasher = new HashStream();
+
+        progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+          this.downloadsProgress[mirror.index] = progress;
+        });
+
+        const downloadPipeline = (downloadStream as Readable).pipe(progressNotifier).pipe(hasher);
+
+        bufferToStream(downloadPipeline, (toBufferErr, res) => {
+          if (shouldStop) {
+            return cb(null);
+          }
+
+          if (toBufferErr) {
+            report.error();
+            return cb(toBufferErr);
+          }
+
+          const hash = hasher.getHash().toString('hex');
+
+          if (hash !== mirror.hash) {
+            report.error();
+            return cb(new Error(`Hash for shard ${mirror.hash} do not match`));
+          }
+
+          report.success();
+
+          this.decryptBuffer.push({ index: mirror.index, content: res as Buffer });
+
+          cb(null);
+        });
       });
-    }, concurrency);
+    }
+  }
+
+  private buildDownloadQueue(fileSize: number, concurrency = 1): QueueObject<Shard> {
+    const task = (mirror: Shard, next: ErrorCallback<Error>) => {
+      retry({ times: 3, interval: 500 }, (nextTry) => {
+        this.buildDownloadTask(fileSize, new EventEmitter())(mirror, nextTry)
+      }).then(() => {
+        next();
+      }).catch((err) => {
+        next(err);
+      });
+    }
+
+    return queue(task, concurrency);
   }
 
   async download(mirrors: Shard[]): Promise<void> {
@@ -246,24 +241,4 @@ function bufferToStream(r: Readable, cb: (err: Error | null, res: Buffer | null)
   r.on('data', buffers.push.bind(buffers));
   r.once('error', (err) => cb(err, null));
   r.once('end', () => cb(null, Buffer.concat(buffers)));
-}
-
-function buildReport(config: EnvironmentConfig, mirror: Shard) {
-  const report = new ExchangeReport(config);
-
-  report.params.exchangeStart = new Date();
-  report.params.farmerId = mirror.farmer.nodeID;
-  report.params.dataHash = mirror.hash;
-
-  return report;
-}
-
-function reportError(report: ExchangeReport) {
-  report.DownloadError();
-  report.sendReport().catch(() => {});
-}
-
-function reportOk(report: ExchangeReport) {
-  report.DownloadOk();
-  report.sendReport().catch(() => {});
 }

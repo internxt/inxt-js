@@ -1,26 +1,24 @@
 import blobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { createWriteStream, statSync } from 'fs';
+import { statSync } from 'fs';
 import * as Winston from 'winston';
+import { basename } from 'path';
 
 import { OneStreamStrategy, OneStreamStrategyObject, MultipleStreamsStrategyObject, upload, uploadV2 } from './lib/upload';
 import {
   download,
   DownloadFunction,
   DownloadStrategyObject,
-  downloadV2,
   OneStreamStrategy as DownloadOneStreamStrategy,
   MultipleStreamsStrategy as DownloadMultipleStreamsStrategy,
   DownloadEmptyStrategy
 } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
-import { BUCKET_ID_NOT_PROVIDED, DOWNLOAD_CANCELLED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
+import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes } from './api/ActionState';
-import { adapt as webAdapter, WebDownloadFileOptions } from './api/adapters/Web';
 import { logger, Logger } from './lib/utils/logger';
-import { basename } from 'path';
-import streamToBlob from 'stream-to-blob';
+
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
 import { StreamFileSystemStrategy } from './lib/upload';
@@ -91,10 +89,6 @@ interface UploadFileParams {
 interface StoreFileParams extends UploadFileOptions {
   debug?: DebugCallback;
   filename?: string;
-}
-
-interface ResolveFileParams extends DownloadFileOptions {
-  debug?: DebugCallback;
 }
 
 interface UploadOptions extends UploadFileOptions {
@@ -218,33 +212,6 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  downloadFile(bucketId: string, fileId: string, options: WebDownloadFileOptions): ActionState {
-    const downloadState = new ActionState(ActionTypes.Download);
-
-    if (!options.fileEncryptionKey && !this.config.encryptionKey) {
-      options.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!bucketId) {
-      options.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    download(this.config, bucketId, fileId, webAdapter(options), this.logger, downloadState)
-      .then((downloadStream) => {
-        return streamToBlob(downloadStream, 'application/octet-stream');
-      }).then((blob) => {
-        options.finishedCallback(null, blob);
-      }).catch((err) => {
-        options.finishedCallback(err, null);
-      });
-
-    return downloadState;
-  }
-
   /**
    * Uploads a file from a web browser
    * @param bucketId Bucket id where file is going to be stored
@@ -277,55 +244,55 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
-    const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
+  // storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
+  //   const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
 
-    const uploadState = new ActionState(ActionTypes.Upload);
-    const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
-    const fileStat = statSync(filepath);
+  //   const uploadState = new ActionState(ActionTypes.Upload);
+  //   const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
+  //   const fileStat = statSync(filepath);
 
-    if (!this.config.encryptionKey) {
-      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+  //   if (!this.config.encryptionKey) {
+  //     params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
-      return uploadState;
-    }
+  //     return uploadState;
+  //   }
 
-    if (!bucketId) {
-      params.finishedCallback(Error('Bucket id was not provided'), null);
+  //   if (!bucketId) {
+  //     params.finishedCallback(Error('Bucket id was not provided'), null);
 
-      return uploadState;
-    }
+  //     return uploadState;
+  //   }
 
-    if (fileStat.size === 0) {
-      params.finishedCallback(Error('Can not upload a file with size 0'), null);
+  //   if (fileStat.size === 0) {
+  //     params.finishedCallback(Error('Can not upload a file with size 0'), null);
 
-      return uploadState;
-    }
+  //     return uploadState;
+  //   }
 
-    if (params.debug) {
-      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-    }
+  //   if (params.debug) {
+  //     this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
+  //   }
 
-    const filename = params.filename || basename(filepath);
+  //   const filename = params.filename || basename(filepath);
 
-    EncryptFilename(this.config.encryptionKey, bucketId, filename)
-      .then((encryptedName: string) => {
-        logger.debug('Filename %s encrypted is %s', filename, encryptedName);
+  //   EncryptFilename(this.config.encryptionKey, bucketId, filename)
+  //     .then((encryptedName: string) => {
+  //       logger.debug('Filename %s encrypted is %s', filename, encryptedName);
 
-        const fileMeta = { content: Readable.from(''), size: fileStat.size, name: encryptedName };
+  //       const fileMeta = { content: Readable.from(''), size: fileStat.size, name: encryptedName };
 
-        return uploadV2(this.config, fileMeta, bucketId, params, this.logger, uploadState, uploadStrategy);
-      }).then(() => {
-        this.logger.info('Upload Success!');
-      }).catch((err: Error) => {
-        if (err && err.message && err.message.includes('Upload aborted')) {
-          return params.finishedCallback(new Error('Process killed by user'), null);
-        }
-        params.finishedCallback(err, null);
-      });
+  //       return uploadV2(this.config, fileMeta, bucketId, params, this.logger, uploadState, uploadStrategy);
+  //     }).then(() => {
+  //       this.logger.info('Upload Success!');
+  //     }).catch((err: Error) => {
+  //       if (err && err.message && err.message.includes('Upload aborted')) {
+  //         return params.finishedCallback(new Error('Process killed by user'), null);
+  //       }
+  //       params.finishedCallback(err, null);
+  //     });
 
-    return uploadState;
-  }
+  //   return uploadState;
+  // }
 
   upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
     const uploadState = new ActionState(ActionTypes.Upload);
@@ -399,17 +366,9 @@ export class Environment {
       this.logger = Logger.getDebugger(this.config.logLevel || 1, opts.debug);
     }
 
-    let strategy: DownloadStrategy = new DownloadEmptyStrategy();
+    const strategy: DownloadStrategy = new DownloadOneStreamStrategy(this.config, this.logger);
 
-    if (strategyObj.label === 'OneStreamOnly') {
-      strategy = new DownloadOneStreamStrategy();
-    }
-
-    if (strategyObj.label === 'MultipleStreams') {
-      strategy = new DownloadMultipleStreamsStrategy(this.config);
-    }
-
-    downloadV2(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
+    download(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);
     }).catch((err) => {
       opts.finishedCallback(err, null);
@@ -475,75 +434,6 @@ export class Environment {
   storeFileCancel(state: ActionState): void {
     state.stop();
   }
-
-  /**
-   * Downloads a file, returns state object
-   * @param bucketId Bucket id where file is
-   * @param fileId Id of the file to be downloaded
-   * @param filePath File path where the file maybe already is
-   * @param options Options for resolve file case
-   */
-  resolveFile(bucketId: string, fileId: string, filepath: string, params: ResolveFileParams): ActionState {
-    const downloadState = new ActionState(ActionTypes.Download);
-
-    if (!this.config.encryptionKey) {
-      params.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!bucketId) {
-      params.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
-
-      return downloadState;
-    }
-
-    if (!fileId) {
-      params.finishedCallback(Error('File id not provided'), null);
-
-      return downloadState;
-    }
-
-    if (params.debug) {
-      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-    }
-
-    const destination = createWriteStream(filepath);
-
-    downloadState.once(DOWNLOAD_CANCELLED, () => {
-      destination.emit('error', new Error('Process killed by user'));
-    });
-
-    destination.once('error', (err) => {
-      destination.destroy();
-      params.finishedCallback(err, null);
-    });
-
-    destination.once('finish', () => {
-      destination.destroy();
-      params.finishedCallback(null, null);
-    });
-
-    download(this.config, bucketId, fileId, params, this.logger, downloadState)
-      .then((fileStream) => {
-        fileStream.on('error', (err) => destination.emit('error', err));
-        fileStream.pipe(destination);
-      }).catch((err) => {
-        destination.destroy();
-        params.finishedCallback(err, null);
-      });
-
-    return downloadState;
-  }
-
-  /**
-   * Cancels the download
-   * @param state Download file state at the moment
-   */
-  resolveFileCancel(state: ActionState): void {
-    state.stop();
-  }
-
 }
 
 export interface EnvironmentConfig {
@@ -554,10 +444,9 @@ export interface EnvironmentConfig {
   logLevel?: number;
   webProxy?: string;
   useProxy?: boolean;
-  config?: {
-    shardRetry: number,
-    ramUsage: number
-  };
+  download?: {
+    concurrency: number;
+  }
   inject?: {
     fileEncryptionKey?: Buffer,
     index?: Buffer;

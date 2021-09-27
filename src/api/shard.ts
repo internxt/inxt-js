@@ -16,3 +16,9 @@ export interface Shard {
   };
   operation: string;
 }
+
+export function buildRequestUrl(shard: Shard) {
+  const { address, port } = shard.farmer;
+
+  return `http://${address}:${port}/download/link/${shard.hash}`;
+}

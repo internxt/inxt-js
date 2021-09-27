@@ -25,8 +25,8 @@
     "@types/jest": "^26.0.4",
     "@types/needle": "^2.5.2",
     "@types/node": "^15.0.2",
-    "@types/node-fetch": "^2.5.7",
     "@types/sinon": "^10.0.2",
+    "archiver": "^5.3.0",
     "browserify": "^16.5.1",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
@@ -42,23 +42,13 @@
     "typescript": "^3.9.6"
   },
   "dependencies": {
-    "@types/progress-stream": "^2.0.2",
     "abort-controller": "^3.0.0",
-    "archiver": "^5.3.0",
     "async": "^3.2.0",
     "axios": "^0.19.2",
     "bip39": "^3.0.2",
     "blob-to-stream": "^1.0.3",
-    "buffer-to-stream": "^1.0.0",
     "commander": "^8.0.0",
-    "memory-blob-store": "^5.0.1",
-    "multistream": "^4.1.0",
-    "mux-demux": "^3.7.9",
     "needle": "^3.0.0",
-    "node-fetch": "=2.6.2",
-    "progress-stream": "^2.0.0",
-    "stream-to-blob": "^2.0.1",
-    "streamsaver": "^2.0.4",
     "winston": "^3.3.3"
   }
 }

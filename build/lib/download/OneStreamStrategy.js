@@ -52,94 +52,190 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OneStreamStrategy = void 0;
 var async_1 = require("async");
 var crypto_1 = require("crypto");
+var events_1 = require("../../api/events");
+var reports_1 = require("../../api/reports");
 var ShardObject_1 = require("../../api/ShardObject");
 var request_1 = require("../../services/request");
+var hasher_1 = require("../hasher");
+var streams_1 = require("../streams");
 var error_1 = require("../utils/error");
 var DownloadStrategy_1 = require("./DownloadStrategy");
 var OneStreamStrategy = /** @class */ (function (_super) {
     __extends(OneStreamStrategy, _super);
-    function OneStreamStrategy() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+    function OneStreamStrategy(config, logger) {
+        var _a, _b;
+        var _this = _super.call(this) || this;
         _this.abortables = [];
+        _this.internalBuffer = [];
+        _this.downloadsProgress = [];
+        _this.progressIntervalId = setTimeout(function () { });
+        _this.aborted = false;
+        _this.config = config;
+        _this.logger = logger;
+        _this.concurrency = (_b = (_a = _this.config.download) === null || _a === void 0 ? void 0 : _a.concurrency) !== null && _b !== void 0 ? _b : 1;
+        _this.decipher = crypto_1.createDecipheriv('aes-256-ctr', crypto_1.randomBytes(32), crypto_1.randomBytes(16));
+        _this.startProgressInterval();
+        _this.logger.debug('Using %s concurrent requests', _this.concurrency);
+        _this.addAbortable(function () { return _this.stopProgressInterval(); });
+        _this.addAbortable(function () { return _this.internalBuffer = []; });
         return _this;
     }
+    OneStreamStrategy.prototype.startProgressInterval = function () {
+        var _this = this;
+        this.progressIntervalId = setInterval(function () {
+            var currentProgress = _this.downloadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0) / _this.downloadsProgress.length;
+            _this.emit(events_1.Events.Download.Progress, currentProgress);
+        }, 5000);
+    };
+    OneStreamStrategy.prototype.stopProgressInterval = function () {
+        clearInterval(this.progressIntervalId);
+    };
+    OneStreamStrategy.prototype.addAbortable = function (abort) {
+        this.abortables.push({ abort: abort });
+    };
     OneStreamStrategy.prototype.download = function (mirrors) {
         return __awaiter(this, void 0, void 0, function () {
-            var decipher_1, downloadStreamsRefs_1, downloadPipeline, lastWriteFinished_1, err_1;
+            var lastShardIndexDecrypted_1, downloadTask, downloadQueue_1, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        this.emit(DownloadStrategy_1.DownloadEvents.Start);
-                        decipher_1 = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                        downloadStreamsRefs_1 = [];
-                        return [4 /*yield*/, async_1.eachLimit(mirrors, 6, function (mirror, next) {
-                                getDownloadStream(mirror).then(function (downloadStream) {
-                                    downloadStreamsRefs_1.push({
-                                        index: mirror.index,
-                                        stream: downloadStream
+                        if (this.fileEncryptionKey.length === 0 || this.iv.length === 0) {
+                            throw new Error('Required decryption data not found');
+                        }
+                        this.downloadsProgress = new Array(mirrors.length).fill(0);
+                        this.decipher = crypto_1.createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+                        this.emit(events_1.Events.Download.Start);
+                        this.emit(events_1.Events.Download.Ready, this.decipher);
+                        this.once(events_1.Events.Download.Error, function (err) { return _this.decipher.emit('error', err); });
+                        mirrors.sort(function (mA, mb) { return mA.index - mb.index; });
+                        lastShardIndexDecrypted_1 = -1;
+                        downloadTask = function (mirror, cb) {
+                            async_1.retry({ times: 3, interval: 500 }, function (nextTry) {
+                                getDownloadStream(mirror, function (err, shardStream) {
+                                    _this.logger.debug('Got stream for mirror %s', mirror.index);
+                                    if (err) {
+                                        return nextTry(err);
+                                    }
+                                    _this.handleShard(mirror, shardStream, function (downloadErr) {
+                                        _this.logger.debug('Stream handled for mirror %s', mirror.index);
+                                        if (downloadErr) {
+                                            return nextTry(downloadErr);
+                                        }
+                                        var waitingInterval = setInterval(function () {
+                                            if (lastShardIndexDecrypted_1 !== mirror.index - 1) {
+                                                return;
+                                            }
+                                            clearInterval(waitingInterval);
+                                            _this.decryptShard(mirror.index, function (decryptErr) {
+                                                _this.logger.debug('Decrypting shard for mirror %s', mirror.index);
+                                                if (decryptErr) {
+                                                    return nextTry(decryptErr);
+                                                }
+                                                lastShardIndexDecrypted_1++;
+                                                nextTry(null);
+                                            });
+                                        }, 50);
                                     });
-                                    next();
-                                }).catch(function (err) {
-                                    next(err);
+                                }, _this.config.useProxy);
+                            }, function (err) {
+                                if (err) {
+                                    return cb(err);
+                                }
+                                cb(null);
+                            });
+                        };
+                        downloadQueue_1 = async_1.queue(downloadTask, this.concurrency);
+                        this.addAbortable(function () { return downloadQueue_1.kill(); });
+                        return [4 /*yield*/, async_1.eachLimit(mirrors, this.concurrency, function (mirror, cb) {
+                                if (_this.aborted) {
+                                    return cb();
+                                }
+                                downloadQueue_1.push(mirror, function (err) {
+                                    if (err) {
+                                        return cb(err);
+                                    }
+                                    _this.internalBuffer[mirror.index] = Buffer.alloc(0);
+                                    var isLastShard = mirror.index === mirrors.length - 1;
+                                    if (isLastShard) {
+                                        _this.cleanup();
+                                        _this.emit(events_1.Events.Download.Progress, 1);
+                                        _this.decipher.end();
+                                    }
+                                    cb();
                                 });
                             })];
                     case 1:
                         _a.sent();
-                        downloadStreamsRefs_1.sort(function (a, b) { return a.index - b.index; });
-                        downloadPipeline = downloadStreamsRefs_1.map(function (ref) { return ref.stream; });
-                        downloadPipeline.forEach(function (stream) {
-                            _this.abortables.push({ abort: function () { return stream.destroy(); } });
-                        });
-                        lastWriteFinished_1 = false;
-                        async_1.eachLimit(downloadPipeline, 1, function (download, next) {
-                            download.on('data', function (chunk) {
-                                if (!decipher_1.write(chunk)) {
-                                    lastWriteFinished_1 = false;
-                                    decipher_1.once('drain', function () {
-                                        lastWriteFinished_1 = true;
-                                        download.resume();
-                                    });
-                                    download.pause();
-                                }
-                            });
-                            download.once('end', function () {
-                                var lastWriteWatcherId = setInterval(function () {
-                                    if (lastWriteFinished_1) {
-                                        next();
-                                        clearInterval(lastWriteWatcherId);
-                                    }
-                                }, 50);
-                            });
-                            download.once('error', next);
-                        }, function (err) {
-                            if (err) {
-                                _this.emit(DownloadStrategy_1.DownloadEvents.Error, error_1.wrap('OneStreamStrategyError', err));
-                                return;
-                            }
-                            decipher_1.end();
-                        });
-                        this.emit(DownloadStrategy_1.DownloadEvents.Ready, decipher_1);
                         return [3 /*break*/, 3];
                     case 2:
                         err_1 = _a.sent();
-                        this.emit(DownloadStrategy_1.DownloadEvents.Error, error_1.wrap('OneStreamStrategyError', err_1));
+                        this.handleError(err_1);
                         return [3 /*break*/, 3];
                     case 3: return [2 /*return*/];
                 }
             });
         });
     };
-    OneStreamStrategy.prototype.abort = function () {
+    OneStreamStrategy.prototype.cleanup = function () {
+        this.stopProgressInterval();
+    };
+    OneStreamStrategy.prototype.decryptShard = function (index, cb) {
+        if (this.decipher.write(this.internalBuffer[index])) {
+            return cb(null);
+        }
+        this.decipher.once('drain', cb);
+    };
+    OneStreamStrategy.prototype.handleShard = function (shard, stream, cb) {
+        var _this = this;
+        var errored = false;
+        var shardBuffers = [];
+        var exchangeReport = reports_1.ExchangeReport.build(this.config, shard);
+        var progressNotifier = new streams_1.ProgressNotifier(shard.size, 2000);
+        var hasher = new hasher_1.HashStream();
+        var downloadPipeline = stream.pipe(progressNotifier).pipe(hasher);
+        progressNotifier.on(streams_1.Events.Progress, function (progress) {
+            _this.downloadsProgress[shard.index] = progress;
+        });
+        downloadPipeline.on('data', shardBuffers.push.bind(shardBuffers));
+        downloadPipeline.once('error', function (err) {
+            errored = true;
+            exchangeReport.error();
+            cb(err);
+        }).once('end', function () {
+            if (errored) {
+                return;
+            }
+            var hash = hasher.getHash().toString('hex');
+            if (hash !== shard.hash) {
+                exchangeReport.error();
+                return cb(new Error("Hash for downloaded shard " + shard.hash + " does not match"));
+            }
+            exchangeReport.success();
+            _this.internalBuffer[shard.index] = Buffer.concat(shardBuffers);
+            cb(null);
+        });
+    };
+    OneStreamStrategy.prototype.handleError = function (err) {
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
-        this.emit(DownloadStrategy_1.DownloadEvents.Abort);
+        this.decipher.emit('error', error_1.wrap('OneStreamStrategy', err));
+    };
+    OneStreamStrategy.prototype.abort = function () {
+        this.aborted = true;
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
+        this.emit(events_1.Events.Download.Abort);
     };
     return OneStreamStrategy;
 }(DownloadStrategy_1.DownloadStrategy));
 exports.OneStreamStrategy = OneStreamStrategy;
-function getDownloadStream(shard) {
-    return ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard)).then(request_1.getStream);
+function getDownloadStream(shard, cb, useProxy) {
+    if (useProxy === void 0) { useProxy = false; }
+    ShardObject_1.ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then(function (url) { return request_1.getStream(url, { useProxy: useProxy }); }).then(function (stream) {
+        cb(null, stream);
+    }).catch(function (err) {
+        cb(err, null);
+    });
 }
 function buildRequestUrlShard(shard) {
     var _a = shard.farmer, address = _a.address, port = _a.port;

@@ -23,8 +23,9 @@ export declare class ShardObject extends EventEmitter {
     get index(): number;
     upload(content: Buffer): Promise<ShardMeta>;
     static requestPut(url: string): Promise<PutUrl>;
-    static requestGet(url: string): Promise<GetUrl>;
+    static requestGet(url: string, useProxy?: boolean): Promise<GetUrl>;
     static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any>;
+    static getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void;
     negotiateContract(): Promise<ContractNegotiated>;
     private sendShardToNode;
     abort(): void;
