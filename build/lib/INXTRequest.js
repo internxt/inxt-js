@@ -74,6 +74,7 @@ var Methods;
     Methods["Get"] = "GET";
     Methods["Post"] = "POST";
     Methods["Put"] = "PUT";
+    Methods["Patch"] = "PATCH";
 })(Methods || (Methods = {}));
 var INXTRequest = /** @class */ (function (_super) {
     __extends(INXTRequest, _super);
