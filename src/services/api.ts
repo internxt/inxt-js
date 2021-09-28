@@ -8,7 +8,8 @@ import { ShardMeta } from "../lib/shardMeta";
 export enum Methods {
   Get = 'GET',
   Post = 'POST',
-  Put = 'PUT'
+  Put = 'PUT',
+  Patch = 'PATCH'
 }
 
 export interface GetBucketByIdResponse {
@@ -123,6 +124,7 @@ export interface InxtApiI {
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
   getShardFromNode(shard: Shard): INXTRequest;
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
+  renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
@@ -171,6 +173,10 @@ class InxtApi implements InxtApiI {
   }
 
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
+    return emptyINXTRequest(this.config);
+  }
+
+  renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 }
@@ -280,5 +286,11 @@ export class Bridge extends InxtApi {
     const targetUrl = `https://api.internxt.com/buckets/${bucketId}/tokens`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation, file: fileId } }, false);
+  }
+
+  renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/files/${fileId}`;
+
+    return new INXTRequest(this.config, Methods.Patch, targetUrl, { data: { name: newName } });
   }
 }
