@@ -8,7 +8,8 @@ import { ShardMeta } from "../lib/shardMeta";
 export declare enum Methods {
     Get = "GET",
     Post = "POST",
-    Put = "PUT"
+    Put = "PUT",
+    Patch = "PATCH"
 }
 export interface GetBucketByIdResponse {
     user: string;
@@ -99,6 +100,7 @@ export interface InxtApiI {
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
     createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
+    renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
 }
 declare class InxtApi implements InxtApiI {
     protected config: EnvironmentConfig;
@@ -113,6 +115,7 @@ declare class InxtApi implements InxtApiI {
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
     createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
+    renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
 }
 export declare class EmptyBridgeUrlError extends Error {
     constructor();
@@ -128,5 +131,6 @@ export declare class Bridge extends InxtApi {
     sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
     getShardFromNode(shard: Shard): INXTRequest;
     createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
+    renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
 }
 export {};

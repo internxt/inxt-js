@@ -427,6 +427,18 @@ export class Environment {
     return uploadState;
   }
 
+  async renameFile(bucketId: string, fileId: string, newPlainName: string): Promise<void> {
+    const mnemonic: string | undefined = this.config.encryptionKey;
+
+    if (!mnemonic) {
+      throw new Error(ENCRYPTION_KEY_NOT_PROVIDED);
+    }
+
+    return EncryptFilename(mnemonic, bucketId, newPlainName).then((newEncryptedName) => {
+      return new Bridge(this.config).renameFile(bucketId, fileId, newEncryptedName).start();
+    }).then(() => {});
+  }
+
   /**
    * Cancels a file upload
    * @param {ActionState} state Upload state

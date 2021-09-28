@@ -6,7 +6,8 @@ import { EnvironmentConfig } from '..';
 declare enum Methods {
     Get = "GET",
     Post = "POST",
-    Put = "PUT"
+    Put = "PUT",
+    Patch = "PATCH"
 }
 export declare class INXTRequest extends EventEmitter {
     private req;

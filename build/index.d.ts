@@ -144,6 +144,7 @@ export declare class Environment {
         size: number;
         plainName: string;
     }, params: UploadFileOptions, givenUploadState?: ActionState): ActionState;
+    renameFile(bucketId: string, fileId: string, newPlainName: string): Promise<void>;
     /**
      * Cancels a file upload
      * @param {ActionState} state Upload state

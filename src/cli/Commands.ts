@@ -1,6 +1,8 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
 import { downloadFile, downloadFileParallel } from './download-file';
+import { getFileInfo } from './get-filo-info';
+import { renameFile } from './rename-file';
 // import { uploadFile } from './upload-file';
 import { uploadFolder } from './upload-folder-zip';
 
@@ -45,6 +47,24 @@ export const downloadFileCommandParallel = buildCommand({
 }).action((fileId, path) => {
   downloadFileParallel(fileId, path).finally(notifyProgramFinished('download-file-parallel'));
 });
+
+export const renameFileCommand = buildCommand({
+  version: '0.0.1',
+  command: 'rename-file <fileId> <newName>',
+  description: 'Renames a file in the network',
+  options: []
+}).action((fileId, newName) => {
+  renameFile(fileId, newName).finally(notifyProgramFinished('rename-file'));
+});
+
+export const getFileInfoCommand = buildCommand({
+  version: '0.0.1',
+  command: 'get-file-info <fileId>',
+  description: 'Gets file info',
+  options: []
+}).action((fileId) => {
+  getFileInfo(fileId).finally(notifyProgramFinished('get-file-info'))
+})
 
 // export const downloadFolderZippedCommand = buildCommand({
 //   version: '0.0.1',

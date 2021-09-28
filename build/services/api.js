@@ -31,6 +31,7 @@ var Methods;
     Methods["Get"] = "GET";
     Methods["Post"] = "POST";
     Methods["Put"] = "PUT";
+    Methods["Patch"] = "PATCH";
 })(Methods = exports.Methods || (exports.Methods = {}));
 function emptyINXTRequest(config) {
     return new lib_1.INXTRequest(config, Methods.Get, '', {}, false);
@@ -66,6 +67,9 @@ var InxtApi = /** @class */ (function () {
         return emptyINXTRequest(this.config);
     };
     InxtApi.prototype.createFileToken = function (bucketId, fileId, operation) {
+        return emptyINXTRequest(this.config);
+    };
+    InxtApi.prototype.renameFile = function (bucketId, fileId, newName) {
         return emptyINXTRequest(this.config);
     };
     return InxtApi;
@@ -159,6 +163,10 @@ var Bridge = /** @class */ (function (_super) {
     Bridge.prototype.createFileToken = function (bucketId, fileId, operation) {
         var targetUrl = "https://api.internxt.com/buckets/" + bucketId + "/tokens";
         return new lib_1.INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation: operation, file: fileId } }, false);
+    };
+    Bridge.prototype.renameFile = function (bucketId, fileId, newName) {
+        var targetUrl = this.config.bridgeUrl + "/buckets/" + bucketId + "/files/" + fileId;
+        return new lib_1.INXTRequest(this.config, Methods.Patch, targetUrl, { data: { name: newName } });
     };
     return Bridge;
 }(InxtApi));
