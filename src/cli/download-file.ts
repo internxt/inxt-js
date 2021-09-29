@@ -22,7 +22,6 @@ export async function downloadFile(fileId: string, path: string) {
           }
 
           pipeline((downloadStream as Readable), createWriteStream(path), (err) => {
-            console.log('here i am');
             if (err) {
               return reject(err);
             }
