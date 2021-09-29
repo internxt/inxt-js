@@ -75,6 +75,7 @@ export async function uploadFolder(path: string) {
   archiverSetup.finalize();
 
   logger.debug('directory hash zipped is %s', folderMeta.hash);
+  logger.debug('directory ziped size is %s', folderMeta.size);
 
   type ResolveFunction = (res: any) => void;
   type RejectFunction = (err: Error) => void;

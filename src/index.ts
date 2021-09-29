@@ -1,6 +1,6 @@
 import blobToStream from 'blob-to-stream';
 import { Readable } from 'stream';
-import { statSync } from 'fs';
+import { createReadStream, statSync } from 'fs';
 import * as Winston from 'winston';
 import { basename } from 'path';
 
@@ -35,7 +35,7 @@ export type UploadFunction = OneStreamOnlyStrategyFunction & MultipleStreamsStra
 
 export type OnlyErrorCallback = (err: Error | null) => void;
 
-export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null)  => void;
+export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
 export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
@@ -62,19 +62,19 @@ export interface DownloadFileOptions {
   finishedCallback: DownloadFinishedCallback;
 }
 
-type GetInfoCallback = (err: Error | null, result: any)  => void;
+type GetInfoCallback = (err: Error | null, result: any) => void;
 
-type GetBucketsCallback = (err: Error | null, result: any)  => void;
+type GetBucketsCallback = (err: Error | null, result: any) => void;
 
-type GetBucketIdCallback = (err: Error | null, result: any)  => void;
+type GetBucketIdCallback = (err: Error | null, result: any) => void;
 
-type CreateBucketCallback = (err: Error | null, result: any)  => void;
+type CreateBucketCallback = (err: Error | null, result: any) => void;
 
-type DeleteBucketCallback = (err: Error | null, result: any)  => void;
+type DeleteBucketCallback = (err: Error | null, result: any) => void;
 
-type ListFilesCallback = (err: Error | null, result: any)  => void;
+type ListFilesCallback = (err: Error | null, result: any) => void;
 
-type DeleteFileCallback = (err: Error | null, result: any)  => void;
+type DeleteFileCallback = (err: Error | null, result: any) => void;
 
 type DebugCallback = (message: string) => void;
 
@@ -234,7 +234,7 @@ export class Environment {
       return uploadState;
     }
 
-    const file = { content:blobToStream(fileContent) , plainName: filename, size };
+    const file = { content: blobToStream(fileContent), plainName: filename, size };
 
     return this.uploadStream(bucketId, file, params, uploadState);
   }
@@ -244,55 +244,53 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  // storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
-  //   const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
+  storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
+    const uploadState = new ActionState(ActionTypes.Upload);
 
-  //   const uploadState = new ActionState(ActionTypes.Upload);
-  //   const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
-  //   const fileStat = statSync(filepath);
+    if (!this.config.encryptionKey) {
+      params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
-  //   if (!this.config.encryptionKey) {
-  //     params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+      return uploadState;
+    }
 
-  //     return uploadState;
-  //   }
+    if (!bucketId) {
+      params.finishedCallback(Error('Bucket id was not provided'), null);
 
-  //   if (!bucketId) {
-  //     params.finishedCallback(Error('Bucket id was not provided'), null);
+      return uploadState;
+    }
 
-  //     return uploadState;
-  //   }
+    const fileStat = statSync(filepath);
 
-  //   if (fileStat.size === 0) {
-  //     params.finishedCallback(Error('Can not upload a file with size 0'), null);
+    if (fileStat.size === 0) {
+      params.finishedCallback(Error('Can not upload a file with size 0'), null);
 
-  //     return uploadState;
-  //   }
+      return uploadState;
+    }
 
-  //   if (params.debug) {
-  //     this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-  //   }
+    if (params.debug) {
+      this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
+    }
 
-  //   const filename = params.filename || basename(filepath);
+    const filename = params.filename || basename(filepath);
 
-  //   EncryptFilename(this.config.encryptionKey, bucketId, filename)
-  //     .then((encryptedName: string) => {
-  //       logger.debug('Filename %s encrypted is %s', filename, encryptedName);
+    EncryptFilename(this.config.encryptionKey, bucketId, filename)
+      .then((name: string) => {
+        logger.debug('Filename %s encrypted is %s', filename, name);
 
-  //       const fileMeta = { content: Readable.from(''), size: fileStat.size, name: encryptedName };
+        const fileMeta = { content: createReadStream(filepath), name, size: fileStat.size };
 
-  //       return uploadV2(this.config, fileMeta, bucketId, params, this.logger, uploadState, uploadStrategy);
-  //     }).then(() => {
-  //       this.logger.info('Upload Success!');
-  //     }).catch((err: Error) => {
-  //       if (err && err.message && err.message.includes('Upload aborted')) {
-  //         return params.finishedCallback(new Error('Process killed by user'), null);
-  //       }
-  //       params.finishedCallback(err, null);
-  //     });
+        return upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
+      }).then(() => {
+        this.logger.info('Upload Success!');
+      }).catch((err: Error) => {
+        if (err && err.message && err.message.includes('Upload aborted')) {
+          return params.finishedCallback(new Error('Process killed by user'), null);
+        }
+        params.finishedCallback(err, null);
+      });
 
-  //   return uploadState;
-  // }
+    return uploadState;
+  }
 
   upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
     const uploadState = new ActionState(ActionTypes.Upload);
@@ -390,7 +388,7 @@ export class Environment {
    * @param bucketId Bucket id where file is going to be stored
    * @param params Store file params
    */
-  uploadStream(bucketId: string, file: {content:Readable, size:number, plainName:string}, params: UploadFileOptions, givenUploadState?: ActionState): ActionState {
+  uploadStream(bucketId: string, file: { content: Readable, size: number, plainName: string }, params: UploadFileOptions, givenUploadState?: ActionState): ActionState {
     const uploadState = givenUploadState ?? new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
@@ -409,9 +407,9 @@ export class Environment {
       .then((encryptedName: string) => {
         logger.debug('Filename %s encrypted is %s', file.plainName, encryptedName);
 
-        const {content, size} = file
+        const { content, size } = file
 
-        const fileMeta = {content, size, name: encryptedName}
+        const fileMeta = { content, size, name: encryptedName }
 
         return upload(this.config, bucketId, fileMeta, params, this.logger, uploadState);
 
@@ -436,7 +434,7 @@ export class Environment {
 
     return EncryptFilename(mnemonic, bucketId, newPlainName).then((newEncryptedName) => {
       return new Bridge(this.config).renameFile(bucketId, fileId, newEncryptedName).start();
-    }).then(() => {});
+    }).then(() => { });
   }
 
   /**

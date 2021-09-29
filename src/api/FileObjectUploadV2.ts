@@ -1,21 +1,19 @@
-// import { EventEmitter, Readable } from "stream";
-// import { randomBytes } from "crypto";
-// import winston from "winston";
+import { EventEmitter, Readable } from "stream";
+import { randomBytes } from "crypto";
+import winston from "winston";
 
-// import { UploadProgressCallback } from "..";
-// import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
-// import { ShardObject } from "./ShardObject";
-// import { ShardMeta } from "../lib/shardMeta";
-// import { INXTRequest } from "../lib";
-// import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI } from "../services/api";
-// import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
-// import { logger } from "../lib/utils/logger";
-// import { wrap } from "../lib/utils/error";
-// import { ShardUploadSuccessMessage, UploadEvents, UploadFinishedMessage, UploadStrategy } from "../lib/upload/UploadStrategy";
-// import { FileMeta } from "./FileObjectUpload";
-// import { Abortable } from "./Abortable";
+import { EnvironmentConfig, UploadProgressCallback } from "..";
+import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
+import { ShardObject } from "./ShardObject";
+import { INXTRequest } from "../lib";
+import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI } from "../services/api";
+import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
+import { logger } from "../lib/utils/logger";
+import { wrap } from "../lib/utils/error";
+import { ShardUploadSuccessMessage, UploadEvents, UploadFinishedMessage, UploadStrategy } from "../lib/upload/UploadStrategy";
+import { Abortable } from "./Abortable";
 
-// import { Events } from './events';
+import { Events } from './events';
 
 interface FileMeta {
   size: number;
@@ -34,25 +32,6 @@ interface ShardMeta {
   exclude?: any;
 }
 
-
-export class FileObjectUploadV2 {
-  constructor() {
-    // super();
-  }
-
-  stage() {
-
-  }
-
-  upload(cb: any): Promise<ShardMeta[]> {
-    return Promise.resolve([]);
-  }
-
-  abort(): void {
-
-  }
-}
-/*
 export class FileObjectUploadV2 extends EventEmitter implements FileObjectUploadProtocol, Abortable {
   private fileMeta: FileMeta;
   private config: EnvironmentConfig;
@@ -264,4 +243,3 @@ function updateProgress(totalBytes: number, currentBytesUploaded: number, newByt
 
   return newCurrentBytes;
 }
-*/
