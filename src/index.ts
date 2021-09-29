@@ -9,9 +9,7 @@ import {
   download,
   DownloadFunction,
   DownloadStrategyObject,
-  OneStreamStrategy as DownloadOneStreamStrategy,
-  MultipleStreamsStrategy as DownloadMultipleStreamsStrategy,
-  DownloadEmptyStrategy
+  OneStreamStrategy as DownloadOneStreamStrategy
 } from './lib/download';
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 

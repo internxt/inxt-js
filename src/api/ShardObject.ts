@@ -100,16 +100,6 @@ export class ShardObject extends EventEmitter {
     return putStream(url, content, { useProxy: false }, controller);
   }
 
-  static getDownloadStream(shard: Shard, cb: (err: Error | null, stream: Readable | null) => void): void {
-    ShardObject.requestGet(buildRequestUrl(shard)).then((url: string) => {
-      return getStream(url, { useProxy: true });
-    }).then((stream) => {
-      cb(null, stream);
-    }).catch((err) => {
-      cb(err, null);
-    });
-  }
-
   negotiateContract(): Promise<ContractNegotiated> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);
     this.requests.push(req);
