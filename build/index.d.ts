@@ -48,6 +48,10 @@ interface UploadFileParams {
     progressCallback: UploadProgressCallback;
     finishedCallback: UploadFinishCallback;
 }
+interface StoreFileParams extends UploadFileOptions {
+    debug?: DebugCallback;
+    filename?: string;
+}
 interface UploadOptions extends UploadFileOptions {
     filename: string;
 }
@@ -130,6 +134,7 @@ export declare class Environment {
      * @param bucketId Bucket id where file is going to be stored
      * @param params Store file params
      */
+    storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
     upload: UploadFunction;
     download: DownloadFunction;
     downloadCancel(state: ActionState): void;

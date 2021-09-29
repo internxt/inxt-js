@@ -42,6 +42,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
 var blob_to_stream_1 = __importDefault(require("blob-to-stream"));
 var stream_1 = require("stream");
+var fs_1 = require("fs");
+var path_1 = require("path");
 var upload_1 = require("./lib/upload");
 var download_1 = require("./lib/download");
 var crypto_1 = require("./lib/crypto");
@@ -60,47 +62,6 @@ var utils = {
 var Environment = /** @class */ (function () {
     function Environment(config) {
         var _this = this;
-        /**
-         * Uploads a file from file system
-         * @param bucketId Bucket id where file is going to be stored
-         * @param params Store file params
-         */
-        // storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState {
-        //   const desiredRamUsage = this.config.config?.ramUsage ?? 1024 * 1024 * 200; // 200Mb
-        //   const uploadState = new ActionState(ActionTypes.Upload);
-        //   const uploadStrategy = new StreamFileSystemStrategy({ desiredRamUsage, filepath }, logger);
-        //   const fileStat = statSync(filepath);
-        //   if (!this.config.encryptionKey) {
-        //     params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-        //     return uploadState;
-        //   }
-        //   if (!bucketId) {
-        //     params.finishedCallback(Error('Bucket id was not provided'), null);
-        //     return uploadState;
-        //   }
-        //   if (fileStat.size === 0) {
-        //     params.finishedCallback(Error('Can not upload a file with size 0'), null);
-        //     return uploadState;
-        //   }
-        //   if (params.debug) {
-        //     this.logger = Logger.getDebugger(this.config.logLevel || 1, params.debug);
-        //   }
-        //   const filename = params.filename || basename(filepath);
-        //   EncryptFilename(this.config.encryptionKey, bucketId, filename)
-        //     .then((encryptedName: string) => {
-        //       logger.debug('Filename %s encrypted is %s', filename, encryptedName);
-        //       const fileMeta = { content: Readable.from(''), size: fileStat.size, name: encryptedName };
-        //       return uploadV2(this.config, fileMeta, bucketId, params, this.logger, uploadState, uploadStrategy);
-        //     }).then(() => {
-        //       this.logger.info('Upload Success!');
-        //     }).catch((err: Error) => {
-        //       if (err && err.message && err.message.includes('Upload aborted')) {
-        //         return params.finishedCallback(new Error('Process killed by user'), null);
-        //       }
-        //       params.finishedCallback(err, null);
-        //     });
-        //   return uploadState;
-        // }
         this.upload = function (bucketId, opts, strategyObj) {
             var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
             if (!_this.config.encryptionKey) {
@@ -267,6 +228,46 @@ var Environment = /** @class */ (function () {
         }
         var file = { content: blob_to_stream_1.default(fileContent), plainName: filename, size: size };
         return this.uploadStream(bucketId, file, params, uploadState);
+    };
+    /**
+     * Uploads a file from file system
+     * @param bucketId Bucket id where file is going to be stored
+     * @param params Store file params
+     */
+    Environment.prototype.storeFile = function (bucketId, filepath, params) {
+        var _this = this;
+        var uploadState = new ActionState_1.ActionState(ActionState_1.ActionTypes.Upload);
+        if (!this.config.encryptionKey) {
+            params.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+            return uploadState;
+        }
+        if (!bucketId) {
+            params.finishedCallback(Error('Bucket id was not provided'), null);
+            return uploadState;
+        }
+        var fileStat = fs_1.statSync(filepath);
+        if (fileStat.size === 0) {
+            params.finishedCallback(Error('Can not upload a file with size 0'), null);
+            return uploadState;
+        }
+        if (params.debug) {
+            this.logger = logger_1.Logger.getDebugger(this.config.logLevel || 1, params.debug);
+        }
+        var filename = params.filename || path_1.basename(filepath);
+        crypto_1.EncryptFilename(this.config.encryptionKey, bucketId, filename)
+            .then(function (name) {
+            logger_1.logger.debug('Filename %s encrypted is %s', filename, name);
+            var fileMeta = { content: fs_1.createReadStream(filepath), name: name, size: fileStat.size };
+            return upload_1.upload(_this.config, bucketId, fileMeta, params, _this.logger, uploadState);
+        }).then(function () {
+            _this.logger.info('Upload Success!');
+        }).catch(function (err) {
+            if (err && err.message && err.message.includes('Upload aborted')) {
+                return params.finishedCallback(new Error('Process killed by user'), null);
+            }
+            params.finishedCallback(err, null);
+        });
+        return uploadState;
     };
     Environment.prototype.downloadCancel = function (state) {
         state.stop();
