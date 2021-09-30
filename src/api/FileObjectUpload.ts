@@ -182,8 +182,10 @@ export class FileObjectUpload extends EventEmitter {
   }
 
   private parallelUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+    const shardSize = determineShardSize(this.fileMeta.size);
+
     const ramUsage = 200 * 1024 * 1024; // 200Mb
-    const nShards = Math.ceil(this.fileMeta.size / determineShardSize(this.fileMeta.size));
+    const nShards = Math.ceil(this.fileMeta.size / shardSize);
     const concurrency = Math.min(determineConcurrency(ramUsage, this.fileMeta.size), nShards);
 
     logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
@@ -199,7 +201,10 @@ export class FileObjectUpload extends EventEmitter {
       uploader.emit('error', Error('Upload aborted'));
     });
 
-    this.cipher.pipe(uploader.getUpstream());
+    const uploadStream = uploader.getUpstream();
+
+    this.cipher.on('data', (chunk: Buffer) => uploadStream.write(chunk));
+    this.cipher.once('end', () => uploader.end());
 
     return new Promise((resolve, reject) => {
       uploader.once('end', () => {
