@@ -213,7 +213,7 @@ export class Bridge extends InxtApi {
     const targetUrl = `${this.url}/buckets/${bucketId}/files`;
     const defParams: AxiosRequestConfig = {
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
       },
       data: body
     };
@@ -227,7 +227,7 @@ export class Bridge extends InxtApi {
     const targetUrl = `${this.url}/frames/${frameId}`;
     const defParams: AxiosRequestConfig = {
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
       },
       data: { ...body, challenges: body.challenges_as_str }
     };
@@ -244,6 +244,7 @@ export class Bridge extends InxtApi {
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
     const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
-    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
+    // restore proxy after tests
+    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, false);
   }
 }

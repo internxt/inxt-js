@@ -1,5 +1,7 @@
 import express from 'express';
 import { createReadStream, createWriteStream } from 'fs';
+import { pipeline } from 'stream';
+import { HashStream } from '../src/lib/hasher';
 
 export type ServerShutdownFunction = (cb: (err?: Error) => void) => void;
 
@@ -10,6 +12,7 @@ export function startServer(
   console.log('Starting shard-server on :' + desiredPort);
 
   const app = express();
+  const shards = [];
 
   app.get('/shards/:hash', (req, res) => {
     const { hash } = req.params;
@@ -30,10 +33,18 @@ export function startServer(
     }
 
     const writer = createWriteStream(hash);
+    const hasher = new HashStream();
 
-    req.pipe(writer).once('end', () => {
-      res.status(200).send({ result: 'Consigment completed' });
-    });
+    pipeline(req, hasher, writer, (err) => {
+      if (err) {
+        return res.status(500).send({ error: err });
+      }
+
+      if (hasher.getHash().toString('hex') === hash) {
+        return res.status(200).send({ result: 'Consignment completed' });
+      }
+      res.status(400).send({ result: 'Hash mismatched' });
+    })
   }); 
 
   const server = app.listen(desiredPort, () => {

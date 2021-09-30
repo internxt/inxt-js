@@ -1,6 +1,8 @@
 import { Environment } from "../src";
 import { ServerShutdownFunction, startServer as startFarmer } from "./shard-server";
 import { startServer as startBridge } from './bridge-server';
+import { parse } from "path";
+import { expect } from "chai";
 
 const testFiles = [
   '100k.dat',
@@ -38,7 +40,7 @@ before((done) => {
   let shutdownFarmer: ServerShutdownFunction;
 
   new Promise((resolve, reject) => {
-    startBridge(bridgePort, (err, shutdownBridgeFn) => {
+    startBridge(bridgePort, farmerPort, (err, shutdownBridgeFn) => {
       shutdownBridge = shutdownBridgeFn;
 
       if (err) {
@@ -88,10 +90,10 @@ after((done) => {
 
 describe('# Upload tests', () => {
   describe('Entire process', () => {
-    it('Should upload & download', async () => {
+    it('Should upload & download', async (done) => {
       try {
         for (const testFilePath of testFiles) {
-          await new Promise((resolve, reject) => {
+          new Promise((resolve: (fileId: string) => void, reject) => {
             const state = network.storeFile(bucketId, testFilePath, {
               progressCallback: (progress: number) => {},
               finishedCallback: (err: Error | null, fileId: string) => {
@@ -102,6 +104,14 @@ describe('# Upload tests', () => {
                 resolve(fileId);
               }
             })
+          }).then((fileId) => {
+            const { name, ext } = parse(testFilePath);
+            network.resolveFile('bucketTest', fileId, name + 'down' + ext, {
+              progressCallback: (progress) => {},
+              finishedCallback: (err) => {
+                expect(err).to.be.null;
+              }
+            });
           });
         }
       } catch (err) {
