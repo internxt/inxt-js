@@ -2,6 +2,7 @@ import express from 'express';
 import { createReadStream, createWriteStream } from 'fs';
 import { pipeline } from 'stream';
 import { HashStream } from '../src/lib/hasher';
+import { logger } from '../src/lib/utils/logger';
 
 export type ServerShutdownFunction = (cb: (err?: Error) => void) => void;
 
@@ -12,10 +13,15 @@ export function startServer(
   console.log('Starting shard-server on :' + desiredPort);
 
   const app = express();
-  const shards = [];
+
+  app.use(function middleware(req, res, next) {
+    logger.info('[SHARD-SERVER]: Received a request to %s', req.path);
+    next();
+  })
 
   app.get('/shards/:hash', (req, res) => {
     const { hash } = req.params;
+    console.log('Received a request download for shard %s', hash);
 
     if (!hash) {
       return res.status(400).send({ error: 'Invalid hash format' });

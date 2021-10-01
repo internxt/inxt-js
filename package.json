@@ -7,7 +7,7 @@
     "build": "rimraf build/* && tsc",
     "build:js": "npm run build && browserify -s 'inxt' ./build/index.js -o dist/inxt.es6.js",
     "test": "ts-mocha tests/**/*.ts",
-    "testupload": "ts-mocha tests/_upload.test.ts",
+    "e2e": "ts-mocha tests/_upload.test.ts",
     "lint": "tslint './src/**/*.ts'",
     "lint:fix": "npm run lint -- --fix",
     "dev": "tsc lab/index.ts && node lab/index.js && rm lab/index.js",

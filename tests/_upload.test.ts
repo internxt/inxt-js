@@ -3,17 +3,32 @@ import { ServerShutdownFunction, startServer as startFarmer } from "./shard-serv
 import { startServer as startBridge } from './bridge-server';
 import { parse } from "path";
 import { expect } from "chai";
+import { HashStream } from "../src/lib/hasher";
+import { createReadStream } from "fs";
+
+/**
+ * This is an adhoc test that will ensure upload / download entire process 
+ * is not broken. 
+ * 
+ * To make this test work, and until the library allows proxy params injection
+ * you have to follow this steps: 
+ * 
+ * - DownloadShardRequest() -> change api.streamRequest params to useProxy from true to false
+ * - request.ts -> L53: Change https for http library
+ * - api.ts -> sendShardToNode() -> change L248 params to useProxy from true to false
+ */
 
 const testFiles = [
   '100k.dat',
-  '2m.dat', // fileSize == shardSize
-  '3m.dat', // fileSize > shardSize
-  '4m.dat', // fileSize == shardSize * 2
-  '4_5m.dat', // fileSize > shardSize * 2 
-  '6m.dat', // fileSize == shardSize * 3,
-  '7m.dat', // fileSize == shardSize * 3 + 1
-  '500m.dat',
-  '1G.dat',
+  // '2m.dat', // fileSize == shardSize
+  // '3m.dat', // fileSize > shardSize
+  // '4m.dat', // fileSize == shardSize * 2
+  // '4_5m.dat', // fileSize > shardSize * 2 
+  // '6m.dat', // fileSize == shardSize * 3,
+  // '7m.dat', // fileSize == shardSize * 3 + 1
+  // '10m.dat'
+  // '500m.dat',
+  // '1G.dat',
   // '5G.dat',
   // '10G.dat'
 ];
@@ -85,16 +100,18 @@ before((done) => {
 });
 
 after((done) => {
+  console.log('shutting down servers');
   shutdown(done);
 });
 
 describe('# Upload tests', () => {
   describe('Entire process', () => {
-    it('Should upload & download', async (done) => {
+    it('Should upload & download', async function () {
+      this.timeout(Infinity);
       try {
         for (const testFilePath of testFiles) {
-          new Promise((resolve: (fileId: string) => void, reject) => {
-            const state = network.storeFile(bucketId, testFilePath, {
+          await new Promise((resolve: (fileId: string) => void, reject) => {
+            network.storeFile(bucketId, testFilePath, {
               progressCallback: (progress: number) => {},
               finishedCallback: (err: Error | null, fileId: string) => {
                 if (err) {
@@ -106,11 +123,46 @@ describe('# Upload tests', () => {
             })
           }).then((fileId) => {
             const { name, ext } = parse(testFilePath);
-            network.resolveFile('bucketTest', fileId, name + 'down' + ext, {
-              progressCallback: (progress) => {},
-              finishedCallback: (err) => {
-                expect(err).to.be.null;
-              }
+            const downloadedFilePath = name + 'down' + ext
+
+            return new Promise((resolve: (downloadedFilePath: string) => void, reject) => {
+              network.resolveFile(bucketId, fileId, downloadedFilePath, {
+                progressCallback: (progress) => {},
+                finishedCallback: (err) => {
+                  expect(err).to.be.null;
+                  resolve(downloadedFilePath);
+                }
+              });
+            });
+          }).then((downloadedFilePath) => {
+            console.log('llego aqui');
+            const uploadedFile = createReadStream(testFilePath);
+            const downloadedFile = createReadStream(downloadedFilePath);
+
+            const uploadHasher = new HashStream();
+            const downloadHasher = new HashStream();
+
+            const hashingUpload = new Promise((resolve, reject) => {
+              uploadedFile.pipe(uploadHasher)
+                .on('data', () => {})
+                .once('error', reject).once('end', resolve);
+            });
+
+            const hashingDownload = new Promise((resolve, reject) => {
+              downloadedFile.pipe(downloadHasher)
+                .on('data', () => {})
+                .once('error', reject).once('end', resolve);
+            });
+
+            Promise.all([ hashingUpload, hashingDownload ]).then(() => {
+              const uploadHash = uploadHasher.getHash().toString('hex');
+              const downloadHash = downloadHasher.getHash().toString('hex');
+
+              console.log('FILE %s', testFilePath);
+              console.log('[U] %s', uploadHash);
+              console.log('[D] %s', downloadHash);
+
+              expect(uploadHash).to.equal(downloadHash);
             });
           });
         }

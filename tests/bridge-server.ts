@@ -23,11 +23,19 @@ interface Mirror {
 
 interface Frame {
   id: string;
+  size: number;
   mirrors: Mirror[];
 }
+
 interface BridgeFile {
   id: string,
-  frame: Frame
+  frame: string,
+  filename: string,
+  index: string,
+  hmac: {
+    type: string,
+    value: string
+  }
 }
 
 export function startServer(
@@ -66,14 +74,28 @@ export function startServer(
       return res.status(404).send();
     }
 
+    const frame = frames.find(f => f.id === maybeFile.frame);
+
+    if (!frame) {
+      return res.status(404).send();
+    }
+
+    const fileSize = frame.mirrors.reduce((accum, m) => accum + m.size, 0);
+    frame.size = fileSize;
+
     return res.status(200).send({
       id: maybeFile.id,
-      frame: maybeFile.frame,
-      size: 0
+      frame: frame.id,
+      size: frame.size,
+      filename: maybeFile.filename,
+      created: new Date(),
+      hmac: maybeFile.hmac,
+      erasure: '',
+      index: maybeFile.index
     });
   });
 
-  // getFileMirror()
+  // getFileMirrors()
   app.get('/buckets/:bucketId/files/:fileId', (req, res) => {
     const { bucketId, fileId } = req.params;
     const { skip, limit } = req.query;
@@ -88,19 +110,19 @@ export function startServer(
       return res.status(404).send();
     }
 
-    const frame = frames.find(f => f.id === maybeFile.frame.id);
+    const frame = frames.find(f => f.id === maybeFile.frame);
 
     console.log('skip %s', skip);
     console.log('limit %s', limit);
 
-    const mirrors = frame.mirrors.slice(parseInt(skip as string), parseInt(limit as string));
+    const mirrors = frame.mirrors.slice(parseInt(skip as string), parseInt(skip as string) + parseInt(limit as string));
   
     return res.status(200).send(mirrors);
   });
 
   // stage()
   app.post('/frames', (_, res) => {
-    const frame: Frame = { id: randomBytes(16).toString('hex'), mirrors: [] };
+    const frame: Frame = { id: randomBytes(16).toString('hex'), mirrors: [], size: 0 };
     frames.push(frame);
 
     res.status(200).send({ id: frame.id });
@@ -109,8 +131,7 @@ export function startServer(
   // addShardToFrame()
   app.put('/frames/:id', (req, res) => {
     const { id } = req.params;
-    const { hash, index, size } = req.body;
-    // get all you can from here
+    const { hash, index, size, parity } = req.body;
 
     if (!id) {
       return res.status(400).send();
@@ -134,7 +155,7 @@ export function startServer(
       hash,
       index,
       operation: 'PUSH',
-      parity: false,
+      parity,
       replaceCount: 0,
       size,
       token: 'eee',
@@ -155,14 +176,14 @@ export function startServer(
     }
 
     const file: BridgeFile = {
-      frame, 
+      ...req.body,
       id: randomBytes(16).toString('hex')  
     };
 
     files.push(file);
 
-    console.log('files', JSON.stringify(files, null, 2));
-    console.log('frames', JSON.stringify(frames, null, 2));
+    // console.log('files', JSON.stringify(files, null, 2));
+    // console.log('frames', JSON.stringify(frames, null, 2));
 
     res.status(200).send({
       id: file.id,
