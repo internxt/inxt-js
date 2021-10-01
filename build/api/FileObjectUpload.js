@@ -203,8 +203,9 @@ var FileObjectUpload = /** @class */ (function (_super) {
     };
     FileObjectUpload.prototype.parallelUpload = function (callback) {
         var _this = this;
+        var shardSize = utils_1.determineShardSize(this.fileMeta.size);
         var ramUsage = 200 * 1024 * 1024; // 200Mb
-        var nShards = Math.ceil(this.fileMeta.size / utils_1.determineShardSize(this.fileMeta.size));
+        var nShards = Math.ceil(this.fileMeta.size / shardSize);
         var concurrency = Math.min(utils_1.determineConcurrency(ramUsage, this.fileMeta.size), nShards);
         logger_1.logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
         var uploader = new uploader_1.UploaderQueue(concurrency, nShards, this);
@@ -216,7 +217,9 @@ var FileObjectUpload = /** @class */ (function (_super) {
         this.on(constants_1.UPLOAD_CANCELLED, function () {
             uploader.emit('error', Error('Upload aborted'));
         });
-        this.cipher.pipe(uploader.getUpstream());
+        var uploadStream = uploader.getUpstream();
+        this.cipher.on('data', function (chunk) { return uploadStream.write(chunk); });
+        this.cipher.once('end', function () { return uploader.end(); });
         return new Promise(function (resolve, reject) {
             uploader.once('end', function () {
                 resolve(_this.shardMetas);

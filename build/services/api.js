@@ -128,7 +128,7 @@ var Bridge = /** @class */ (function (_super) {
         var targetUrl = this.url + "/buckets/" + bucketId + "/files";
         var defParams = {
             headers: {
-                'Content-Type': 'application/octet-stream',
+                'Content-Type': 'application/json',
             },
             data: body
         };
@@ -139,7 +139,7 @@ var Bridge = /** @class */ (function (_super) {
         var targetUrl = this.url + "/frames/" + frameId;
         var defParams = {
             headers: {
-                'Content-Type': 'application/octet-stream',
+                'Content-Type': 'application/json',
             },
             data: __assign(__assign({}, body), { challenges: body.challenges_as_str })
         };
