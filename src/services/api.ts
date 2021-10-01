@@ -240,7 +240,7 @@ export class Bridge extends InxtApi {
     const targetUrl = `${this.url}/buckets/${bucketId}/files`;
     const defParams: AxiosRequestConfig = {
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
       },
       data: body
     };
@@ -254,7 +254,7 @@ export class Bridge extends InxtApi {
     const targetUrl = `${this.url}/frames/${frameId}`;
     const defParams: AxiosRequestConfig = {
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
       },
       data: { ...body, challenges: body.challenges_as_str }
     };

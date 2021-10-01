@@ -3,7 +3,7 @@ import { buildCommand } from './CommandInterface';
 import { downloadFile, downloadFileParallel } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
-// import { uploadFile } from './upload-file';
+import { uploadFile } from './upload-file';
 import { uploadFolder } from './upload-folder-zip';
 
 function notifyProgramFinished(programName: string) {
@@ -12,14 +12,14 @@ function notifyProgramFinished(programName: string) {
   };
 }
 
-// export const uploadFileCommand = buildCommand({
-//   version: '0.0.1',
-//   command: 'upload-file <path>',
-//   description: 'Upload a file',
-//   options: []
-// }).action((path) => {
-//   uploadFile(path).finally(notifyProgramFinished('upload-file'));
-// });
+export const uploadFileCommand = buildCommand({
+  version: '0.0.1',
+  command: 'upload-file <path>',
+  description: 'Upload a file',
+  options: []
+}).action((path) => {
+  uploadFile(path).finally(notifyProgramFinished('upload-file'));
+});
 
 export const uploadFolderZipCommand = buildCommand({
   version: '0.0.1',
