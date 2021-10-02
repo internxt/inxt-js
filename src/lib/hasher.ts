@@ -12,8 +12,6 @@ export class HashStream extends Transform {
   }
 
   _transform(chunk: Buffer, enc: BufferEncoding, cb: TransformCallback) {
-    console.log('chunk', chunk && chunk.slice(0, 4).toString('hex'));
-    console.log('chunk is ', chunk === null);
     this.hasher.update(chunk);
     cb(null, chunk);
   }
