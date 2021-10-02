@@ -1,22 +1,21 @@
 import EventEmitter from 'events';
-import { createCipheriv } from 'crypto';
-import { Duplex, pipeline, Readable, Writable } from 'stream';
+import { createCipheriv, createHash } from 'crypto';
+import { Duplex, Readable, Writable } from 'stream';
 
 import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from './UploadStrategy';
 import { generateMerkleTree } from '../merkleTreeStreams';
 import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
 import { wrap } from '../utils/error';
-import { Events as ProgressEvents, ProgressNotifier } from '../streams';
 import AbortController from 'abort-controller';
-import { Contract } from '../../api';
 import { queue } from 'async';
 import { determineShardSize } from '../utils';
-import { FunnelStream } from '../funnelStream';
 import { Tap } from '../TapStream';
 import { HashStream } from '../hasher';
 import { ShardMeta } from '../shardMeta';
 import { ContractNegotiated } from '../contracts';
+import { FunnelStream } from '../funnelStream';
+import { logger } from '../utils/logger';
 
 interface Source {
   size: number;
@@ -161,30 +160,45 @@ export class OneStreamStrategy extends UploadStrategy {
     try {
       this.emit(UploadEvents.Started);
 
+      console.log('fk: %s', this.fileEncryptionKey.toString('hex'));
+      console.log('iv: %s', this.iv.toString('hex'));
+
       const concurrency = 1;
       const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const fileSize = this.source.size;
       const shardSize = determineShardSize(fileSize);
       const readable = this.source.stream;
       const tap = new Tap(shardSize);
-      const hasher = new HashStream();
+      const funnel = new FunnelStream(shardSize);
+      const nShards = Math.ceil(fileSize / shardSize);
 
-      const uploadPipeline = readable.pipe(cipher).pipe(tap).pipe(hasher);
+      logger.debug('Slicing file in %s shards', nShards);
+
+      const uploadPipeline = readable.pipe(cipher).pipe(tap).pipe(funnel);
 
       let currentShardIndex = 0;
-      let concurrentTasks = 0;
-      let finishedTasks = 0;
+      let concurrentTasks: any[] = [];
+      let finishedTasks: any[] = [];
+
+      console.log('shardSize', shardSize);
 
       uploadPipeline.on('data', (shard: Buffer) => {
-        concurrentTasks++;
+        console.log('shard encrypted start %s end %s', 
+          shard.slice(0, 4).toString('hex'),
+          shard.slice(shard.length - 4).toString('hex')
+        );
 
-        console.log('data', shard && shard.slice(0, 4).toString('hex'))
+        console.log('shard length %s', shard.length);
 
-        this.internalBuffer.push(shard);
+        this.internalBuffer[currentShardIndex] = shard;
+
+        const hash = createHash('ripemd160').update(
+          createHash('sha256').update(shard).digest()
+        ).digest('hex');
 
         const mTree = generateMerkleTree();
         const shardMeta: ShardMeta = {
-          hash: hasher.getHash().toString('hex'),
+          hash,
           index: currentShardIndex,
           parity: false,
           size: shard.length,
@@ -194,22 +208,31 @@ export class OneStreamStrategy extends UploadStrategy {
 
         this.shardMetas.push(shardMeta);
 
-        hasher.reset();
+        concurrentTasks.push(0);
+        currentShardIndex++;
 
         uploadQueue.push(shardMeta, () => {
-          finishedTasks++;
+          finishedTasks.push(0);
+
+          if (currentShardIndex === nShards) {
+            return this.emit(UploadEvents.Finished, { result: this.shardMetas });
+          }
 
           console.log('concurrentTasks %s | finishedTasks %s', concurrentTasks, finishedTasks);
 
-          if (finishedTasks === concurrentTasks) {
+          if (finishedTasks.length === concurrentTasks.length) {
             tap.open();
-            finishedTasks = 0;
-            concurrentTasks = 0;
+            finishedTasks = [];
+            concurrentTasks = [];
           }
         });
       });
 
       const uploadQueue = queue<ShardMeta>((shardMeta, next) => {
+        logger.debug('Processing shard %s, hash %s', shardMeta.index, shardMeta.hash);
+
+        console.log('shardMeta', JSON.stringify(shardMeta, null, 2));
+
         negotiateContract(shardMeta).then((contract) => {
           this.uploadShard(shardMeta, contract, (err) => {
             if (err) {
@@ -218,25 +241,17 @@ export class OneStreamStrategy extends UploadStrategy {
 
             this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
 
-            this.emit(UploadEvents.Progress, shardSize / fileSize);
+            this.emit(UploadEvents.Progress, shardMeta.size / fileSize);
 
             next();
           });
-        });
+        }).catch((err) => {
+          console.log('error here', err);
+          next(err);
+        })
       }, concurrency);
 
-      // const progressNotifier = new ProgressNotifier(this.source.size);
-
-      // progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
-      //   this.emit(UploadEvents.Progress, progress);
-      // });
-
       this.addToAbortables(() => uploadPipeline.destroy());
-
-      // this.emit(UploadEvents.Finished, { result: this.shardMetas });
-
-      // cleanStreams([ progressNotifier, uploadPipeline, encrypter, this.source.stream ]);
-      // cleanEventEmitters([ this ]);
     } catch (err) {
       this.emit(UploadEvents.Error, wrap('OneStreamStrategyError', err as Error));
     }
@@ -245,6 +260,9 @@ export class OneStreamStrategy extends UploadStrategy {
   private uploadShard(shardMeta: ShardMeta, contract: ContractNegotiated, cb: (err?: Error) => void) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
     const controller = new AbortController();
+
+    cb();
+    return;
 
     return ShardObject.requestPut(url).then((putUrl) => {
       return ShardObject.putStream(putUrl, Readable.from(this.internalBuffer[shardMeta.index]), controller);
