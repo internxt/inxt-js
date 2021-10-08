@@ -138,6 +138,12 @@ export class OneStreamStrategy extends UploadStrategy {
     super();
 
     this.source = params.source;
+
+    setInterval(() => {
+      console.log('INTERNAL', this.internalBuffer.map((b, i) => {
+        return { start: b.slice(0, 4).toString('hex'), end: b.slice(b.length - 4).toString('hex'), i };
+      }))
+    }, 1000);
   }
 
   getIv(): Buffer {
@@ -183,13 +189,7 @@ export class OneStreamStrategy extends UploadStrategy {
       console.log('shardSize', shardSize);
 
       uploadPipeline.on('data', (shard: Buffer) => {
-        console.log('shard encrypted start %s end %s', 
-          shard.slice(0, 4).toString('hex'),
-          shard.slice(shard.length - 4).toString('hex')
-        );
-
-        console.log('shard length %s', shard.length);
-
+        console.log('ONDATA', { start: shard.slice(0, 4), end: shard.slice(shard.length - 4) })
         this.internalBuffer[currentShardIndex] = shard;
 
         const hash = createHash('ripemd160').update(
@@ -259,14 +259,19 @@ export class OneStreamStrategy extends UploadStrategy {
 
   private uploadShard(shardMeta: ShardMeta, contract: ContractNegotiated, cb: (err?: Error) => void) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
-    const controller = new AbortController();
 
-    cb();
-    return;
+    return ShardObject.requestPut(url).then((url) => {
+      return new Promise((resolve, reject) => {
+        ShardObject.putStreamTwo(url, Readable.from(this.internalBuffer[shardMeta.index]), (err) => {
+          if (err) {
+            return reject(err);
+          }
 
-    return ShardObject.requestPut(url).then((putUrl) => {
-      return ShardObject.putStream(putUrl, Readable.from(this.internalBuffer[shardMeta.index]), controller);
-    }).then(() => {
+          return resolve(null);
+        });
+      });
+    }).then((res) => {
+      // if (res.status 200)
       cb();
     }).catch((err) => {
       cb(err);
