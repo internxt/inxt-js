@@ -37,6 +37,10 @@ interface Params extends UploadParams {
  * - Error handling
  * - Tests
  */
+
+/**
+ * TODO: Bug -> Upload is finished before all uploads finishes (check line 150)
+ */
 export class OneStreamStrategy extends UploadStrategy {
   private source: Source;
   private abortables: Abortable[] = [];
@@ -96,6 +100,7 @@ export class OneStreamStrategy extends UploadStrategy {
       let currentShards: any[] = [];
       let concurrentTasks: any[] = [];
       let finishedTasks: any[] = [];
+      let totalFinishedTasks: any[] = [];
 
       console.log('shardSize', shardSize);
 
@@ -132,6 +137,9 @@ export class OneStreamStrategy extends UploadStrategy {
         currentShards.push(0);
 
         uploadQueue.push(shardMeta, (err) => {
+          totalFinishedTasks.push(0);
+          finishedTasks.push(0);
+
           if (err) {
             // return this.emit(Events.Upload.)
             console.log('error during upload, killing queue');
@@ -141,9 +149,13 @@ export class OneStreamStrategy extends UploadStrategy {
             */
             return uploadQueue.kill();
           }
-          finishedTasks.push(0);
 
-          if (currentShardIndex === nShards - 1) {
+          /**
+           * TODO: BUG
+           * What if the currentShardIndex finishes before the currentShardIndex - n upload?
+           * Better check for total finished tasks
+           */
+          if (totalFinishedTasks.length === nShards) {
             return this.emit(UploadEvents.Finished, { result: this.shardMetas });
           }
 
