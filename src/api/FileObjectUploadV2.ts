@@ -69,6 +69,8 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
       this.index = randomBytes(32);
     }
 
+    // this.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
+
     this.iv = this.index.slice(0, 16);
 
     this.once(Events.Upload.Abort, this.abort.bind(this));
@@ -97,6 +99,11 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     } else {
       this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
     }
+
+    // this.fileEncryptionKey = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
+
+    console.log('FK: %s', this.fileEncryptionKey.toString('hex'));
+    console.log('INDEX: %s', this.index.toString('hex'));
 
     return this;
   }
@@ -220,7 +227,9 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   }
 }
 
-export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
+export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {  
+  // process.exit(0);
+  
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename: fileMeta.name,
