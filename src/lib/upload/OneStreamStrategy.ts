@@ -77,6 +77,17 @@ export class OneStreamStrategy extends UploadStrategy {
     this.fileEncryptionKey = fk;
   }
 
+  private startProgressInterval() {
+    this.progressIntervalId = setInterval(() => {
+      const currentProgress = this.uploadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.uploadsProgress.length;
+      this.emit(Events.Upload.Progress, currentProgress);
+    }, 5000);
+  }
+
+  private stopProgressInterval() {
+    clearInterval(this.progressIntervalId);
+  }
+
   async upload(negotiateContract: NegotiateContract): Promise<void> {
     try {
       this.emit(UploadEvents.Started);
@@ -92,6 +103,8 @@ export class OneStreamStrategy extends UploadStrategy {
       const tap = new Tap(concurrency * shardSize);
       const funnel = new FunnelStream(shardSize);
       const nShards = Math.ceil(fileSize / shardSize);
+
+      this.uploadsProgress = new Array(nShards).fill(0);
 
       logger.debug('Slicing file in %s shards', nShards);
 
@@ -235,15 +248,21 @@ export class OneStreamStrategy extends UploadStrategy {
     this.abortables.push({ abort: abortFunction });
   }
 
+  private handleError(err: Error) {
+    this.abortables.forEach((abortable) => abortable.abort());
+
+    this.emit(Events.Upload.Error, wrap('OneStreamStrategyError', err as Error));
+  }
+
   abort(): void {
-    this.emit(UploadEvents.Aborted);
+    this.emit(Events.Upload.Abort);
     this.abortables.forEach((abortable) => abortable.abort());
     this.removeAllListeners();
   }
-}
 
-function cleanEventEmitters(emitters: EventEmitter[]) {
-  emitters.forEach(e => e.removeAllListeners());
+  cleanup() {
+    this.stopProgressInterval();
+  }
 }
 
 function cleanStreams(streams: (Readable | Writable | Duplex)[]) {

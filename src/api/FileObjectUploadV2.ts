@@ -171,9 +171,9 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
     this.uploader.setIv(this.iv);
 
-    this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
-    this.uploader.once(UploadEvents.Aborted, () => this.uploader.emit(UploadEvents.Error, new Error('Upload aborted')));
-    this.uploader.on(UploadEvents.Progress, (progress: number) => this.emit(UploadEvents.Progress, progress));
+    this.uploader.once(Events.Upload.Started, () => this.logger.info('Upload started'));
+    this.uploader.once(Events.Upload.Abort, () => this.uploader.emit(UploadEvents.Error, new Error('Upload aborted')));
+    this.uploader.on(Events.Upload.Progress, (progress: number) => this.emit(UploadEvents.Progress, progress));
 
     let currentBytesUploaded = 0;
     this.uploader.on(UploadEvents.ShardUploadSuccess, (message: ShardUploadSuccessMessage) => {

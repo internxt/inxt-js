@@ -17,6 +17,7 @@ import { UploadTaskParams } from './UploadStream';
 import { Tap } from '../TapStream';
 import { Abortable } from '../../api/Abortable';
 import { ShardObject } from '../../api/ShardObject';
+import { Events } from '../../api/events';
 
 export type MultipleStreamsStrategyObject = { label: 'MultipleStreams', params: Params };
 
@@ -218,7 +219,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
   }
 
   abort(): void {
-    this.emit(UploadEvents.Aborted);
+    this.emit(Events.Upload.Abort);
     this.abortables.forEach((abortable) => {
       abortable.abort();
     });
