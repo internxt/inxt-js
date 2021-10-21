@@ -30,20 +30,17 @@ interface Params extends UploadParams {
 /**
  * TODO:  
  * - Fix progress notification. 
- * - Test parallelism. 
  * - Clean shardmeta array whenever is possible.
- * - Error handling
+ * - Abortable
  * - Tests
  */
 
-/**
- * TODO: Bug -> Upload is finished before all uploads finishes (check line 150)
- */
 export class OneStreamStrategy extends UploadStrategy {
   private source: Source;
   private abortables: Abortable[] = [];
   private internalBuffer: Buffer[] = [];
   private shardMetas: ShardMeta[] = [];
+  private aborted = false;
 
   private uploadsProgress: number[] = [];
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
@@ -83,12 +80,9 @@ export class OneStreamStrategy extends UploadStrategy {
   }
 
   async upload(negotiateContract: NegotiateContract): Promise<void> {
+    this.emit(UploadEvents.Started);
+
     try {
-      this.emit(UploadEvents.Started);
-
-      console.log('fk: %s', this.fileEncryptionKey.toString('hex'));
-      console.log('iv: %s', this.iv.toString('hex'));
-
       const concurrency = 2;
       const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const fileSize = this.source.size;
@@ -144,6 +138,9 @@ export class OneStreamStrategy extends UploadStrategy {
         uploadPipeline.on('data', (shard: Buffer) => {
           const currentShardIndex = currentShards.length;
 
+          /**
+           * TODO: Remove Buffer.from?
+           */
           this.internalBuffer[currentShardIndex] = Buffer.from(shard);
 
           /**
@@ -208,13 +205,17 @@ export class OneStreamStrategy extends UploadStrategy {
           return cb(err);
         }
 
-        return cb();
+        cb();
       });
     });
   }
 
   private addToAbortables(abortFunction: () => void) {
-    this.abortables.push({ abort: abortFunction });
+    if (this.aborted) {
+      abortFunction();
+    } else {
+      this.abortables.push({ abort: abortFunction });
+    }
   }
 
   private handleError(err: Error) {
@@ -224,6 +225,7 @@ export class OneStreamStrategy extends UploadStrategy {
   }
 
   abort(): void {
+    this.aborted = true;
     this.emit(Events.Upload.Abort);
     this.abortables.forEach((abortable) => abortable.abort());
     this.removeAllListeners();

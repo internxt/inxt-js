@@ -41,7 +41,11 @@ export async function uploadFile(filepath: string) {
         }
       };
 
-      network.upload(bucketId, uploadOpts, uploadStrategy);
+      const state = network.upload(bucketId, uploadOpts, uploadStrategy);
+
+      process.on('SIGINT', () => {
+        network.uploadCancel(state);
+      });
     });
   } catch (err) {
     logger.error('Error uploading file: %s', err.message);
