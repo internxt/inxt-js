@@ -90,6 +90,14 @@ export class ShardObject extends EventEmitter {
     return this.meta;
   }
 
+  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void) {
+    get<{ result: string }>(url, { useProxy: true }).then((res) => {
+      cb(null, res.result);
+    }).catch((err) => {
+      cb(err, '');
+    });
+  }
+
   static requestPut(url: string): Promise<PutUrl> {
     return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
   }
