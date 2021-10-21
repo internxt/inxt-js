@@ -47,18 +47,14 @@ export class OneStreamStrategy extends UploadStrategy {
   private internalBuffer: Buffer[] = [];
   private shardMetas: ShardMeta[] = [];
 
+  private uploadsProgress: number[] = [];
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
+
   constructor(params: Params) {
     super();
 
     this.source = params.source;
-
-    // setInterval(() => {
-    //   console.log('INTERNAL LENGTH', this.internalBuffer.length);
-    //   console.log('INTERNAL', this.internalBuffer);
-    //   // console.log('INTERNAL', this.internalBuffer.map((b, i) => {
-    //   //   return { start: b.slice(0, 4).toString('hex'), end: b.slice(b.length - 4).toString('hex'), i };
-    //   // }))
-    // }, 1000);
+    this.startProgressInterval();
   }
 
   getIv(): Buffer {
