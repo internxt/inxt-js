@@ -1,7 +1,6 @@
-import { queue } from 'async';
-import EventEmitter from 'events';
+import { queue, retry } from 'async';
 import { createCipheriv, createHash } from 'crypto';
-import { Duplex, Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 
 import { NegotiateContract, UploadEvents, UploadParams, UploadStrategy } from './UploadStrategy';
 import { generateMerkleTree } from '../merkleTreeStreams';
@@ -10,7 +9,6 @@ import { ShardObject } from '../../api/ShardObject';
 import { wrap } from '../utils/error';
 import { determineShardSize } from '../utils';
 import { Tap } from '../TapStream';
-import { HashStream } from '../hasher';
 import { ShardMeta } from '../shardMeta';
 import { ContractNegotiated } from '../contracts';
 import { FunnelStream } from '../funnelStream';
@@ -105,138 +103,113 @@ export class OneStreamStrategy extends UploadStrategy {
       logger.debug('Slicing file in %s shards', nShards);
 
       const uploadPipeline = readable.pipe(cipher).pipe(tap).pipe(funnel);
+      this.addToAbortables(() => uploadPipeline.destroy());
 
       let currentShards: any[] = [];
       let concurrentTasks: any[] = [];
       let finishedTasks: any[] = [];
       let totalFinishedTasks: any[] = [];
 
-      console.log('shardSize', shardSize);
-
-      uploadPipeline.on('data', (shard: Buffer) => {
-        const currentShardIndex = currentShards.length;
-
-        this.internalBuffer[currentShardIndex] = Buffer.from(shard);
-
-        // console.log('ONDATA', { 
-        //   start: shard.slice(0, 4), 
-        //   end: shard.slice(shard.length - 4),
-        //   index: currentShardIndex
-        // });
-
-        // console.log('stored on index %s is %s', currentShardIndex, this.internalBuffer[currentShardIndex].slice(0, 4).toString('hex'));
-
-        const hash = createHash('ripemd160').update(
-          createHash('sha256').update(shard).digest()
-        ).digest('hex');
-
-        const mTree = generateMerkleTree();
-        const shardMeta: ShardMeta = {
-          hash,
-          index: currentShardIndex,
-          parity: false,
-          size: shard.length,
-          tree: mTree.leaf,
-          challenges_as_str: mTree.challenges_as_str
-        };
-
-        this.shardMetas.push(shardMeta);
-
-        concurrentTasks.push(0);
-        currentShards.push(0);
-
-        uploadQueue.push(shardMeta, (err) => {
-          totalFinishedTasks.push(0);
-          finishedTasks.push(0);
-
-          if (err) {
-            // return this.emit(Events.Upload.)
-            console.log('error during upload, killing queue');
-            console.log(err);
-            /**
-             * TODO: Cleanup here
-            */
-            return uploadQueue.kill();
-          }
-
-          /**
-           * TODO: BUG
-           * What if the currentShardIndex finishes before the currentShardIndex - n upload?
-           * Better check for total finished tasks
-           */
-          if (totalFinishedTasks.length === nShards) {
-            return this.emit(UploadEvents.Finished, { result: this.shardMetas });
-          }
-
-          console.log('concurrentTasks %s | finishedTasks %s', concurrentTasks, finishedTasks);
-
-          if (finishedTasks.length === concurrentTasks.length) {
-            tap.open();
-            finishedTasks = [];
-            concurrentTasks = [];
-          }
-        });
-      });
-
       const uploadQueue = queue<ShardMeta>((shardMeta, next) => {
-        logger.debug('Processing shard %s, hash %s', shardMeta.index, shardMeta.hash);
+        retry({ times: 3, interval: 500 }, (nextTry) => {
+          logger.debug('Negotiating contract for shard %s, hash %s', shardMeta.index, shardMeta.hash);
 
-        // console.log('shardMeta', JSON.stringify(shardMeta, null, 2));
+          negotiateContract(shardMeta).then((contract) => {
+            logger.debug('Negotiated contract for shard %s. Uploading ...', shardMeta.index);
 
-        negotiateContract(shardMeta).then((contract) => {
-          console.log('Calling to upload shard for shard %s', shardMeta.index);
-          this.uploadShard(shardMeta, contract, (err) => {
-            if (err) {
-              return next(err);
-            }
+            this.uploadShard(shardMeta, contract, (err) => {
+              if (err) {
+                return nextTry(err);
+              }
 
-            console.log('cleaning shard %s', shardMeta.index);
+              this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
+              this.uploadsProgress[shardMeta.index] = 1;
 
-            this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
-
-            /* TODO: Count total progress here and notify it different */
-            this.emit(UploadEvents.Progress, shardMeta.size / fileSize);
-
-            next();
+              nextTry();
+            });
+          }).catch((err) => {
+            nextTry(err);
           });
-        }).catch((err) => {
-          console.log('error here', err);
-          next(err);
-        })
+        }, (err: Error | null | undefined) => {
+          if (err) {
+            return next(err);
+          }
+          next(null);
+        });
       }, concurrency);
 
-      this.addToAbortables(() => uploadPipeline.destroy());
+      this.addToAbortables(() => uploadQueue.kill());
+
+      await new Promise((resolve, reject) => {
+        uploadPipeline.on('data', (shard: Buffer) => {
+          const currentShardIndex = currentShards.length;
+
+          this.internalBuffer[currentShardIndex] = Buffer.from(shard);
+
+          /**
+           * TODO: calculate shard hash on the fly with a stream
+           */
+          const mTree = generateMerkleTree();
+          const shardMeta: ShardMeta = {
+            hash: calculateShardHash(shard).toString('hex'),
+            index: currentShardIndex,
+            parity: false,
+            size: shard.length,
+            tree: mTree.leaf,
+            challenges_as_str: mTree.challenges_as_str
+          };
+
+          this.shardMetas.push(shardMeta);
+
+          concurrentTasks.push(0);
+          currentShards.push(0);
+
+          uploadQueue.push(shardMeta, (err) => {
+            totalFinishedTasks.push(0);
+            finishedTasks.push(0);
+
+            if (err) {
+              return reject(err);
+            }
+
+            if (totalFinishedTasks.length === nShards) {
+              this.cleanup();
+              resolve(null);
+              return this.emit(UploadEvents.Finished, { result: this.shardMetas });
+            }
+
+            if (finishedTasks.length === concurrentTasks.length) {
+              tap.open();
+              finishedTasks = [];
+              concurrentTasks = [];
+            }
+          });
+        });
+      });
     } catch (err) {
-      this.emit(UploadEvents.Error, wrap('OneStreamStrategyError', err as Error));
+      this.handleError(err as Error);
     }
   }
 
   private uploadShard(shardMeta: ShardMeta, contract: ContractNegotiated, cb: (err?: Error) => void) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
 
-    // console.log('uploading shard man!! shard %s', shardMeta.index);
+    console.log('uploadShard %s', shardMeta.index);
 
-    return ShardObject.requestPut(url).then((url) => {
-      // console.log('PUT REQUESTED for shard %s', shardMeta.index);
-      return new Promise((resolve, reject) => {
-        ShardObject.putStreamTwo(url, Readable.from(this.internalBuffer[shardMeta.index]), (err) => {
-          console.log('XXX err for shard %s', err?.message, shardMeta.index);
-          if (err) {
-            return reject(err);
-          }
+    ShardObject.requestPutTwo(url, (err, putUrl) => {
+      if (err) {
+        return cb(err);
+      }
 
-          return resolve(null);
-        });
+      ShardObject.putStreamTwo(putUrl, Readable.from(this.internalBuffer[shardMeta.index]), (err) => {
+        console.log('XXX err for shard %s', err?.message, shardMeta.index);
+        if (err) {
+          // TODO: Si el error es un 304, hay que dar el shard por subido.
+          return cb(err);
+        }
+
+        return cb();
       });
-    }).then((res) => {
-      console.log('calling callback fro shard %s', shardMeta.index);
-      // if (res.status 200)
-      cb();
-    }).catch((err) => {
-      // TODO: Si el error es un 304, hay que dar el shard por subido.
-      console.log('calling callback for shard %s with error', shardMeta.index);
-      console.log('ERROR', err);
-      cb(err);
     });
   }
 
@@ -261,11 +234,8 @@ export class OneStreamStrategy extends UploadStrategy {
   }
 }
 
-function cleanStreams(streams: (Readable | Writable | Duplex)[]) {
-  cleanEventEmitters(streams);
-  streams.forEach(s => {
-    if (!s.destroyed) {
-      s.destroy();
-    }
-  });
+function calculateShardHash(shard: Buffer): Buffer {
+  return createHash('ripemd160').update(
+    createHash('sha256').update(shard).digest()
+  ).digest();
 }
