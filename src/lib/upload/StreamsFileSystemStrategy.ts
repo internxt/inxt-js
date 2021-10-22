@@ -142,7 +142,6 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
         return ShardObject.putStream(putUrl, source);
       }).then((res) => {
-        console.log('res', res);
         this.logger.debug('Shard %s uploaded correctly', shardMeta?.hash);
         cb();
       }).catch((err) => {

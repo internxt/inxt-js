@@ -113,9 +113,6 @@ export class ShardObject extends EventEmitter {
   static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{
     const formattedUrl = new URL(url);
 
-    console.log('hostname', formattedUrl.hostname);
-    console.log('path', formattedUrl.pathname + '?' + formattedUrl.searchParams.toString());
-
     const putRequest = request({
       hostname: formattedUrl.hostname,
       path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
@@ -131,7 +128,7 @@ export class ShardObject extends EventEmitter {
       res.once('error', cb);
       res.once('end', () => {
         const body = Buffer.concat(chunks);
-        console.log(body.toString());
+        // console.log(body.toString());
         cb(null);
       });
     });

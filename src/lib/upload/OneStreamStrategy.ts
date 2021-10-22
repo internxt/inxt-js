@@ -191,15 +191,12 @@ export class OneStreamStrategy extends UploadStrategy {
   private uploadShard(shardMeta: ShardMeta, contract: ContractNegotiated, cb: (err?: Error) => void) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
 
-    console.log('uploadShard %s', shardMeta.index);
-
     ShardObject.requestPutTwo(url, (err, putUrl) => {
       if (err) {
         return cb(err);
       }
 
       ShardObject.putStreamTwo(putUrl, Readable.from(this.internalBuffer[shardMeta.index]), (err) => {
-        console.log('XXX err for shard %s', err?.message, shardMeta.index);
         if (err) {
           // TODO: Si el error es un 304, hay que dar el shard por subido.
           return cb(err);

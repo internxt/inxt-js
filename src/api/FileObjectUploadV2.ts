@@ -100,11 +100,6 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
       this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
     }
 
-    // this.fileEncryptionKey = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
-
-    console.log('FK: %s', this.fileEncryptionKey.toString('hex'));
-    console.log('INDEX: %s', this.index.toString('hex'));
-
     return this;
   }
 
