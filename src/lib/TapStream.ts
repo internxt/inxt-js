@@ -30,8 +30,6 @@ export class Tap extends Transform {
       return;
     }
 
-    // console.log('diameterSize: %s, bytesRead: %s, incoming chunkSize: %s', this.diameterSize, this.bytesRead, chunk.length);
-
     if (this.temporalBuffer.length > 0) {
       const diffToRefill = this.diameterSize - this.temporalBuffer.length;
 
@@ -44,13 +42,7 @@ export class Tap extends Transform {
     }
 
     if (chunk.length > this.diameterSize - this.bytesRead) {
-      // console.log('chunk cannot be pushed at all');
-
-      if (this.diameterSize - this.bytesRead >= 0) { // bug here, if this.diameterSize - this.bytesRead == 0, what to do?
-        // console.log('pushing from byte 0 to byte %s', this.diameterSize - this.bytesRead - 1);
-        // console.log('bytes %s', this.diameterSize - this.bytesRead);
-        // console.log('saving from byte %s to byte %s', this.diameterSize - this.bytesRead, chunk.length);
-
+      if (this.diameterSize - this.bytesRead >= 0) {
         this.temporalBuffer = chunk.slice(this.diameterSize - this.bytesRead);
         this.pump(chunk.slice(0, this.diameterSize - this.bytesRead));
       }
@@ -69,15 +61,11 @@ export class Tap extends Transform {
   open() {
     this.emit(TapEvents.Opened);
 
-    console.log('opening tap');
-
     this.shouldContinue = true;
   }
 
   close(cb: ContinueCallback) {
     this.emit(TapEvents.Closed);
-
-    console.log('closing tap');
 
     this.pausedInterval = setInterval(() => {
       if (this.shouldContinue) {

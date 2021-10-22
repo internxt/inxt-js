@@ -1,8 +1,8 @@
-import { EventEmitter, Readable } from "stream";
+import { EventEmitter } from "stream";
 import { randomBytes } from "crypto";
 import winston from "winston";
 
-import { EnvironmentConfig, UploadProgressCallback } from "..";
+import { EnvironmentConfig } from "..";
 import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
 import { ShardObject } from "./ShardObject";
 import { INXTRequest } from "../lib";
@@ -10,7 +10,7 @@ import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameSt
 import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
 import { logger } from "../lib/utils/logger";
 import { wrap } from "../lib/utils/error";
-import { ShardUploadSuccessMessage, UploadEvents, UploadFinishedMessage, UploadStrategy } from "../lib/upload/UploadStrategy";
+import { UploadEvents, UploadFinishedMessage, UploadStrategy } from "../lib/upload/UploadStrategy";
 import { Abortable } from "./Abortable";
 
 import { Events } from './events';
@@ -68,6 +68,8 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     } else {
       this.index = randomBytes(32);
     }
+
+    // this.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
 
     this.iv = this.index.slice(0, 16);
 
@@ -158,21 +160,14 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
     return hmac.digest().toString('hex');
   }
 
-  upload(cb: UploadProgressCallback): Promise<ShardMeta[]> {
+  upload(): Promise<ShardMeta[]> {
     this.checkIfIsAborted();
 
     this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
     this.uploader.setIv(this.iv);
 
-    this.uploader.once(UploadEvents.Started, () => this.logger.info('Upload started'));
-    this.uploader.once(UploadEvents.Aborted, () => this.uploader.emit(UploadEvents.Error, new Error('Upload aborted')));
-    this.uploader.on(UploadEvents.Progress, (progress: number) => this.emit(UploadEvents.Progress, progress));
-
-    let currentBytesUploaded = 0;
-    this.uploader.on(UploadEvents.ShardUploadSuccess, (message: ShardUploadSuccessMessage) => {
-      this.logger.debug('Shard %s uploaded correctly. Size %s', message.hash, message.size);
-      currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, message.size, cb);
-    });
+    this.uploader.once(Events.Upload.Abort, () => this.uploader.emit(Events.Upload.Error, new Error('Upload aborted')));
+    this.uploader.on(Events.Upload.Progress, (progress) => this.emit(Events.Upload.Progress, progress));
 
     const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
       this.uploader.removeAllListeners();
@@ -220,7 +215,7 @@ export class FileObjectUploadV2 extends EventEmitter implements FileObjectUpload
   }
 }
 
-export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
+export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {    
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename: fileMeta.name,
@@ -233,13 +228,4 @@ export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: Fi
   }
 
   return bucketEntry;
-}
-
-function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
-  const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-  const progressCounter = newCurrentBytes / totalBytes;
-
-  progress(progressCounter, newCurrentBytes, totalBytes);
-
-  return newCurrentBytes;
 }

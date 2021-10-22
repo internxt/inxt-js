@@ -2,6 +2,7 @@ import archiver from 'archiver';
 import { Cipher, createCipheriv, randomBytes } from 'crypto';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
+import { v4 } from 'uuid';
 
 import { Environment, EnvironmentConfig } from '..';
 import { GenerateFileKey } from '../lib/crypto';
@@ -68,14 +69,16 @@ export async function uploadFolder(path: string) {
   );
 
   const cipher = createCipheriv('aes-256-ctr', fileEncryptionKey, iv);
-  const folderMeta = await getEncryptedFolderMeta(path, cipher);
+  const { hash, size } = await getEncryptedFolderMeta(path, cipher);
+  const networkFilename = v4();
 
   const archiverSetup = archiver('zip', { zlib: { level: 9 } })
   const directoryStream = archiverSetup.directory(path + '/', false);
   archiverSetup.finalize();
 
-  logger.debug('directory hash zipped is %s', folderMeta.hash);
-  logger.debug('directory ziped size is %s', folderMeta.size);
+  logger.debug('directory hash zipped is %s', hash);
+  logger.debug('directory ziped size is %s', size);
+  logger.info('Network name is %s', networkFilename);
 
   type ResolveFunction = (res: any) => void;
   type RejectFunction = (err: Error) => void;
@@ -87,7 +90,7 @@ export async function uploadFolder(path: string) {
   }
 
   const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction) => ({
-    filename: path,
+    filename: networkFilename,
     progressCallback: (progress: number) => {
       logger.debug('Progress %s%', (progress * 100).toFixed(2));
     },
@@ -97,11 +100,9 @@ export async function uploadFolder(path: string) {
   const uploadStrategy: OneStreamStrategyObject = {
     label: 'OneStreamOnly',
     params: {
-      desiredRamUsage: 200,
       source: {
         stream: directoryStream,
-        hash: folderMeta.hash,
-        size: folderMeta.size
+        size
       }
     }
   };

@@ -1,8 +1,5 @@
 import { DownloadEvents } from "../lib/download/DownloadStrategy";
-
-enum UploadEvents {
-  Abort = 'upload-aborted'
-}
+import { UploadEvents } from "../lib/upload/UploadStrategy";
 
 export const Events = {
   Upload: UploadEvents,

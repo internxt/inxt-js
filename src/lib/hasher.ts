@@ -20,6 +20,10 @@ export class HashStream extends Transform {
     return this.hasher.end(cb);
   }
 
+  reset() {
+    this.hasher = createHash('sha256');
+  }
+
   readHash() {
     if (!this.finalHash.length) {
       this.finalHash = this.hasher.read();

@@ -18,7 +18,7 @@ export enum UploadEvents {
   Error = 'upload-error',
   Started = 'upload-start',
   Progress = 'upload-progress',
-  Aborted = 'upload-aborted',
+  Abort = 'upload-aborted',
   Finished = 'upload-finished',
   ShardUploadSuccess = 'shard-upload-success',
 }
@@ -61,6 +61,4 @@ export abstract class UploadStrategy extends EventEmitter implements Abortable {
   abstract abort(): void;
 }
 
-export interface UploadParams {
-  desiredRamUsage: number;
-}
+export interface UploadParams {}

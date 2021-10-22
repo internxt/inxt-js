@@ -12,6 +12,8 @@ import { buildRequestUrl, Shard } from "./shard";
 import { get, getStream, putStream } from "../services/request";
 import AbortController from 'abort-controller';
 
+import { request } from 'https';
+
 type PutUrl = string;
 type GetUrl = string;
 
@@ -88,6 +90,14 @@ export class ShardObject extends EventEmitter {
     return this.meta;
   }
 
+  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void) {
+    get<{ result: string }>(url, { useProxy: true }).then((res) => {
+      cb(null, res.result);
+    }).catch((err) => {
+      cb(err, '');
+    });
+  }
+
   static requestPut(url: string): Promise<PutUrl> {
     return get<{ result: string }>(url, { useProxy: true }).then((res) => res.result);
   }
@@ -99,6 +109,32 @@ export class ShardObject extends EventEmitter {
   static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
     return putStream(url, content, { useProxy: false }, controller);
   }
+
+  static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{
+    const formattedUrl = new URL(url);
+
+    const putRequest = request({
+      hostname: formattedUrl.hostname,
+      path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
+      method: 'PUT'
+    }, (res) => {
+      if (res.statusCode !== 200) {
+        return cb(new Error('Request failed with status ' + res.statusCode));
+      }
+
+      const chunks: Buffer[] = [];
+
+      res.on('data', chunks.push.bind(chunks));
+      res.once('error', cb);
+      res.once('end', () => {
+        const body = Buffer.concat(chunks);
+        // console.log(body.toString());
+        cb(null);
+      });
+    });
+
+    content.pipe(putRequest);
+  } 
 
   negotiateContract(): Promise<ContractNegotiated> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);

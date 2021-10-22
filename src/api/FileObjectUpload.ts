@@ -316,8 +316,6 @@ export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: File
     hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
   };
 
-  // console.log('FINAL HMAC', bucketEntry.hmac);
-
   if (rs) {
     bucketEntry.erasure = { type: "reedsolomon" };
   }
