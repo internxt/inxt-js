@@ -17,11 +17,9 @@ export async function uploadFile(filepath: string) {
 
     const uploadStrategy: UploadStrategyObject = {
       label: 'OneStreamOnly',
-      params: { 
-        desiredRamUsage: 200 * 1024 * 1024, 
+      params: {
         source: {
           stream: createReadStream(filepath),
-          hash: '',
           size: statSync(filepath).size
         } 
       }

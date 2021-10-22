@@ -17,7 +17,6 @@ import { Events } from '../../api/events';
 
 interface Source {
   size: number;
-  hash: string;
   stream: Readable;
 }
 
@@ -31,7 +30,6 @@ interface Params extends UploadParams {
  * TODO:  
  * - Fix progress notification. 
  * - Clean shardmeta array whenever is possible.
- * - Abortable
  * - Tests
  */
 

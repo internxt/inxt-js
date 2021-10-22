@@ -44,7 +44,7 @@ interface Logger {
 
 export class StreamFileSystemStrategy extends UploadStrategy {
   private filepath: string;
-  private ramUsage: number;
+  // private ramUsage: number;
 
   private abortables: Abortable[] = [];
   private logger: Logger;
@@ -54,7 +54,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
 
     this.logger = logger;
     this.filepath = params.filepath;
-    this.ramUsage = params.desiredRamUsage;
+    // this.ramUsage = params.desiredRamUsage;
   }
 
   getIv(): Buffer {
@@ -125,7 +125,7 @@ export class StreamFileSystemStrategy extends UploadStrategy {
     const fileSize = statSync(this.filepath).size;
     const shardSize = determineShardSize(fileSize);
     const nShards = Math.ceil(fileSize / shardSize);
-    const concurrency = Math.min(determineConcurrency(this.ramUsage, fileSize), nShards);
+    const concurrency = Math.min(determineConcurrency(0, fileSize), nShards);
 
     const shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
     const shardMetas = await this.generateShardMetas(shards);
