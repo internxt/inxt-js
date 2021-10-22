@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { EventEmitter } from "stream";
 import winston from "winston";
-import { EnvironmentConfig, UploadProgressCallback } from "..";
+import { EnvironmentConfig } from "..";
 import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
 import { CreateEntryFromFrameBody, CreateEntryFromFrameResponse, InxtApiI } from "../services/api";
 import { UploadStrategy } from "../lib/upload/UploadStrategy";
@@ -43,7 +43,7 @@ export declare class FileObjectUploadV2 extends EventEmitter implements FileObje
     stage(): Promise<void>;
     SaveFileInNetwork(bucketEntry: CreateEntryFromFrameBody): Promise<CreateEntryFromFrameResponse>;
     GenerateHmac(shardMetas: ShardMeta[]): string;
-    upload(cb: UploadProgressCallback): Promise<ShardMeta[]>;
+    upload(): Promise<ShardMeta[]>;
     createBucketEntry(shardMetas: ShardMeta[]): Promise<void>;
     abort(): void;
     isAborted(): boolean;

@@ -26,7 +26,6 @@ interface Logger {
 }
 export declare class StreamFileSystemStrategy extends UploadStrategy {
     private filepath;
-    private ramUsage;
     private abortables;
     private logger;
     constructor(params: Params, logger: Logger);

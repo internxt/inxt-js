@@ -52,7 +52,6 @@ var ActionState_1 = require("./api/ActionState");
 var logger_1 = require("./lib/utils/logger");
 var fileinfo_1 = require("./api/fileinfo");
 var api_1 = require("./services/api");
-var upload_2 = require("./lib/upload");
 var EmptyStrategy_1 = require("./lib/upload/EmptyStrategy");
 var hasher_1 = require("./lib/hasher");
 var utils = {
@@ -79,9 +78,6 @@ var Environment = /** @class */ (function () {
                 var strategy = new EmptyStrategy_1.EmptyStrategy();
                 if (strategyObj.label === 'OneStreamOnly') {
                     strategy = new upload_1.OneStreamStrategy(strategyObj.params);
-                }
-                if (strategyObj.label === 'MultipleStreams') {
-                    strategy = new upload_2.StreamFileSystemStrategy(strategyObj.params, logger_1.logger);
                 }
                 if (strategy instanceof EmptyStrategy_1.EmptyStrategy) {
                     return opts.finishedCallback(new Error('Unknown upload strategy'), null);

@@ -48,26 +48,39 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OneStreamStrategy = void 0;
+var async_1 = require("async");
 var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var UploadStrategy_1 = require("./UploadStrategy");
 var merkleTreeStreams_1 = require("../merkleTreeStreams");
 var ShardObject_1 = require("../../api/ShardObject");
 var error_1 = require("../utils/error");
-var streams_1 = require("../streams");
-var abort_controller_1 = __importDefault(require("abort-controller"));
-var api_1 = require("../../api");
+var utils_1 = require("../utils");
+var TapStream_1 = require("../TapStream");
+var funnelStream_1 = require("../funnelStream");
+var logger_1 = require("../utils/logger");
+var events_1 = require("../../api/events");
+/**
+ * TODO:
+ * - Fix progress notification.
+ * - Clean shardmeta array whenever is possible.
+ * - Tests
+ */
 var OneStreamStrategy = /** @class */ (function (_super) {
     __extends(OneStreamStrategy, _super);
     function OneStreamStrategy(params) {
         var _this = _super.call(this) || this;
         _this.abortables = [];
+        _this.internalBuffer = [];
+        _this.shardMetas = [];
+        _this.aborted = false;
+        _this.uploadsProgress = [];
+        _this.progressIntervalId = setTimeout(function () { });
         _this.source = params.source;
+        _this.startProgressInterval();
+        _this.once(events_1.Events.Upload.Abort, _this.abort.bind(_this));
         return _this;
     }
     OneStreamStrategy.prototype.getIv = function () {
@@ -82,80 +95,160 @@ var OneStreamStrategy = /** @class */ (function (_super) {
     OneStreamStrategy.prototype.setFileEncryptionKey = function (fk) {
         this.fileEncryptionKey = fk;
     };
+    OneStreamStrategy.prototype.startProgressInterval = function () {
+        var _this = this;
+        this.progressIntervalId = setInterval(function () {
+            var currentProgress = _this.uploadsProgress.reduce(function (acumm, progress) { return acumm + progress; }, 0) / _this.uploadsProgress.length;
+            _this.emit(events_1.Events.Upload.Progress, currentProgress);
+        }, 5000);
+    };
+    OneStreamStrategy.prototype.stopProgressInterval = function () {
+        clearInterval(this.progressIntervalId);
+    };
     OneStreamStrategy.prototype.upload = function (negotiateContract) {
         return __awaiter(this, void 0, void 0, function () {
-            var merkleTree, shardMeta, contract, url, encrypter, progressNotifier, putUrl, uploadPipeline_1, controller_1, err_1;
+            var concurrency, cipher, fileSize, shardSize, readable, tap_1, funnel, nShards_1, uploadPipeline_1, currentShards_1, concurrentTasks_1, finishedTasks_1, totalFinishedTasks_1, uploadQueue_1, err_1;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        _a.trys.push([0, 4, , 5]);
                         this.emit(UploadStrategy_1.UploadEvents.Started);
-                        merkleTree = merkleTreeStreams_1.generateMerkleTree();
-                        shardMeta = {
-                            hash: this.source.hash,
-                            size: this.source.size,
-                            index: 0,
-                            parity: false,
-                            challenges_as_str: merkleTree.challenges_as_str,
-                            tree: merkleTree.leaf
-                        };
-                        return [4 /*yield*/, negotiateContract(shardMeta)];
+                        _a.label = 1;
                     case 1:
-                        contract = _a.sent();
-                        url = api_1.Contract.buildRequestUrl(contract);
-                        encrypter = crypto_1.createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
-                        progressNotifier = new streams_1.ProgressNotifier(this.source.size);
-                        progressNotifier.on(streams_1.Events.Progress, function (progress) {
-                            _this.emit(UploadStrategy_1.UploadEvents.Progress, progress);
-                        });
-                        return [4 /*yield*/, ShardObject_1.ShardObject.requestPut(url)];
-                    case 2:
-                        putUrl = _a.sent();
-                        uploadPipeline_1 = stream_1.pipeline(this.source.stream, encrypter, progressNotifier, function (err) {
-                            if (err) {
-                                uploadPipeline_1.destroy();
-                                _this.emit(UploadStrategy_1.UploadEvents.Error, error_1.wrap('OneStreamStrategyError', err));
-                            }
-                        });
-                        controller_1 = new abort_controller_1.default();
+                        _a.trys.push([1, 3, , 4]);
+                        concurrency = 2;
+                        cipher = crypto_1.createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
+                        fileSize = this.source.size;
+                        shardSize = utils_1.determineShardSize(fileSize);
+                        readable = this.source.stream;
+                        tap_1 = new TapStream_1.Tap(concurrency * shardSize);
+                        funnel = new funnelStream_1.FunnelStream(shardSize);
+                        nShards_1 = Math.ceil(fileSize / shardSize);
+                        this.uploadsProgress = new Array(nShards_1).fill(0);
+                        logger_1.logger.debug('Slicing file in %s shards', nShards_1);
+                        uploadPipeline_1 = readable.pipe(cipher).pipe(tap_1).pipe(funnel);
                         this.addToAbortables(function () { return uploadPipeline_1.destroy(); });
-                        this.addToAbortables(function () { return controller_1.abort(); });
-                        return [4 /*yield*/, ShardObject_1.ShardObject.putStream(putUrl, uploadPipeline_1, controller_1)];
-                    case 3:
+                        currentShards_1 = [];
+                        concurrentTasks_1 = [];
+                        finishedTasks_1 = [];
+                        totalFinishedTasks_1 = [];
+                        uploadQueue_1 = async_1.queue(function (shardMeta, next) {
+                            async_1.retry({ times: 3, interval: 500 }, function (nextTry) {
+                                logger_1.logger.debug('Negotiating contract for shard %s, hash %s', shardMeta.index, shardMeta.hash);
+                                negotiateContract(shardMeta).then(function (contract) {
+                                    logger_1.logger.debug('Negotiated contract for shard %s. Uploading ...', shardMeta.index);
+                                    _this.uploadShard(shardMeta, contract, function (err) {
+                                        if (err) {
+                                            return nextTry(err);
+                                        }
+                                        _this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
+                                        _this.uploadsProgress[shardMeta.index] = 1;
+                                        nextTry();
+                                    });
+                                }).catch(function (err) {
+                                    nextTry(err);
+                                });
+                            }, function (err) {
+                                if (err) {
+                                    return next(err);
+                                }
+                                next(null);
+                            });
+                        }, concurrency);
+                        this.addToAbortables(function () { return uploadQueue_1.kill(); });
+                        return [4 /*yield*/, new Promise(function (resolve, reject) {
+                                uploadPipeline_1.on('data', function (shard) {
+                                    var currentShardIndex = currentShards_1.length;
+                                    /**
+                                     * TODO: Remove Buffer.from?
+                                     */
+                                    _this.internalBuffer[currentShardIndex] = Buffer.from(shard);
+                                    /**
+                                     * TODO: calculate shard hash on the fly with a stream
+                                     */
+                                    var mTree = merkleTreeStreams_1.generateMerkleTree();
+                                    var shardMeta = {
+                                        hash: calculateShardHash(shard).toString('hex'),
+                                        index: currentShardIndex,
+                                        parity: false,
+                                        size: shard.length,
+                                        tree: mTree.leaf,
+                                        challenges_as_str: mTree.challenges_as_str
+                                    };
+                                    _this.shardMetas.push(shardMeta);
+                                    concurrentTasks_1.push(0);
+                                    currentShards_1.push(0);
+                                    uploadQueue_1.push(shardMeta, function (err) {
+                                        totalFinishedTasks_1.push(0);
+                                        finishedTasks_1.push(0);
+                                        if (err) {
+                                            return reject(err);
+                                        }
+                                        if (totalFinishedTasks_1.length === nShards_1) {
+                                            _this.cleanup();
+                                            resolve(null);
+                                            return _this.emit(UploadStrategy_1.UploadEvents.Finished, { result: _this.shardMetas });
+                                        }
+                                        if (finishedTasks_1.length === concurrentTasks_1.length) {
+                                            tap_1.open();
+                                            finishedTasks_1 = [];
+                                            concurrentTasks_1 = [];
+                                        }
+                                    });
+                                });
+                            })];
+                    case 2:
                         _a.sent();
-                        this.emit(UploadStrategy_1.UploadEvents.Finished, { result: [shardMeta] });
-                        cleanStreams([progressNotifier, uploadPipeline_1, encrypter, this.source.stream]);
-                        cleanEventEmitters([this]);
-                        return [3 /*break*/, 5];
-                    case 4:
+                        return [3 /*break*/, 4];
+                    case 3:
                         err_1 = _a.sent();
-                        this.emit(UploadStrategy_1.UploadEvents.Error, error_1.wrap('OneStreamStrategyError', err_1));
-                        return [3 /*break*/, 5];
-                    case 5: return [2 /*return*/];
+                        this.handleError(err_1);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
                 }
             });
         });
     };
+    OneStreamStrategy.prototype.uploadShard = function (shardMeta, contract, cb) {
+        var _this = this;
+        var url = "http://" + contract.farmer.address + ":" + contract.farmer.port + "/upload/link/" + shardMeta.hash;
+        ShardObject_1.ShardObject.requestPutTwo(url, function (err, putUrl) {
+            if (err) {
+                return cb(err);
+            }
+            ShardObject_1.ShardObject.putStreamTwo(putUrl, stream_1.Readable.from(_this.internalBuffer[shardMeta.index]), function (err) {
+                if (err) {
+                    // TODO: Si el error es un 304, hay que dar el shard por subido.
+                    return cb(err);
+                }
+                cb();
+            });
+        });
+    };
     OneStreamStrategy.prototype.addToAbortables = function (abortFunction) {
-        this.abortables.push({ abort: abortFunction });
+        if (this.aborted) {
+            abortFunction();
+        }
+        else {
+            this.abortables.push({ abort: abortFunction });
+        }
+    };
+    OneStreamStrategy.prototype.handleError = function (err) {
+        this.abortables.forEach(function (abortable) { return abortable.abort(); });
+        this.emit(events_1.Events.Upload.Error, error_1.wrap('OneStreamStrategyError', err));
     };
     OneStreamStrategy.prototype.abort = function () {
-        this.emit(UploadStrategy_1.UploadEvents.Aborted);
+        this.aborted = true;
+        this.emit(events_1.Events.Upload.Abort);
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
         this.removeAllListeners();
+    };
+    OneStreamStrategy.prototype.cleanup = function () {
+        this.stopProgressInterval();
     };
     return OneStreamStrategy;
 }(UploadStrategy_1.UploadStrategy));
 exports.OneStreamStrategy = OneStreamStrategy;
-function cleanEventEmitters(emitters) {
-    emitters.forEach(function (e) { return e.removeAllListeners(); });
-}
-function cleanStreams(streams) {
-    cleanEventEmitters(streams);
-    streams.forEach(function (s) {
-        if (!s.destroyed) {
-            s.destroy();
-        }
-    });
+function calculateShardHash(shard) {
+    return crypto_1.createHash('ripemd160').update(crypto_1.createHash('sha256').update(shard).digest()).digest();
 }

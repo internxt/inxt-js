@@ -9,7 +9,6 @@ function GetFileInfo(config, bucketId, fileId, token) {
         .then(function (res) { return res.data; })
         .catch(function (err) {
         var _a;
-        console.log(err);
         switch ((_a = err.response) === null || _a === void 0 ? void 0 : _a.status) {
             case 404:
                 throw Error(err.response.data.error);

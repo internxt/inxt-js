@@ -89,7 +89,7 @@ function upload(config, bucketId, fileMeta, params, debug, actionState) {
 exports.upload = upload;
 function uploadV2(config, fileMeta, bucketId, params, debug, actionState, uploader) {
     return __awaiter(this, void 0, void 0, function () {
-        var file, uploadResponses;
+        var file, shardMetas;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -110,11 +110,11 @@ function uploadV2(config, fileMeta, bucketId, params, debug, actionState, upload
                     return [4 /*yield*/, file.stage()];
                 case 3:
                     _a.sent();
-                    return [4 /*yield*/, file.upload(params.progressCallback)];
+                    return [4 /*yield*/, file.upload()];
                 case 4:
-                    uploadResponses = _a.sent();
+                    shardMetas = _a.sent();
                     logger_1.logger.debug('Upload finished. Creating bucket entry...');
-                    return [4 /*yield*/, file.createBucketEntry(uploadResponses)];
+                    return [4 /*yield*/, file.createBucketEntry(shardMetas)];
                 case 5:
                     _a.sent();
                     logger_1.logger.info('Uploaded file with id %s', file.getId());

@@ -78,15 +78,17 @@ var funnelStream_1 = require("../funnelStream");
 var UploadStream_1 = require("./UploadStream");
 var TapStream_1 = require("../TapStream");
 var ShardObject_1 = require("../../api/ShardObject");
+var events_1 = require("../../api/events");
 var StreamFileSystemStrategy = /** @class */ (function (_super) {
     __extends(StreamFileSystemStrategy, _super);
     function StreamFileSystemStrategy(params, logger) {
         var _this = _super.call(this) || this;
+        // private ramUsage: number;
         _this.abortables = [];
         _this.logger = logger;
         _this.filepath = params.filepath;
-        _this.ramUsage = params.desiredRamUsage;
         return _this;
+        // this.ramUsage = params.desiredRamUsage;
     }
     StreamFileSystemStrategy.prototype.getIv = function () {
         return this.iv;
@@ -161,7 +163,7 @@ var StreamFileSystemStrategy = /** @class */ (function (_super) {
                         fileSize = fs_1.statSync(this.filepath).size;
                         shardSize = utils_1.determineShardSize(fileSize);
                         nShards = Math.ceil(fileSize / shardSize);
-                        concurrency = Math.min(utils_1.determineConcurrency(this.ramUsage, fileSize), nShards);
+                        concurrency = Math.min(utils_1.determineConcurrency(0, fileSize), nShards);
                         shards = this.generateShardAccessors(this.filepath, nShards, shardSize, fileSize);
                         return [4 /*yield*/, this.generateShardMetas(shards)];
                     case 1:
@@ -178,7 +180,6 @@ var StreamFileSystemStrategy = /** @class */ (function (_super) {
                                 _this.logger.debug('Streaming shard %s to %s', shardMeta === null || shardMeta === void 0 ? void 0 : shardMeta.hash, putUrl);
                                 return ShardObject_1.ShardObject.putStream(putUrl, source);
                             }).then(function (res) {
-                                console.log('res', res);
                                 _this.logger.debug('Shard %s uploaded correctly', shardMeta === null || shardMeta === void 0 ? void 0 : shardMeta.hash);
                                 cb();
                             }).catch(function (err) {
@@ -267,7 +268,7 @@ var StreamFileSystemStrategy = /** @class */ (function (_super) {
         });
     };
     StreamFileSystemStrategy.prototype.abort = function () {
-        this.emit(UploadStrategy_1.UploadEvents.Aborted);
+        this.emit(events_1.Events.Upload.Abort);
         this.abortables.forEach(function (abortable) {
             abortable.abort();
         });

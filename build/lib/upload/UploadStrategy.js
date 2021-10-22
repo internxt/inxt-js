@@ -20,7 +20,7 @@ var UploadEvents;
     UploadEvents["Error"] = "upload-error";
     UploadEvents["Started"] = "upload-start";
     UploadEvents["Progress"] = "upload-progress";
-    UploadEvents["Aborted"] = "upload-aborted";
+    UploadEvents["Abort"] = "upload-aborted";
     UploadEvents["Finished"] = "upload-finished";
     UploadEvents["ShardUploadSuccess"] = "shard-upload-success";
 })(UploadEvents = exports.UploadEvents || (exports.UploadEvents = {}));

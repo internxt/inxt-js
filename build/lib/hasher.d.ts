@@ -7,6 +7,7 @@ export declare class HashStream extends Transform {
     constructor(opts?: TransformOptions);
     _transform(chunk: Buffer, enc: BufferEncoding, cb: TransformCallback): void;
     _flush(cb: (err: Error | null) => void): void;
+    reset(): void;
     readHash(): Buffer;
     getHash(): Buffer;
 }

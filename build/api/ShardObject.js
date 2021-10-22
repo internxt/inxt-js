@@ -65,6 +65,7 @@ var events_1 = require("events");
 var error_1 = require("../lib/utils/error");
 var logger_1 = require("../lib/utils/logger");
 var request_1 = require("../services/request");
+var https_1 = require("https");
 var ShardObject = /** @class */ (function (_super) {
     __extends(ShardObject, _super);
     function ShardObject(api, frameId, meta, shard) {
@@ -139,6 +140,13 @@ var ShardObject = /** @class */ (function (_super) {
             });
         });
     };
+    ShardObject.requestPutTwo = function (url, cb) {
+        request_1.get(url, { useProxy: true }).then(function (res) {
+            cb(null, res.result);
+        }).catch(function (err) {
+            cb(err, '');
+        });
+    };
     ShardObject.requestPut = function (url) {
         return request_1.get(url, { useProxy: true }).then(function (res) { return res.result; });
     };
@@ -148,6 +156,27 @@ var ShardObject = /** @class */ (function (_super) {
     };
     ShardObject.putStream = function (url, content, controller) {
         return request_1.putStream(url, content, { useProxy: false }, controller);
+    };
+    ShardObject.putStreamTwo = function (url, content, cb) {
+        var formattedUrl = new URL(url);
+        var putRequest = https_1.request({
+            hostname: formattedUrl.hostname,
+            path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
+            method: 'PUT'
+        }, function (res) {
+            if (res.statusCode !== 200) {
+                return cb(new Error('Request failed with status ' + res.statusCode));
+            }
+            var chunks = [];
+            res.on('data', chunks.push.bind(chunks));
+            res.once('error', cb);
+            res.once('end', function () {
+                var body = Buffer.concat(chunks);
+                // console.log(body.toString());
+                cb(null);
+            });
+        });
+        content.pipe(putRequest);
     };
     ShardObject.prototype.negotiateContract = function () {
         var req = this.api.addShardToFrame(this.frameId, this.meta);

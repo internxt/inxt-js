@@ -314,7 +314,6 @@ function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
         index: fileObject.index.toString('hex'),
         hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
     };
-    // console.log('FINAL HMAC', bucketEntry.hmac);
     if (rs) {
         bucketEntry.erasure = { type: "reedsolomon" };
     }

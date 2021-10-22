@@ -1,9 +1,6 @@
 import { DownloadEvents } from "../lib/download/DownloadStrategy";
-declare enum UploadEvents {
-    Abort = "upload-aborted"
-}
+import { UploadEvents } from "../lib/upload/UploadStrategy";
 export declare const Events: {
     Upload: typeof UploadEvents;
     Download: typeof DownloadEvents;
 };
-export {};

@@ -22,9 +22,11 @@ export declare class ShardObject extends EventEmitter {
     get hash(): string;
     get index(): number;
     upload(content: Buffer): Promise<ShardMeta>;
+    static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void): void;
     static requestPut(url: string): Promise<PutUrl>;
     static requestGet(url: string, useProxy?: boolean): Promise<GetUrl>;
     static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any>;
+    static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void;
     negotiateContract(): Promise<ContractNegotiated>;
     private sendShardToNode;
     abort(): void;

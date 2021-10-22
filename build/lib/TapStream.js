@@ -38,7 +38,6 @@ var Tap = /** @class */ (function (_super) {
             done(new Error('TapStreamError: Chunk length is bigger than diameter size'));
             return;
         }
-        // console.log('diameterSize: %s, bytesRead: %s, incoming chunkSize: %s', this.diameterSize, this.bytesRead, chunk.length);
         if (this.temporalBuffer.length > 0) {
             var diffToRefill = this.diameterSize - this.temporalBuffer.length;
             this.pump(Buffer.concat([this.temporalBuffer, chunk.slice(0, diffToRefill)]));
@@ -47,11 +46,7 @@ var Tap = /** @class */ (function (_super) {
             chunk = chunk.slice(diffToRefill);
         }
         if (chunk.length > this.diameterSize - this.bytesRead) {
-            // console.log('chunk cannot be pushed at all');
-            if (this.diameterSize - this.bytesRead >= 0) { // bug here, if this.diameterSize - this.bytesRead == 0, what to do?
-                // console.log('pushing from byte 0 to byte %s', this.diameterSize - this.bytesRead - 1);
-                // console.log('bytes %s', this.diameterSize - this.bytesRead);
-                // console.log('saving from byte %s to byte %s', this.diameterSize - this.bytesRead, chunk.length);
+            if (this.diameterSize - this.bytesRead >= 0) {
                 this.temporalBuffer = chunk.slice(this.diameterSize - this.bytesRead);
                 this.pump(chunk.slice(0, this.diameterSize - this.bytesRead));
             }
@@ -68,13 +63,11 @@ var Tap = /** @class */ (function (_super) {
     };
     Tap.prototype.open = function () {
         this.emit(TapEvents.Opened);
-        console.log('opening tap');
         this.shouldContinue = true;
     };
     Tap.prototype.close = function (cb) {
         var _this = this;
         this.emit(TapEvents.Closed);
-        console.log('closing tap');
         this.pausedInterval = setInterval(function () {
             if (_this.shouldContinue) {
                 cb(null);

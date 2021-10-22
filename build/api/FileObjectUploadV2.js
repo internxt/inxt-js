@@ -89,6 +89,7 @@ var FileObjectUploadV2 = /** @class */ (function (_super) {
         else {
             _this.index = crypto_1.randomBytes(32);
         }
+        // this.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
         _this.iv = _this.index.slice(0, 16);
         _this.once(events_1.Events.Upload.Abort, _this.abort.bind(_this));
         return _this;
@@ -176,19 +177,13 @@ var FileObjectUploadV2 = /** @class */ (function (_super) {
         }
         return hmac.digest().toString('hex');
     };
-    FileObjectUploadV2.prototype.upload = function (cb) {
+    FileObjectUploadV2.prototype.upload = function () {
         var _this = this;
         this.checkIfIsAborted();
         this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
         this.uploader.setIv(this.iv);
-        this.uploader.once(UploadStrategy_1.UploadEvents.Started, function () { return _this.logger.info('Upload started'); });
-        this.uploader.once(UploadStrategy_1.UploadEvents.Aborted, function () { return _this.uploader.emit(UploadStrategy_1.UploadEvents.Error, new Error('Upload aborted')); });
-        this.uploader.on(UploadStrategy_1.UploadEvents.Progress, function (progress) { return _this.emit(UploadStrategy_1.UploadEvents.Progress, progress); });
-        var currentBytesUploaded = 0;
-        this.uploader.on(UploadStrategy_1.UploadEvents.ShardUploadSuccess, function (message) {
-            _this.logger.debug('Shard %s uploaded correctly. Size %s', message.hash, message.size);
-            currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, message.size, cb);
-        });
+        this.uploader.once(events_1.Events.Upload.Abort, function () { return _this.uploader.emit(events_1.Events.Upload.Error, new Error('Upload aborted')); });
+        this.uploader.on(events_1.Events.Upload.Progress, function (progress) { return _this.emit(events_1.Events.Upload.Progress, progress); });
         var errorHandler = function (reject) { return function (err) {
             _this.uploader.removeAllListeners();
             reject(err);
@@ -243,9 +238,3 @@ function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
     return bucketEntry;
 }
 exports.generateBucketEntry = generateBucketEntry;
-function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
-    var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-    var progressCounter = newCurrentBytes / totalBytes;
-    progress(progressCounter, newCurrentBytes, totalBytes);
-    return newCurrentBytes;
-}
