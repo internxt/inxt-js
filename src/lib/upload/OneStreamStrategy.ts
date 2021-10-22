@@ -50,6 +50,8 @@ export class OneStreamStrategy extends UploadStrategy {
 
     this.source = params.source;
     this.startProgressInterval();
+
+    this.once(Events.Upload.Abort, this.abort.bind(this));
   }
 
   getIv(): Buffer {

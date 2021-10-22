@@ -44,6 +44,7 @@ export async function uploadFile(filepath: string) {
       const state = network.upload(bucketId, uploadOpts, uploadStrategy);
 
       process.on('SIGINT', () => {
+        logger.info('Aborting upload');
         network.uploadCancel(state);
       });
     });

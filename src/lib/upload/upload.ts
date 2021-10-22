@@ -58,11 +58,11 @@ export async function uploadV2(config: EnvironmentConfig, fileMeta: FileMeta, bu
   await file.checkBucketExistence();
   await file.stage();
 
-  const uploadResponses = await file.upload(params.progressCallback);
+  const shardMetas = await file.upload();
 
   logger.debug('Upload finished. Creating bucket entry...');
 
-  await file.createBucketEntry(uploadResponses);
+  await file.createBucketEntry(shardMetas);
 
   logger.info('Uploaded file with id %s', file.getId());
 
