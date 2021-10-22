@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { mnemonicToSeed } from 'bip39';
 
-import { BUCKET_NAME_MAGIC, BUCKET_META_MAGIC, GCM_DIGEST_SIZE, SHA256_DIGEST_SIZE } from './constants';
+import { BUCKET_META_MAGIC, GCM_DIGEST_SIZE, SHA256_DIGEST_SIZE } from './constants';
 
 export function sha256(input: Buffer): Buffer {
   return crypto.createHash('sha256').update(input).digest();
