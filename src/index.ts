@@ -76,8 +76,6 @@ export interface EnvironmentConfig {
 }
 
 
-type GetInfoCallback = (err: Error | null, result: any) => void;
-
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
 type GetBucketIdCallback = (err: Error | null, result: any) => void;
@@ -114,15 +112,6 @@ export class Environment {
   constructor(config: EnvironmentConfig) {
     this.config = config;
     this.logger = Logger.getInstance(1);
-  }
-
-  /**
-   * Gets general API info
-   * @param cb Callback that will receive api's info
-   */
-  getInfo(cb: GetInfoCallback): void {
-    /* TODO */
-    cb(null, 'Not implemented yet');
   }
 
   /**

@@ -21,7 +21,8 @@ export class EmptyStrategy extends UploadStrategy {
     this.fileEncryptionKey = fk;
   }
 
-  async upload(): Promise<void> {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  upload(negotiateContract: NegotiateContract): void { null }
 
-  abort(): void {}
+  abort(): void { null }
 }

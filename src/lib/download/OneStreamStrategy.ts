@@ -22,6 +22,7 @@ export class OneStreamStrategy extends DownloadStrategy {
   private decipher: Decipher;
   private config: EnvironmentConfig;
   private concurrency: number;
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
   private aborted = false;
   private logger: winston.Logger;

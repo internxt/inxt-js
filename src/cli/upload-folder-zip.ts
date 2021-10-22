@@ -40,7 +40,7 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
 
   setTimeout(archive.finalize.bind(archive), 100);
 
-  hasher.on('data', () => {});
+  hasher.on('data', () => null);
 
   return pipelineAsync(archive.directory(folderPath + '/', false), cipher, counter, hasher)
     .then(() => {
@@ -80,7 +80,7 @@ export async function uploadFolder(path: string) {
   logger.debug('directory ziped size is %s', size);
   logger.info('Network name is %s', networkFilename);
 
-  type ResolveFunction = (res: any) => void;
+  type ResolveFunction = (res: null) => void;
   type RejectFunction = (err: Error) => void;
 
   const finishCbGenerator = (resolve: ResolveFunction, reject: RejectFunction) => {

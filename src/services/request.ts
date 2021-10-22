@@ -8,9 +8,6 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig } from '..';
 import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
-import { Methods } from './api';
-import { wrap } from '../lib/utils/error';
-import AbortController from 'abort-controller';
 import needle from 'needle';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
@@ -185,7 +182,7 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
   return getStream;
 }
 
-export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {
+export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }): Promise<K> {
   let targetUrl = url;
   let free: undefined | (() => void);
 

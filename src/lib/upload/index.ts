@@ -6,4 +6,3 @@ export interface UploadOptions extends UploadFileOptions {
 
 export * from './upload';
 export * from './OneStreamStrategy';
-export * from './StreamsFileSystemStrategy';

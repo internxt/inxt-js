@@ -11,7 +11,7 @@ export interface ShardUploadSuccessMessage {
 }
 
 export interface UploadFinishedMessage {
-  result: any;
+  result: ShardMeta[];
 }
 
 export enum UploadEvents {

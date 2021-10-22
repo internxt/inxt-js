@@ -140,42 +140,52 @@ class InxtApi implements InxtApiI {
     this.url = config.bridgeUrl ?? '';
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createFrame(params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
     return exchangeReport.sendReport();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getShardFromNode(shard: Shard): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
     return emptyINXTRequest(this.config);
   }

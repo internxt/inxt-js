@@ -18,7 +18,6 @@ import { Events } from './events';
 interface FileMeta {
   size: number;
   name: string;
-  // content: Readable;
 }
 
 interface ShardMeta {
@@ -29,7 +28,6 @@ interface ShardMeta {
   challenges?: Buffer[];
   challenges_as_str: string[];
   tree: string[];
-  exclude?: any;
 }
 
 export class FileObjectUpload extends EventEmitter implements FileObjectUploadProtocol, Abortable {
@@ -68,8 +66,6 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
     } else {
       this.index = randomBytes(32);
     }
-
-    // this.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadbaa', 'hex'); 
 
     this.iv = this.index.slice(0, 16);
 

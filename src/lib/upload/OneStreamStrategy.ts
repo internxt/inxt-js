@@ -41,6 +41,7 @@ export class OneStreamStrategy extends UploadStrategy {
   private aborted = false;
 
   private uploadsProgress: number[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
 
   constructor(params: Params) {
@@ -99,10 +100,10 @@ export class OneStreamStrategy extends UploadStrategy {
       const uploadPipeline = readable.pipe(cipher).pipe(tap).pipe(funnel);
       this.addToAbortables(() => uploadPipeline.destroy());
 
-      let currentShards: any[] = [];
-      let concurrentTasks: any[] = [];
-      let finishedTasks: any[] = [];
-      let totalFinishedTasks: any[] = [];
+      const currentShards: number[] = [];
+      let concurrentTasks: number[] = [];
+      let finishedTasks: number[] = [];
+      const totalFinishedTasks: number[] = [];
 
       const uploadQueue = queue<ShardMeta>((shardMeta, next) => {
         retry({ times: 3, interval: 500 }, (nextTry) => {

@@ -1,5 +1,4 @@
 import * as Winston from 'winston';
-import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit } from 'async';
