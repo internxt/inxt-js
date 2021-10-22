@@ -19,7 +19,6 @@ import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
-import { StreamFileSystemStrategy } from './lib/upload';
 import { UploadStrategy } from './lib/upload/UploadStrategy';
 import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 import { HashStream } from './lib/hasher';
@@ -316,10 +315,6 @@ export class Environment {
 
       if (strategyObj.label === 'OneStreamOnly') {
         strategy = new OneStreamStrategy(strategyObj.params);
-      }
-
-      if (strategyObj.label === 'MultipleStreams') {
-        strategy = new StreamFileSystemStrategy(strategyObj.params, logger);
       }
 
       if (strategy instanceof EmptyStrategy) {
