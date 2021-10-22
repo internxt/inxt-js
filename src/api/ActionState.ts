@@ -1,7 +1,5 @@
 import { EventEmitter } from 'events';
-
-import { UPLOAD_CANCELLED } from './constants';
-import { Events } from './events';
+import { Events } from '.';
 
 export enum ActionTypes {
   Download = 'DOWNLOAD',
@@ -25,7 +23,6 @@ export class ActionState extends EventEmitter {
     }
 
     if (this.type === ActionTypes.Upload) {
-      this.emit(UPLOAD_CANCELLED);
       this.emit(Events.Upload.Abort);
     }
   }

@@ -5,9 +5,9 @@ import winston from "winston";
 import { EnvironmentConfig } from "../..";
 
 import { Abortable } from "../../api/Abortable";
-import { Events } from "../../api/events";
+import { Events } from "../../api/Events";
 import { ExchangeReport } from "../../api/reports";
-import { Shard } from "../../api/shard";
+import { Shard } from "../../api/Shard";
 import { ShardObject } from "../../api/ShardObject";
 import { getStream } from "../../services/request";
 import { HashStream } from "../hasher";

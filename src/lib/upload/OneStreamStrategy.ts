@@ -13,7 +13,7 @@ import { ShardMeta } from '../shardMeta';
 import { ContractNegotiated } from '../contracts';
 import { FunnelStream } from '../funnelStream';
 import { logger } from '../utils/logger';
-import { Events } from '../../api/events';
+import { Events } from '../../api/Events';
 
 interface Source {
   size: number;

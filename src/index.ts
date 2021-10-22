@@ -20,6 +20,7 @@ import { UploadStrategy } from './lib/upload/UploadStrategy';
 import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 import { HashStream } from './lib/hasher';
 import { DownloadStrategy } from './lib/download/DownloadStrategy';
+import { EnvironmentConfig } from './api/EnvironmentConfig';
 
 export type UploadStrategyObject = OneStreamStrategyObject;
 
@@ -54,27 +55,6 @@ export interface DownloadFileOptions {
   decryptionProgressCallback?: DecryptionProgressCallback;
   finishedCallback: DownloadFinishedCallback;
 }
-
-export interface EnvironmentConfig {
-  bridgeUrl?: string;
-  bridgeUser: string;
-  bridgePass: string;
-  encryptionKey?: string;
-  logLevel?: number;
-  webProxy?: string;
-  useProxy?: boolean;
-  download?: {
-    concurrency: number;
-  }
-  inject?: {
-    fileEncryptionKey?: Buffer,
-    index?: Buffer;
-  }
-  upload?: {
-    concurrency: number;
-  }
-}
-
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 

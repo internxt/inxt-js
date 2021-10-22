@@ -13,7 +13,7 @@ import { wrap } from "../lib/utils/error";
 import { UploadEvents, UploadFinishedMessage, UploadStrategy } from "../lib/upload/UploadStrategy";
 import { Abortable } from "./Abortable";
 
-import { Events } from './events';
+import { Events } from './Events';
 
 interface FileMeta {
   size: number;
@@ -86,7 +86,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
     }
   }
 
-  async init(): Promise<FileObjectUploadV2> {
+  async init(): Promise<FileObjectUpload> {
     this.checkIfIsAborted();
 
     if (this.config.inject && this.config.inject.fileEncryptionKey) {
@@ -211,7 +211,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   }
 }
 
-export function generateBucketEntry(fileObject: FileObjectUploadV2, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {    
+export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {    
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename: fileMeta.name,

@@ -1,6 +1,5 @@
 import { request } from "../services/request";
-import { EnvironmentConfig } from "..";
-import { Shard } from "./shard";
+import { EnvironmentConfig, Shard } from ".";
 
 export interface ExchangeReportParams {
   dataHash: string | null;
@@ -121,11 +120,13 @@ export class ExchangeReport {
   
   error() {
     this.DownloadError();
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.sendReport().catch(() => {});
   }
 
   success() {
     this.DownloadOk();
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.sendReport().catch(() => {});
   }
 }

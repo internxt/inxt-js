@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { Abortable } from '../../api/Abortable';
-import { Shard } from '../../api/shard';
+import { Shard } from '../../api/Shard';
 
 export enum DownloadEvents {
   Error = 'download-error',

@@ -7,14 +7,14 @@ import { GenerateFileKey } from "../lib/crypto";
 
 import { FileInfo, GetFileInfo, GetFileMirrors, ReplacePointer } from "./fileinfo";
 import { EnvironmentConfig } from "..";
-import { Shard } from "./shard";
+import { Shard } from "./Shard";
 import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS } from './constants';
 import { wrap } from '../lib/utils/error';
 import { ShardObject } from './ShardObject';
 import { Bridge, InxtApiI } from '../services/api';
 import { DownloadStrategy } from '../lib/download/DownloadStrategy';
-import { Events } from './events';
+import { Events } from './Events';
 import { Abortable } from './Abortable';
 
 export class FileObject extends EventEmitter {

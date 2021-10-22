@@ -8,7 +8,7 @@ import { ShardMeta } from "../lib/shardMeta";
 import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
-import { buildRequestUrl, Shard } from "./shard";
+import { buildRequestUrl, Shard } from "./Shard";
 import { get, getStream, putStream } from "../services/request";
 import AbortController from 'abort-controller';
 
@@ -107,7 +107,7 @@ export class ShardObject extends EventEmitter {
   }
 
   static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
-    return putStream(url, content, { useProxy: false }, controller);
+    return putStream(url, content, { useProxy: false });
   }
 
   static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{

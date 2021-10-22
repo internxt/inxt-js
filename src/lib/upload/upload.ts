@@ -1,12 +1,9 @@
 import * as Winston from 'winston';
 
 import { EnvironmentConfig, UploadFileOptions } from "../..";
-import { ActionState } from "../../api/ActionState";
-import { FileObjectUpload } from '../../api/FileObjectUpload';
 import { logger } from '../utils/logger';
 import { UploadEvents, UploadStrategy } from './UploadStrategy';
-
-import { Events } from '../../api/events';
+import { ActionState, Events, FileMeta, FileObjectUpload } from '../../api';
 
 /**
  * Upload entry point

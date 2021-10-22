@@ -1,7 +1,7 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { EnvironmentConfig } from "..";
 import { ExchangeReport } from "../api/reports";
-import { Shard } from "../api/shard";
+import { Shard } from "../api/Shard";
 import { INXTRequest } from "../lib";
 import { ShardMeta } from "../lib/shardMeta";
 

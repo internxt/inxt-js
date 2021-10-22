@@ -6,7 +6,7 @@ import { DownloadFileOptions, EnvironmentConfig } from '../..';
 import { ActionState } from '../../api/ActionState';
 import { FileObject } from '../../api/FileObject';
 import { DownloadEvents, DownloadStrategy } from './DownloadStrategy';
-import { Events } from '../../api/events';
+import { Events } from '../../api/Events';
 
 export async function download(
   config: EnvironmentConfig, 
