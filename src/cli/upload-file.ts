@@ -5,7 +5,7 @@ import { UploadOptions } from '../lib/upload';
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
 
-export async function uploadFile(filepath: string) {
+export async function uploadFile(filepath: string, concurrency: number) {
   if (!existsSync(filepath)) {
     logger.error('File "%s" does not exist', filepath);
     process.exit(-1);
@@ -13,8 +13,9 @@ export async function uploadFile(filepath: string) {
 
   try {
     const network = getEnvironment();
-    const bucketId = process.env.BUCKET_ID;
+    network.config.upload = { concurrency };
 
+    const bucketId = process.env.BUCKET_ID;
     const uploadStrategy: UploadStrategyObject = {
       label: 'OneStreamOnly',
       params: {
