@@ -47,7 +47,7 @@ export async function downloadFile(fileId: string, path: string) {
   }
 }
 
-export async function downloadFileParallel(fileId: string, path: string, strategy?: DownloadStrategyLabel) {
+export async function downloadFileParallel(fileId: string, path: string) {
   logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();

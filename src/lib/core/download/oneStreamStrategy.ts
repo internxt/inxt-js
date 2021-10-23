@@ -48,7 +48,7 @@ export class OneStreamStrategy extends DownloadStrategy {
     clearInterval(this.progressIntervalId);
   }
 
-  private addAbortable(abort: () => any) {
+  private addAbortable(abort: () => void) {
     this.abortables.push({ abort });
   }
 

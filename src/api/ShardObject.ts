@@ -106,7 +106,7 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
+  static putStream(url: PutUrl, content: Readable): Promise<any> {
     return putStream(url, content, { useProxy: false });
   }
 

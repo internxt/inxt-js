@@ -12,12 +12,6 @@ import { wrap } from "../lib/utils/error";
 import { UploadFinishedMessage, UploadStrategy, Events } from "../lib/core";
 import { Abortable } from "./Abortable";
 
-
-interface FileMeta {
-  size: number;
-  name: string;
-}
-
 interface ShardMeta {
   hash: string;
   size: number; // size of the actual file

@@ -11,11 +11,13 @@ export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable 
 export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
 
 export type OneStreamStrategyLabel = 'OneStreamOnly';
-export type OneStreamStrategyObject = { label: OneStreamStrategyLabel, params: { }};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type OneStreamStrategyObject = { label: OneStreamStrategyLabel, params: any};
 export type OneStreamStrategyFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: OneStreamStrategyObject) => ActionState;
 
 export type MultipleStreamsStrategyLabel = 'MultipleStreams';
-export type MultipleStreamsStrategyObject = { label: MultipleStreamsStrategyLabel, params: { }};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MultipleStreamsStrategyObject = { label: MultipleStreamsStrategyLabel, params: any};
 export type MultipleStreamsStrategyFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
 
 export type DownloadStrategyLabel = OneStreamStrategyLabel;
