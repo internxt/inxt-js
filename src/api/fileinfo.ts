@@ -25,8 +25,8 @@ export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId:
   const body: AxiosRequestConfig = token ? { headers: { 'x-token': token } } : { };
 
   return request(config, 'get', `${config.bridgeUrl}/buckets/${bucketId}/files/${fileId}/info`, body, false)
-    .then<FileInfo>((res: AxiosResponse) => res.data)
-    .catch((err: AxiosError) => {
+    .then<FileInfo>((res: AxiosResponse) => res.data as FileInfo)
+    .catch((err: AxiosError | any) => {
       switch (err.response?.status) {
         case 404:
           throw Error(err.response.data.error);
@@ -46,7 +46,7 @@ export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileI
   };
 
   return request(config, 'GET', targetUrl, params, false)
-    .then((res: AxiosResponse) => res.data);
+    .then((res: AxiosResponse) => res.data as Shard[]);
 }
 
 export function ReplacePointer(config: EnvironmentConfig, bucketId: string, fileId: string, pointerIndex: number, excludeNodes: string[] = []): Promise<Shard[]> {

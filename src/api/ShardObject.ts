@@ -147,7 +147,7 @@ export class ShardObject extends EventEmitter {
     let success = true;
 
     return req.start<SendShardToNodeResponse>()
-      .catch((err: AxiosError) => {
+      .catch((err: any) => {
         if (err.response && err.response.status < 400) {
           return { result: err.response.data && err.response.data.error };
         }
