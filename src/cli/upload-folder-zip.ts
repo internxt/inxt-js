@@ -4,11 +4,12 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { v4 } from 'uuid';
 
-import { Environment, EnvironmentConfig } from '..';
+import { Environment } from '..';
+import { EnvironmentConfig } from '../api'
 import { GenerateFileKey } from '../lib/crypto';
 import { HashStream } from '../lib/hasher';
 import { BytesCounter } from '../lib/streams';
-import { OneStreamStrategyObject } from '../lib/upload';
+import { UploadOneStreamStrategyObject } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 
 const pipelineAsync = promisify(pipeline);
@@ -97,7 +98,7 @@ export async function uploadFolder(path: string) {
     finishedCallback: finishCbGenerator(resolve, reject)
   });
 
-  const uploadStrategy: OneStreamStrategyObject = {
+  const uploadStrategy: UploadOneStreamStrategyObject = {
     label: 'OneStreamOnly',
     params: {
       source: {

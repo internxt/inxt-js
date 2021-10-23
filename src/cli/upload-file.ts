@@ -1,7 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'fs';
-import { UploadStrategyObject } from '..';
+import { v4 } from 'uuid';
 
-import { UploadOptions } from '../lib/upload';
+import { UploadStrategyObject, UploadOptions } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
 
@@ -15,6 +15,7 @@ export async function uploadFile(filepath: string, concurrency: number) {
     const network = getEnvironment();
     network.config.upload = { concurrency };
 
+    const uuid = v4();
     const bucketId = process.env.BUCKET_ID;
     const uploadStrategy: UploadStrategyObject = {
       label: 'OneStreamOnly',
@@ -28,7 +29,7 @@ export async function uploadFile(filepath: string, concurrency: number) {
 
     await new Promise((resolve, reject) => {
       const uploadOpts: UploadOptions = {
-        filename: filepath,
+        name: uuid,
         progressCallback: (progress: number) => {
           logger.debug('Progress %s%', (progress * 100).toFixed(2));
         },
@@ -48,6 +49,7 @@ export async function uploadFile(filepath: string, concurrency: number) {
       });
     });
   } catch (err) {
+    console.log(err);
     logger.error('Error uploading file: %s', err.message);
     process.exit(-1);
   }  
