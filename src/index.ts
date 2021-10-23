@@ -16,7 +16,7 @@ import {
   OneStreamStrategy as DownloadOneStreamStrategy 
 } from './lib/core';
 
-import { EncryptFilename, GenerateFileKey } from './lib/crypto';
+import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
 
 // TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
@@ -25,7 +25,7 @@ import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
-import { HashStream } from './lib/hasher';
+import { HashStream } from './lib/utils/streams';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 

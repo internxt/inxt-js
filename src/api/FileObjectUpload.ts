@@ -6,7 +6,7 @@ import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
 import { ShardObject } from "./ShardObject";
 import { INXTRequest } from "../lib";
 import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI } from "../services/api";
-import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
+import { GenerateFileKey, sha512HmacBuffer } from "../lib/utils/crypto";
 import { logger } from "../lib/utils/logger";
 import { wrap } from "../lib/utils/error";
 import { UploadFinishedMessage, UploadStrategy, Events } from "../lib/core";

@@ -2,7 +2,7 @@ import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit } from 'async';
 
-import { GenerateFileKey } from "../lib/crypto";
+import { GenerateFileKey } from "../lib/utils/crypto";
 
 import { FileInfo, GetFileInfo, GetFileMirrors, ReplacePointer } from "./fileinfo";
 import { Shard, EnvironmentConfig } from "./";

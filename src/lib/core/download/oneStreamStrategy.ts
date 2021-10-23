@@ -6,8 +6,7 @@ import { Events } from "..";
 import { Abortable, EnvironmentConfig, ExchangeReport, Shard, ShardObject } from "../../../api";
 
 import { getStream } from "../../../services/request";
-import { HashStream } from "../../hasher";
-import { ProgressNotifier, Events as ProgressEvents } from "../../streams";
+import { HashStream, ProgressNotifier, Events as ProgressEvents } from "../../utils/streams";
 import { wrap } from "../../utils/error";
 import { logger } from "../../utils/logger";
 import { DownloadStrategy } from "./strategy";
