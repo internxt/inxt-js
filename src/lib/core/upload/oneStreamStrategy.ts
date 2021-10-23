@@ -3,14 +3,13 @@ import { createCipheriv, createHash } from 'crypto';
 import { Readable } from 'stream';
 
 import { NegotiateContract, UploadParams, UploadStrategy } from './strategy';
-import { generateMerkleTree } from '../../merkleTreeStreams';
+import { generateMerkleTree } from '../../utils/MerkleTree';
 import { Abortable, ActionState, ShardObject } from '../../../api';
 import { wrap } from '../../utils/error';
 import { determineShardSize } from '../../utils';
-import { Tap } from '../../TapStream';
-import { ShardMeta } from '../../shardMeta';
-import { ContractNegotiated } from '../../contracts';
-import { FunnelStream } from '../../funnelStream';
+import { Tap, Funnel } from '../../utils/streams';
+import { ShardMeta } from '../../models';
+import { ContractMeta } from '../../../api';
 import { logger } from '../../utils/logger';
 
 
@@ -95,7 +94,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
       const shardSize = determineShardSize(fileSize);
       const readable = this.source.stream;
       const tap = new Tap(concurrency * shardSize);
-      const funnel = new FunnelStream(shardSize);
+      const funnel = new Funnel(shardSize);
       const nShards = Math.ceil(fileSize / shardSize);
 
       this.uploadsProgress = new Array(nShards).fill(0);
@@ -194,7 +193,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     }
   }
 
-  private uploadShard(shardMeta: ShardMeta, contract: ContractNegotiated, cb: (err?: Error) => void) {
+  private uploadShard(shardMeta: ShardMeta, contract: ContractMeta, cb: (err?: Error) => void) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
 
     ShardObject.requestPutTwo(url, (err, putUrl) => {

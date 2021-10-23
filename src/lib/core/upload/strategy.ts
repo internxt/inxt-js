@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
-import { Abortable, ActionState } from '../../../api';
-import { ContractNegotiated } from '../../contracts';
-import { ShardMeta } from '../../shardMeta';
+import { Abortable, ActionState, ContractMeta } from '../../../api';
+import { ShardMeta } from '../../models';
 
-export type NegotiateContract = (shardMeta: ShardMeta) => Promise<ContractNegotiated>;
+export type NegotiateContract = (shardMeta: ShardMeta) => Promise<ContractMeta>;
 
 export interface UploadFinishedMessage {
   result: ShardMeta[];

@@ -3,14 +3,13 @@ import { Readable } from "stream";
 import { EventEmitter } from "events";
 
 import { INXTRequest } from "../lib";
-import { ContractNegotiated } from "../lib/contracts";
-import { ShardMeta } from "../lib/shardMeta";
+import { ContractMeta } from "../api";
+import { ShardMeta } from "../lib/models";
 import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
 import { Shard } from "./";
-import { get, putStream } from "../services/request";
-import AbortController from 'abort-controller';
+import { get } from "../services/request";
 
 import { request } from 'https';
 
@@ -40,8 +39,7 @@ export class ShardObject extends EventEmitter {
       challenges_as_str: [],
       size: 0,
       tree: [],
-      challenges: [],
-      exclude: []
+      challenges: []
     };
     this.api = api;
     this.shard = shard;
@@ -106,10 +104,6 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static putStream(url: PutUrl, content: Readable): Promise<any> {
-    return putStream(url, content, { useProxy: false });
-  }
-
   static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{
     const formattedUrl = new URL(url);
 
@@ -136,11 +130,11 @@ export class ShardObject extends EventEmitter {
     content.pipe(putRequest);
   } 
 
-  negotiateContract(): Promise<ContractNegotiated> {
+  negotiateContract(): Promise<ContractMeta> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);
     this.requests.push(req);
 
-    return req.start<ContractNegotiated>()
+    return req.start<ContractMeta>()
       .catch((err) => {
         throw wrap('Contract negotiation error', err);
       });
