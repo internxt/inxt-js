@@ -1,9 +1,8 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
-import { Abortable, ActionState } from '../../../api';
-import { ContractNegotiated } from '../../contracts';
-import { ShardMeta } from '../../shardMeta';
-export declare type NegotiateContract = (shardMeta: ShardMeta) => Promise<ContractNegotiated>;
+import { Abortable, ActionState, ContractMeta } from '../../../api';
+import { ShardMeta } from '../../models';
+export declare type NegotiateContract = (shardMeta: ShardMeta) => Promise<ContractMeta>;
 export interface UploadFinishedMessage {
     result: ShardMeta[];
 }

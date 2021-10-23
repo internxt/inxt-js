@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { Transform } from 'stream';
-export declare class FunnelStream extends Transform {
+export declare class Funnel extends Transform {
     private limit;
     private buffer;
     private bufferOffset;

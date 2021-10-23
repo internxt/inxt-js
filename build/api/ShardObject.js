@@ -80,8 +80,7 @@ var ShardObject = /** @class */ (function (_super) {
             challenges_as_str: [],
             size: 0,
             tree: [],
-            challenges: [],
-            exclude: []
+            challenges: []
         };
         _this.api = api;
         _this.shard = shard;
@@ -153,9 +152,6 @@ var ShardObject = /** @class */ (function (_super) {
     ShardObject.requestGet = function (url, useProxy) {
         if (useProxy === void 0) { useProxy = true; }
         return request_1.get(url, { useProxy: useProxy }).then(function (res) { return res.result; });
-    };
-    ShardObject.putStream = function (url, content) {
-        return request_1.putStream(url, content, { useProxy: false });
     };
     ShardObject.putStreamTwo = function (url, content, cb) {
         var formattedUrl = new URL(url);

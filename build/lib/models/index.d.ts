@@ -1,3 +1,4 @@
 export * from './Contract';
-export * from './Mirror';
 export * from './Farmer';
+export * from './Mirror';
+export * from './ShardMeta';

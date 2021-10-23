@@ -1,9 +1,9 @@
 import * as Winston from 'winston';
 import { UploadStrategyFunction, DownloadFunction } from './lib/core';
-import { GenerateFileKey } from './lib/crypto';
+import { GenerateFileKey } from './lib/utils/crypto';
 import { ActionState, EnvironmentConfig } from './api';
 import { FileInfo } from './api/fileinfo';
-import { HashStream } from './lib/hasher';
+import { HashStream } from './lib/utils/streams';
 declare type GetBucketsCallback = (err: Error | null, result: any) => void;
 declare type GetBucketIdCallback = (err: Error | null, result: any) => void;
 declare type CreateBucketCallback = (err: Error | null, result: any) => void;

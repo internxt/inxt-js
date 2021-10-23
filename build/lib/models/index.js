@@ -11,6 +11,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./Contract"), exports);
+__exportStar(require("./Farmer"), exports);
 __exportStar(require("./Mirror"), exports);
 // export * from './Shard';
-__exportStar(require("./Farmer"), exports);
+__exportStar(require("./ShardMeta"), exports);

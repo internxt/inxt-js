@@ -2,17 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;
 var core_1 = require("./lib/core");
-var crypto_1 = require("./lib/crypto");
+var crypto_1 = require("./lib/utils/crypto");
 // TODO: Remove this
 var constants_1 = require("./api/constants");
 var api_1 = require("./api");
 var logger_1 = require("./lib/utils/logger");
 var fileinfo_1 = require("./api/fileinfo");
 var api_2 = require("./services/api");
-var hasher_1 = require("./lib/hasher");
+var streams_1 = require("./lib/utils/streams");
 var utils = {
     generateFileKey: crypto_1.GenerateFileKey,
-    Hasher: hasher_1.HashStream
+    Hasher: streams_1.HashStream
 };
 var Environment = /** @class */ (function () {
     function Environment(config) {

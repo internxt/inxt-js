@@ -11,4 +11,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./BytesCounter"), exports);
+__exportStar(require("./ChunkedRequest"), exports);
+__exportStar(require("./Funnel"), exports);
+__exportStar(require("./Hasher"), exports);
 __exportStar(require("./ProgressNotifier"), exports);
+__exportStar(require("./Tap"), exports);

@@ -7,5 +7,4 @@ export interface ShardMeta {
     challenges?: Buffer[];
     challenges_as_str: string[];
     tree: string[];
-    exclude?: any;
 }

@@ -54,12 +54,11 @@ var async_1 = require("async");
 var crypto_1 = require("crypto");
 var stream_1 = require("stream");
 var strategy_1 = require("./strategy");
-var merkleTreeStreams_1 = require("../../merkleTreeStreams");
+var MerkleTree_1 = require("../../utils/MerkleTree");
 var api_1 = require("../../../api");
 var error_1 = require("../../utils/error");
 var utils_1 = require("../../utils");
-var TapStream_1 = require("../../TapStream");
-var funnelStream_1 = require("../../funnelStream");
+var streams_1 = require("../../utils/streams");
 var logger_1 = require("../../utils/logger");
 var __1 = require("../");
 /**
@@ -122,8 +121,8 @@ var UploadOneStreamStrategy = /** @class */ (function (_super) {
                         fileSize = this.source.size;
                         shardSize = utils_1.determineShardSize(fileSize);
                         readable = this.source.stream;
-                        tap_1 = new TapStream_1.Tap(concurrency * shardSize);
-                        funnel = new funnelStream_1.FunnelStream(shardSize);
+                        tap_1 = new streams_1.Tap(concurrency * shardSize);
+                        funnel = new streams_1.Funnel(shardSize);
                         nShards_1 = Math.ceil(fileSize / shardSize);
                         this.uploadsProgress = new Array(nShards_1).fill(0);
                         logger_1.logger.debug('Slicing file in %s shards', nShards_1);
@@ -167,7 +166,7 @@ var UploadOneStreamStrategy = /** @class */ (function (_super) {
                                     /**
                                      * TODO: calculate shard hash on the fly with a stream
                                      */
-                                    var mTree = merkleTreeStreams_1.generateMerkleTree();
+                                    var mTree = MerkleTree_1.generateMerkleTree();
                                     var shardMeta = {
                                         hash: calculateShardHash(shard).toString('hex'),
                                         index: currentShardIndex,

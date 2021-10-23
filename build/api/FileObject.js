@@ -52,7 +52,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileObject = void 0;
 var events_1 = require("events");
 var async_1 = require("async");
-var crypto_1 = require("../lib/crypto");
+var crypto_1 = require("../lib/utils/crypto");
 var fileinfo_1 = require("./fileinfo");
 var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");

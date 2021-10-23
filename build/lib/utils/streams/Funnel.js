@@ -13,11 +13,11 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FunnelStream = void 0;
+exports.Funnel = void 0;
 var stream_1 = require("stream");
-var FunnelStream = /** @class */ (function (_super) {
-    __extends(FunnelStream, _super);
-    function FunnelStream(limit) {
+var Funnel = /** @class */ (function (_super) {
+    __extends(Funnel, _super);
+    function Funnel(limit) {
         if (limit === void 0) { limit = 1; }
         var _this = _super.call(this) || this;
         _this.bufferOffset = 0;
@@ -26,19 +26,19 @@ var FunnelStream = /** @class */ (function (_super) {
         _this.buffer = Buffer.alloc(limit);
         return _this;
     }
-    FunnelStream.prototype.bufferStillHasData = function () {
+    Funnel.prototype.bufferStillHasData = function () {
         return this.bufferOffset !== 0;
     };
-    FunnelStream.prototype.bufferIsEmpty = function () {
+    Funnel.prototype.bufferIsEmpty = function () {
         return this.bufferOffset === 0;
     };
-    FunnelStream.prototype.pushToReadable = function (b) {
+    Funnel.prototype.pushToReadable = function (b) {
         this.push(b);
     };
-    FunnelStream.prototype.pushBuffer = function () {
+    Funnel.prototype.pushBuffer = function () {
         this.pushToReadable(this.buffer);
     };
-    FunnelStream.prototype._transform = function (chunk, enc, done) {
+    Funnel.prototype._transform = function (chunk, enc, done) {
         var _this = this;
         if (this.bufferStillHasData()) {
             var bytesToPush_1 = (this.limit - this.bufferOffset);
@@ -80,12 +80,12 @@ var FunnelStream = /** @class */ (function (_super) {
         }
         done(null);
     };
-    FunnelStream.prototype._flush = function (done) {
+    Funnel.prototype._flush = function (done) {
         if (this.bufferStillHasData()) {
             this.pushToReadable(this.buffer.slice(0, this.bufferOffset));
         }
         done();
     };
-    return FunnelStream;
+    return Funnel;
 }(stream_1.Transform));
-exports.FunnelStream = FunnelStream;
+exports.Funnel = Funnel;
