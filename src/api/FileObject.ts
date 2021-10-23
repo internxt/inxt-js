@@ -10,7 +10,6 @@ import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS } from './constants';
 import { wrap } from '../lib/utils/error';
 import { ShardObject } from './ShardObject';
-import { Bridge, InxtApiI } from '../services/api';
 import { DownloadStrategy, Events } from '../lib/core';
 import { Abortable } from './Abortable';
 
@@ -32,7 +31,6 @@ export class FileObject extends EventEmitter {
   totalSizeWithECs = 0;
 
   private aborted = false;
-  private api: InxtApiI;
 
   private downloader: DownloadStrategy;
   private abortables: Abortable[] = [];
@@ -44,11 +42,7 @@ export class FileObject extends EventEmitter {
     this.fileId = fileId;
     this.fileKey = Buffer.alloc(0);
 
-    this.api = new Bridge(config);
-
     this.downloader = downloader;
-    
-    this.abortables.push({ abort: () => downloader.abort() });
 
     this.once(Events.Download.Abort, this.abort.bind(this));
   }
@@ -154,6 +148,7 @@ export class FileObject extends EventEmitter {
     const fk = this.fileKey.slice(0, 32);
     const iv = Buffer.from(this.fileInfo.index, 'hex').slice(0, 16);
 
+    this.abortables.push({ abort: () => this.downloader.abort() });
     this.downloader.setIv(iv);
     this.downloader.setFileEncryptionKey(fk);
 
