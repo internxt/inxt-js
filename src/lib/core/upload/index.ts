@@ -1,0 +1,57 @@
+import { ActionState, EnvironmentConfig, FileObjectUpload } from '../../../api';
+import { UploadStrategy } from './strategy';
+import { Events } from '../';
+
+export * from './strategy';
+export * from './oneStreamStrategy';
+
+export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
+export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
+
+export interface UploadOptions {
+  progressCallback: UploadProgressCallback;
+  finishedCallback: UploadFinishCallback;
+  /**
+   * Name of the content uploaded to the network. This name will be encrypted
+   */
+  name: string;
+}
+
+type FileId = string;
+
+/**
+ * Upload entry point
+ * @param config Environment config
+ * @param bucketId id whose bucket is going to store the file
+ * @param fileMeta file metadata
+ * @param progress upload progress callback
+ * @param finish finish progress callback
+ * 
+ * @returns {FileId} The id of the created file
+ */
+export async function upload(
+  config: EnvironmentConfig, 
+  filename: string, 
+  bucketId: string, 
+  params: UploadOptions, 
+  actionState: ActionState, 
+  uploader: UploadStrategy
+): Promise<FileId> {
+  const file = new FileObjectUpload(config, filename, bucketId, uploader);
+
+  actionState.once(Events.Upload.Abort, () => {
+    file.emit(Events.Upload.Abort);
+    actionState.removeAllListeners();
+  });
+
+  file.on(Events.Upload.Progress, (progress) => {
+    params.progressCallback(progress, 0, 0);
+  });
+
+  return file.init()
+    .then(() => file.checkBucketExistence())
+    .then(() => file.stage())
+    .then(() => file.upload())
+    .then((shardMetas) => file.createBucketEntry(shardMetas))
+    .then(() => file.getId());
+}
