@@ -1,60 +1,31 @@
-import { Readable } from 'stream';
 import * as Winston from 'winston';
 
-import { OneStreamStrategy, OneStreamStrategyObject, upload } from './lib/upload';
 import {
-  download,
-  DownloadFunction,
-  DownloadStrategyObject,
-  OneStreamStrategy as DownloadOneStreamStrategy
-} from './lib/download';
+  upload,
+  UploadStrategyFunction,
+  UploadStrategy,
+  UploadOptions,
+  UploadStrategyObject,
+  UploadOneStreamStrategy,
+  UploadOneStreamStrategyObject,
+  download, 
+  DownloadFunction, 
+  DownloadStrategy,
+  DownloadFileOptions,
+  DownloadStrategyObject, 
+  OneStreamStrategy as DownloadOneStreamStrategy 
+} from './lib/core';
+
 import { EncryptFilename, GenerateFileKey } from './lib/crypto';
 
+// TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
-import { ActionState, ActionTypes } from './api/ActionState';
+import { ActionState, ActionTypes, EnvironmentConfig } from './api';
 import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse } from './services/api';
-import { UploadStrategy } from './lib/upload/UploadStrategy';
-import { EmptyStrategy } from './lib/upload/EmptyStrategy';
 import { HashStream } from './lib/hasher';
-import { DownloadStrategy } from './lib/download/DownloadStrategy';
-import { EnvironmentConfig } from './api/EnvironmentConfig';
-
-export type UploadStrategyObject = OneStreamStrategyObject;
-
-export type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
-export type UploadFunction = OneStreamOnlyStrategyFunction;
-
-export type OnlyErrorCallback = (err: Error | null) => void;
-
-export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
-export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
-
-export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
-export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
-
-export type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
-
-export interface UploadFileOptions {
-  progressCallback: UploadProgressCallback;
-  finishedCallback: UploadFinishCallback;
-}
-
-export interface ResolveFileOptions {
-  progressCallback: DownloadProgressCallback;
-  finishedCallback: OnlyErrorCallback;
-  overwritte?: boolean;
-}
-
-export interface DownloadFileOptions {
-  fileToken?: string;
-  fileEncryptionKey?: Buffer;
-  progressCallback: DownloadProgressCallback;
-  decryptionProgressCallback?: DecryptionProgressCallback;
-  finishedCallback: DownloadFinishedCallback;
-}
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -67,16 +38,6 @@ type DeleteBucketCallback = (err: Error | null, result: any) => void;
 type ListFilesCallback = (err: Error | null, result: any) => void;
 
 type DeleteFileCallback = (err: Error | null, result: any) => void;
-
-type DebugCallback = (message: string) => void;
-
-interface UploadOptions extends UploadFileOptions {
-  filename: string;
-}
-
-export interface DownloadOptions extends DownloadFileOptions {
-  debug?: DebugCallback;
-}
 
 const utils = {
   generateFileKey: GenerateFileKey,
@@ -182,7 +143,7 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  upload: UploadFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
+  upload: UploadStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
@@ -197,24 +158,24 @@ export class Environment {
       return uploadState;
     }
 
-    EncryptFilename(this.config.encryptionKey, bucketId, opts.filename).then((encryptedFilename) => {
-      logger.debug('Filename %s encrypted is %s', opts.filename, encryptedFilename);
-
-      const fileMeta = { content: Readable.from(''), size: 0, name: encryptedFilename };
+    EncryptFilename(this.config.encryptionKey, bucketId, opts.name).then((encryptedFilename) => {
+      logger.debug('Filename %s encrypted is %s', opts.name, encryptedFilename);
 
       logger.debug('Using %s strategy', strategyObj.label);
 
-      let strategy: UploadStrategy = new EmptyStrategy();
+      let strategy: UploadStrategy | null = null;
 
       if (strategyObj.label === 'OneStreamOnly') {
-        strategy = new OneStreamStrategy(strategyObj.params);
+        strategy = new UploadOneStreamStrategy((strategyObj as UploadOneStreamStrategyObject).params);
       }
 
-      if (strategy instanceof EmptyStrategy) {
-        return opts.finishedCallback(new Error('Unknown upload strategy'), null);
+      if (!strategy) {
+        return opts.finishedCallback(Error('Unknown strategy'), null);
       }
 
-      return upload(this.config, fileMeta, bucketId, opts, logger, uploadState, strategy);
+      return upload(this.config, encryptedFilename, bucketId, opts, uploadState, strategy).then((fileId) => {
+        opts.finishedCallback(null, fileId);
+      });
     }).catch((err) => {
       if (err && err.message && err.message.includes('Upload aborted')) {
         return opts.finishedCallback(new Error('Process killed by user'), null);
@@ -225,7 +186,7 @@ export class Environment {
     return uploadState;
   }
 
-  download: DownloadFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadStrategyObject) => {
+  download: DownloadFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: DownloadStrategyObject) => {
     const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
@@ -246,13 +207,9 @@ export class Environment {
       return downloadState;
     }
 
-    if (opts.debug) {
-      this.logger = Logger.getDebugger(this.config.logLevel || 1, opts.debug);
-    }
+    const strategy: DownloadStrategy = new DownloadOneStreamStrategy(this.config);
 
-    const strategy: DownloadStrategy = new DownloadOneStreamStrategy(this.config, this.logger);
-
-    download(this.config, bucketId, fileId, opts, this.logger, downloadState, strategy).then((res) => {
+    download(this.config, bucketId, fileId, opts, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);
     }).catch((err) => {
       opts.finishedCallback(err, null);
@@ -269,7 +226,7 @@ export class Environment {
     state.stop();
   }
 
-  async renameFile(bucketId: string, fileId: string, newPlainName: string): Promise<void> {
+  renameFile(bucketId: string, fileId: string, newPlainName: string): Promise<void> {
     const mnemonic: string | undefined = this.config.encryptionKey;
 
     if (!mnemonic) {
@@ -279,13 +236,5 @@ export class Environment {
     return EncryptFilename(mnemonic, bucketId, newPlainName).then((newEncryptedName) => {
       return new Bridge(this.config).renameFile(bucketId, fileId, newEncryptedName).start();
     }).then(() => { });
-  }
-
-  /**
-   * Cancels a file upload
-   * @param {ActionState} state Upload state
-   */
-  storeFileCancel(state: ActionState): void {
-    state.stop();
   }
 }
