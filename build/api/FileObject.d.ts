@@ -1,12 +1,10 @@
 /// <reference types="node" />
-import * as Winston from 'winston';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { FileInfo } from "./fileinfo";
-import { EnvironmentConfig } from "..";
-import { Shard } from "./shard";
+import { Shard, EnvironmentConfig } from "./";
 import { ShardObject } from './ShardObject';
-import { DownloadStrategy } from '../lib/download/DownloadStrategy';
+import { DownloadStrategy } from '../lib/core';
 export declare class FileObject extends EventEmitter {
     shards: ShardObject[];
     rawShards: Shard[];
@@ -20,11 +18,10 @@ export declare class FileObject extends EventEmitter {
     fileToken?: string;
     totalSizeWithECs: number;
     private aborted;
-    private debug;
     private api;
     private downloader;
     private abortables;
-    constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger, downloader: DownloadStrategy);
+    constructor(config: EnvironmentConfig, bucketId: string, fileId: string, downloader: DownloadStrategy);
     setFileEncryptionKey(key: Buffer): void;
     setFileToken(token: string): void;
     checkIfIsAborted(): void;

@@ -2,7 +2,7 @@
 import { EventEmitter } from 'events';
 import { Readable } from 'stream';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
-import { EnvironmentConfig } from '..';
+import { EnvironmentConfig } from '../api';
 declare enum Methods {
     Get = "GET",
     Post = "POST",

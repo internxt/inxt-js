@@ -42,33 +42,43 @@ var InxtApi = /** @class */ (function () {
         this.config = config;
         this.url = (_a = config.bridgeUrl) !== null && _a !== void 0 ? _a : '';
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.getBucketById = function (bucketId, params) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.getFileById = function (bucketId, fileId, params) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.createFrame = function (params) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.createEntryFromFrame = function (bucketId, body, params) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.addShardToFrame = function (frameId, body, params) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.sendUploadExchangeReport = function (exchangeReport) {
         return exchangeReport.sendReport();
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.sendShardToNode = function (shard, shardContent) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.getShardFromNode = function (shard) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.createFileToken = function (bucketId, fileId, operation) {
         return emptyINXTRequest(this.config);
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     InxtApi.prototype.renameFile = function (bucketId, fileId, newName) {
         return emptyINXTRequest(this.config);
     };

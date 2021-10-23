@@ -31,6 +31,9 @@ var HashStream = /** @class */ (function (_super) {
     HashStream.prototype._flush = function (cb) {
         return this.hasher.end(cb);
     };
+    HashStream.prototype.reset = function () {
+        this.hasher = crypto_1.createHash('sha256');
+    };
     HashStream.prototype.readHash = function () {
         if (!this.finalHash.length) {
             this.finalHash = this.hasher.read();

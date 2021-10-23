@@ -267,7 +267,7 @@ function getStream(url, config) {
     });
 }
 exports.getStream = getStream;
-function putStream(url, content, config, controller) {
+function putStream(url, content, config) {
     if (config === void 0) { config = { useProxy: false }; }
     return __awaiter(this, void 0, void 0, function () {
         var targetUrl, free, proxy, postReq, responseBuffers;

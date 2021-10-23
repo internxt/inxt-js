@@ -1,8 +1,6 @@
 /// <reference types="node" />
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { EnvironmentConfig } from "..";
-import { ExchangeReport } from "../api/reports";
-import { Shard } from "../api/shard";
+import { EnvironmentConfig, ExchangeReport, Shard } from "../api";
 import { INXTRequest } from "../lib";
 import { ShardMeta } from "../lib/shardMeta";
 export declare enum Methods {

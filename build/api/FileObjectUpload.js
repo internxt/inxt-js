@@ -55,50 +55,42 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
             r[k] = a[j];
     return r;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateBucketEntry = exports.FileObjectUpload = void 0;
-var events_1 = require("events");
+var stream_1 = require("stream");
 var crypto_1 = require("crypto");
-var encryptStream_1 = __importDefault(require("../lib/encryptStream"));
-var crypto_2 = require("../lib/crypto");
-var funnelStream_1 = require("../lib/funnelStream");
-var shardMeta_1 = require("../lib/shardMeta");
-var reports_1 = require("./reports");
-var error_1 = require("../lib/utils/error");
-var constants_1 = require("./constants");
-var uploader_1 = require("../lib/upload/uploader");
-var logger_1 = require("../lib/utils/logger");
-var utils_1 = require("../lib/utils");
-var api_1 = require("../services/api");
 var ShardObject_1 = require("./ShardObject");
+var api_1 = require("../services/api");
+var crypto_2 = require("../lib/crypto");
+var logger_1 = require("../lib/utils/logger");
+var error_1 = require("../lib/utils/error");
+var core_1 = require("../lib/core");
 var FileObjectUpload = /** @class */ (function (_super) {
     __extends(FileObjectUpload, _super);
-    function FileObjectUpload(config, fileMeta, bucketId, log, api) {
+    function FileObjectUpload(config, name, bucketId, uploader, api) {
         var _this = _super.call(this) || this;
         _this.requests = [];
         _this.id = '';
         _this.aborted = false;
-        _this.shardMetas = [];
-        _this.encrypted = false;
+        _this.fileEncryptionKey = Buffer.alloc(0);
+        _this.uploader = uploader;
+        _this.name = name;
         _this.config = config;
         _this.index = Buffer.alloc(0);
-        _this.fileMeta = fileMeta;
         _this.bucketId = bucketId;
         _this.frameId = '';
-        _this.funnel = new funnelStream_1.FunnelStream(utils_1.determineShardSize(fileMeta.size));
-        _this.cipher = new encryptStream_1.default(crypto_1.randomBytes(32), crypto_1.randomBytes(16));
-        _this.fileEncryptionKey = crypto_1.randomBytes(32);
         _this.api = api !== null && api !== void 0 ? api : new api_1.Bridge(_this.config);
-        _this.logger = log;
-        _this.once(constants_1.UPLOAD_CANCELLED, _this.abort.bind(_this));
+        if (_this.config.inject && _this.config.inject.index) {
+            _this.index = _this.config.inject.index;
+            logger_1.logger.debug('Using injected index %s', _this.index.toString('hex'));
+        }
+        else {
+            _this.index = crypto_1.randomBytes(32);
+        }
+        _this.iv = _this.index.slice(0, 16);
+        _this.once(core_1.Events.Upload.Abort, _this.abort.bind(_this));
         return _this;
     }
-    FileObjectUpload.prototype.getSize = function () {
-        return this.fileMeta.size;
-    };
     FileObjectUpload.prototype.getId = function () {
         return this.id;
     };
@@ -114,13 +106,17 @@ var FileObjectUpload = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         this.checkIfIsAborted();
-                        this.index = crypto_1.randomBytes(32);
+                        if (!(this.config.inject && this.config.inject.fileEncryptionKey)) return [3 /*break*/, 1];
+                        this.fileEncryptionKey = this.config.inject.fileEncryptionKey;
+                        logger_1.logger.debug('Using injected file encryption key %s', this.fileEncryptionKey.toString('hex'));
+                        return [3 /*break*/, 3];
+                    case 1:
                         _a = this;
                         return [4 /*yield*/, crypto_2.GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index)];
-                    case 1:
+                    case 2:
                         _a.fileEncryptionKey = _b.sent();
-                        this.cipher = new encryptStream_1.default(this.fileEncryptionKey, this.index.slice(0, 16));
-                        return [2 /*return*/, this];
+                        _b.label = 3;
+                    case 3: return [2 /*return*/, this];
                 }
             });
         });
@@ -166,28 +162,6 @@ var FileObjectUpload = /** @class */ (function (_super) {
             throw error_1.wrap('Saving file in network error', err);
         });
     };
-    FileObjectUpload.prototype.negotiateContract = function (frameId, shardMeta) {
-        this.checkIfIsAborted();
-        var req = this.api.addShardToFrame(frameId, shardMeta);
-        this.requests.push(req);
-        return req.start()
-            .catch(function (err) {
-            throw error_1.wrap('Contract negotiation error', err);
-        });
-    };
-    FileObjectUpload.prototype.NodeRejectedShard = function (encryptedShard, shard) {
-        this.checkIfIsAborted();
-        var req = this.api.sendShardToNode(shard, encryptedShard);
-        this.requests.push(req);
-        return req.start()
-            .then(function () { return false; })
-            .catch(function (err) {
-            if (err.response && err.response.status < 400) {
-                return true;
-            }
-            throw error_1.wrap('Farmer request error', err);
-        });
-    };
     FileObjectUpload.prototype.GenerateHmac = function (shardMetas) {
         var shardMetasCopy = __spreadArrays(shardMetas).sort(function (sA, sB) { return sA.index - sB.index; });
         var hmac = crypto_2.sha512HmacBuffer(this.fileEncryptionKey);
@@ -197,88 +171,38 @@ var FileObjectUpload = /** @class */ (function (_super) {
         }
         return hmac.digest().toString('hex');
     };
-    FileObjectUpload.prototype.encrypt = function () {
-        this.encrypted = true;
-        return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
-    };
-    FileObjectUpload.prototype.parallelUpload = function (callback) {
+    FileObjectUpload.prototype.upload = function () {
         var _this = this;
-        var shardSize = utils_1.determineShardSize(this.fileMeta.size);
-        var ramUsage = 200 * 1024 * 1024; // 200Mb
-        var nShards = Math.ceil(this.fileMeta.size / shardSize);
-        var concurrency = Math.min(utils_1.determineConcurrency(ramUsage, this.fileMeta.size), nShards);
-        logger_1.logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
-        var uploader = new uploader_1.UploaderQueue(concurrency, nShards, this);
-        var currentBytesUploaded = 0;
-        uploader.on('upload-progress', function (_a) {
-            var bytesUploaded = _a[0];
-            currentBytesUploaded = updateProgress(_this.getSize(), currentBytesUploaded, bytesUploaded, callback);
-        });
-        this.on(constants_1.UPLOAD_CANCELLED, function () {
-            uploader.emit('error', Error('Upload aborted'));
-        });
-        var uploadStream = uploader.getUpstream();
-        this.cipher.on('data', function (chunk) { return uploadStream.write(chunk); });
-        this.cipher.once('end', function () { return uploader.end(); });
-        return new Promise(function (resolve, reject) {
-            uploader.once('end', function () {
-                resolve(_this.shardMetas);
-            });
-            uploader.once('error', function (_a) {
-                var err = _a[0];
-                reject(err);
-            });
-        });
-    };
-    FileObjectUpload.prototype.upload = function (callback) {
         this.checkIfIsAborted();
-        if (!this.encrypted) {
-            throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
-        }
-        return this.parallelUpload(callback);
-    };
-    FileObjectUpload.prototype.uploadShard = function (encryptedShard, shardSize, frameId, index, attemps, parity) {
-        var _this = this;
-        var shardMeta = shardMeta_1.getShardMeta(encryptedShard, shardSize, index, parity);
-        logger_1.logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
-        var shardObject = new ShardObject_1.ShardObject(this.api, frameId, shardMeta);
-        shardObject.once(ShardObject_1.ShardObject.Events.NodeTransferFinished, function (_a) {
-            var success = _a.success, nodeID = _a.nodeID, hash = _a.hash;
-            var exchangeReport = new reports_1.ExchangeReport(_this.config);
-            exchangeReport.params.dataHash = hash;
-            exchangeReport.params.farmerId = nodeID;
-            exchangeReport.params.exchangeEnd = new Date();
-            if (success) {
-                logger_1.logger.debug('Node %s accepted shard %s', nodeID, hash);
-                exchangeReport.UploadOk();
-            }
-            else {
-                exchangeReport.UploadError();
-            }
-            exchangeReport.sendReport().catch(function () {
-                // no op
-            });
-        });
-        return shardObject.upload(encryptedShard)
-            .then(function (res) {
-            logger_1.logger.info('Shard %s uploaded succesfully', shardMeta.hash);
-            return res;
-        })
-            .catch(function (err) {
-            if (attemps > 1 && !_this.aborted) {
-                logger_1.logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
-                return _this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity);
-            }
-            throw error_1.wrap('Uploading shard error', err);
+        this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
+        this.uploader.setIv(this.iv);
+        this.uploader.once(core_1.Events.Upload.Abort, function () { return _this.uploader.emit(core_1.Events.Upload.Error, new Error('Upload aborted')); });
+        this.uploader.on(core_1.Events.Upload.Progress, function (progress) { return _this.emit(core_1.Events.Upload.Progress, progress); });
+        var errorHandler = function (reject) { return function (err) {
+            _this.uploader.removeAllListeners();
+            reject(err);
+        }; };
+        var finishHandler = function (resolve) { return function (message) {
+            _this.uploader.removeAllListeners();
+            resolve(message.result);
+        }; };
+        var negotiateContract = function (shardMeta) {
+            return new ShardObject_1.ShardObject(_this.api, _this.frameId, shardMeta).negotiateContract();
+        };
+        return new Promise(function (resolve, reject) {
+            _this.uploader.once(core_1.Events.Upload.Error, errorHandler(reject));
+            _this.uploader.once(core_1.Events.Upload.Finished, finishHandler(resolve));
+            _this.uploader.upload(negotiateContract);
         });
     };
     FileObjectUpload.prototype.createBucketEntry = function (shardMetas) {
         var _this = this;
-        return this.SaveFileInNetwork(generateBucketEntry(this, this.fileMeta, shardMetas, false))
+        return this.SaveFileInNetwork(generateBucketEntry(this, this.name, shardMetas, false))
             .then(function (bucketEntry) {
             if (!bucketEntry) {
                 throw new Error('Can not save the file in the network');
             }
+            logger_1.logger.info('Created bucket entry with id %s', bucketEntry.id);
             _this.id = bucketEntry.id;
         })
             .catch(function (err) {
@@ -286,35 +210,23 @@ var FileObjectUpload = /** @class */ (function (_super) {
         });
     };
     FileObjectUpload.prototype.abort = function () {
-        logger_1.logger.info('Aborting file upload');
         this.aborted = true;
         this.requests.forEach(function (r) { return r.abort(); });
-        this.funnel.unpipe(this.cipher);
-        this.fileMeta.content.unpipe(this.funnel);
-        this.fileMeta.content.destroy();
-        this.funnel.destroy();
-        this.cipher.destroy();
+        this.uploader.abort();
     };
     FileObjectUpload.prototype.isAborted = function () {
         return this.aborted;
     };
     return FileObjectUpload;
-}(events_1.EventEmitter));
+}(stream_1.EventEmitter));
 exports.FileObjectUpload = FileObjectUpload;
-function updateProgress(totalBytes, currentBytesUploaded, newBytesUploaded, progress) {
-    var newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-    var progressCounter = newCurrentBytes / totalBytes;
-    progress(progressCounter, newCurrentBytes, totalBytes);
-    return newCurrentBytes;
-}
-function generateBucketEntry(fileObject, fileMeta, shardMetas, rs) {
+function generateBucketEntry(fileObject, filename, shardMetas, rs) {
     var bucketEntry = {
         frame: fileObject.frameId,
-        filename: fileMeta.name,
+        filename: filename,
         index: fileObject.index.toString('hex'),
         hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
     };
-    // console.log('FINAL HMAC', bucketEntry.hmac);
     if (rs) {
         bucketEntry.erasure = { type: "reedsolomon" };
     }

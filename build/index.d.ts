@@ -1,63 +1,15 @@
-/// <reference types="node" />
-import { Readable } from 'stream';
 import * as Winston from 'winston';
-import { OneStreamStrategyObject, MultipleStreamsStrategyObject } from './lib/upload';
-import { DownloadFunction } from './lib/download';
+import { UploadStrategyFunction, DownloadFunction } from './lib/core';
 import { GenerateFileKey } from './lib/crypto';
-import { ActionState } from './api/ActionState';
+import { ActionState, EnvironmentConfig } from './api';
 import { FileInfo } from './api/fileinfo';
 import { HashStream } from './lib/hasher';
-export declare type UploadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
-export declare type OneStreamOnlyStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: OneStreamStrategyObject) => ActionState;
-export declare type MultipleStreamsStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
-export declare type UploadFunction = OneStreamOnlyStrategyFunction & MultipleStreamsStrategyFunction;
-export declare type OnlyErrorCallback = (err: Error | null) => void;
-export declare type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
-export declare type UploadFinishCallback = (err: Error | null, response: string | null) => void;
-export declare type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
-export declare type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
-export declare type DecryptionProgressCallback = (progress: number, decryptedBytes: number | null, totalBytes: number | null) => void;
-export interface UploadFileOptions {
-    progressCallback: UploadProgressCallback;
-    finishedCallback: UploadFinishCallback;
-}
-export interface ResolveFileOptions {
-    progressCallback: DownloadProgressCallback;
-    finishedCallback: OnlyErrorCallback;
-    overwritte?: boolean;
-}
-export interface DownloadFileOptions {
-    fileToken?: string;
-    fileEncryptionKey?: Buffer;
-    progressCallback: DownloadProgressCallback;
-    decryptionProgressCallback?: DecryptionProgressCallback;
-    finishedCallback: DownloadFinishedCallback;
-}
-declare type GetInfoCallback = (err: Error | null, result: any) => void;
 declare type GetBucketsCallback = (err: Error | null, result: any) => void;
 declare type GetBucketIdCallback = (err: Error | null, result: any) => void;
 declare type CreateBucketCallback = (err: Error | null, result: any) => void;
 declare type DeleteBucketCallback = (err: Error | null, result: any) => void;
 declare type ListFilesCallback = (err: Error | null, result: any) => void;
 declare type DeleteFileCallback = (err: Error | null, result: any) => void;
-declare type DebugCallback = (message: string) => void;
-interface UploadFileParams {
-    filename: string;
-    fileSize: number;
-    fileContent: Blob;
-    progressCallback: UploadProgressCallback;
-    finishedCallback: UploadFinishCallback;
-}
-interface StoreFileParams extends UploadFileOptions {
-    debug?: DebugCallback;
-    filename?: string;
-}
-interface UploadOptions extends UploadFileOptions {
-    filename: string;
-}
-export interface DownloadOptions extends DownloadFileOptions {
-    debug?: DebugCallback;
-}
 export declare class Environment {
     config: EnvironmentConfig;
     logger: Winston.Logger;
@@ -66,11 +18,6 @@ export declare class Environment {
         Hasher: typeof HashStream;
     };
     constructor(config: EnvironmentConfig);
-    /**
-     * Gets general API info
-     * @param cb Callback that will receive api's info
-     */
-    getInfo(cb: GetInfoCallback): void;
     /**
      * Gets file info
      * @param bucketId Bucket id where file is stored
@@ -123,53 +70,10 @@ export declare class Environment {
      */
     listFiles(bucketId: string, cb: ListFilesCallback): void;
     setEncryptionKey(newEncryptionKey: string): void;
-    /**
-     * Uploads a file from a web browser
-     * @param bucketId Bucket id where file is going to be stored
-     * @param params Upload file params
-     */
-    uploadFile(bucketId: string, params: UploadFileParams): ActionState;
-    /**
-     * Uploads a file from file system
-     * @param bucketId Bucket id where file is going to be stored
-     * @param params Store file params
-     */
-    storeFile(bucketId: string, filepath: string, params: StoreFileParams): ActionState;
-    upload: UploadFunction;
+    upload: UploadStrategyFunction;
     download: DownloadFunction;
     downloadCancel(state: ActionState): void;
     uploadCancel(state: ActionState): void;
-    /**
-     * Uploads a file from a stream
-     * @param bucketId Bucket id where file is going to be stored
-     * @param params Store file params
-     */
-    uploadStream(bucketId: string, file: {
-        content: Readable;
-        size: number;
-        plainName: string;
-    }, params: UploadFileOptions, givenUploadState?: ActionState): ActionState;
     renameFile(bucketId: string, fileId: string, newPlainName: string): Promise<void>;
-    /**
-     * Cancels a file upload
-     * @param {ActionState} state Upload state
-     */
-    storeFileCancel(state: ActionState): void;
-}
-export interface EnvironmentConfig {
-    bridgeUrl?: string;
-    bridgeUser: string;
-    bridgePass: string;
-    encryptionKey?: string;
-    logLevel?: number;
-    webProxy?: string;
-    useProxy?: boolean;
-    download?: {
-        concurrency: number;
-    };
-    inject?: {
-        fileEncryptionKey?: Buffer;
-        index?: Buffer;
-    };
 }
 export {};

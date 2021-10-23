@@ -62,7 +62,7 @@ var ConcurrentQueue = /** @class */ (function () {
             }); }, concurrency);
         }
         else {
-            // tslint:disable-next-line: no-empty
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
             this.queue = async_1.queue(function () { }, 1);
         }
     }

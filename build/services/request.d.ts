@@ -1,8 +1,7 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
-import { EnvironmentConfig } from '..';
-import AbortController from 'abort-controller';
+import { EnvironmentConfig } from '../api';
 export declare function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean): Promise<AxiosResponse<JSON>>;
 export declare function streamRequest(targetUrl: string, timeoutSeconds?: number): Readable;
 interface PostStreamRequestParams {
@@ -18,5 +17,5 @@ export declare function getStream(url: string, config?: {
 }): Promise<Readable>;
 export declare function putStream<K>(url: string, content: Readable, config?: {
     useProxy: boolean;
-}, controller?: AbortController): Promise<K>;
+}): Promise<K>;
 export {};

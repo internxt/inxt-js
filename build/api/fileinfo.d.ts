@@ -1,5 +1,4 @@
-import { EnvironmentConfig } from '../index';
-import { Shard } from './shard';
+import { EnvironmentConfig, Shard } from '../api';
 export interface FileInfo {
     bucket: string;
     mimetype: string;

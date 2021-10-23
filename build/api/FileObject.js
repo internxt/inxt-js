@@ -58,10 +58,10 @@ var logger_1 = require("../lib/utils/logger");
 var constants_1 = require("./constants");
 var error_1 = require("../lib/utils/error");
 var api_1 = require("../services/api");
-var events_2 = require("./events");
+var core_1 = require("../lib/core");
 var FileObject = /** @class */ (function (_super) {
     __extends(FileObject, _super);
-    function FileObject(config, bucketId, fileId, debug, downloader) {
+    function FileObject(config, bucketId, fileId, downloader) {
         var _this = _super.call(this) || this;
         _this.shards = [];
         _this.rawShards = [];
@@ -73,12 +73,11 @@ var FileObject = /** @class */ (function (_super) {
         _this.config = config;
         _this.bucketId = bucketId;
         _this.fileId = fileId;
-        _this.debug = debug;
         _this.fileKey = Buffer.alloc(0);
         _this.api = new api_1.Bridge(config);
         _this.downloader = downloader;
         _this.abortables.push({ abort: function () { return downloader.abort(); } });
-        _this.once(events_2.Events.Download.Abort, _this.abort.bind(_this));
+        _this.once(core_1.Events.Download.Abort, _this.abort.bind(_this));
         return _this;
     }
     FileObject.prototype.setFileEncryptionKey = function (key) {
@@ -89,7 +88,7 @@ var FileObject = /** @class */ (function (_super) {
     };
     FileObject.prototype.checkIfIsAborted = function () {
         if (this.isAborted()) {
-            this.emit(events_2.Events.Download.Error, new Error('Download aborted'));
+            this.emit(core_1.Events.Download.Error, new Error('Download aborted'));
         }
     };
     FileObject.prototype.getInfo = function () {
@@ -188,16 +187,15 @@ var FileObject = /** @class */ (function (_super) {
         var iv = Buffer.from(this.fileInfo.index, 'hex').slice(0, 16);
         this.downloader.setIv(iv);
         this.downloader.setFileEncryptionKey(fk);
-        this.downloader.once(events_2.Events.Download.Abort, function () { return _this.downloader.emit(events_2.Events.Download.Error, new Error('Download aborted')); });
-        this.downloader.on(events_2.Events.Download.Progress, function (progress) { return _this.emit(events_2.Events.Download.Progress, progress); });
+        this.downloader.once(core_1.Events.Download.Abort, function () { return _this.downloader.emit(core_1.Events.Download.Error, new Error('Download aborted')); });
+        this.downloader.on(core_1.Events.Download.Progress, function (progress) { return _this.emit(core_1.Events.Download.Progress, progress); });
         return new Promise(function (resolve, reject) {
-            _this.downloader.once(events_2.Events.Download.Ready, resolve);
-            _this.downloader.once(events_2.Events.Download.Error, reject);
+            _this.downloader.once(core_1.Events.Download.Ready, resolve);
+            _this.downloader.once(core_1.Events.Download.Error, reject);
             _this.downloader.download(_this.rawShards.filter(function (s) { return !s.parity; }));
         });
     };
     FileObject.prototype.abort = function () {
-        this.debug.info('Aborting file download');
         this.aborted = true;
         this.abortables.forEach(function (abortable) { return abortable.abort(); });
     };

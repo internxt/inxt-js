@@ -15,8 +15,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActionState = exports.ActionTypes = void 0;
 var events_1 = require("events");
-var constants_1 = require("./constants");
-var events_2 = require("./events");
+var core_1 = require("../lib/core");
 var ActionTypes;
 (function (ActionTypes) {
     ActionTypes["Download"] = "DOWNLOAD";
@@ -31,13 +30,11 @@ var ActionState = /** @class */ (function (_super) {
     }
     ActionState.prototype.stop = function () {
         if (this.type === ActionTypes.Download) {
-            this.emit(constants_1.DOWNLOAD_CANCELLED);
-            this.emit(events_2.Events.Download.Abort);
+            this.emit(core_1.Events.Download.Abort);
             return;
         }
         if (this.type === ActionTypes.Upload) {
-            this.emit(constants_1.UPLOAD_CANCELLED);
-            this.emit(events_2.Events.Upload.Abort);
+            this.emit(core_1.Events.Upload.Abort);
         }
     };
     return ActionState;
