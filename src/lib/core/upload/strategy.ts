@@ -53,4 +53,5 @@ export abstract class UploadStrategy extends EventEmitter implements Abortable {
   abstract abort(): void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface UploadParams {}

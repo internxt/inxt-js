@@ -33,7 +33,7 @@ export function GetFileInfo(config: EnvironmentConfig, bucketId: string, fileId:
         default:
           throw Error('Unhandled error: ' + err.message);
       }
-  });
+    });
 }
 
 export function GetFileMirror(config: EnvironmentConfig, bucketId: string, fileId: string, limit: number | 3, skip: number | 0, excludeNodes: string[] = [], token?: string): Promise<Shard[]> {
