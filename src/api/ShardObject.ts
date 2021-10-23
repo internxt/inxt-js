@@ -8,8 +8,8 @@ import { ShardMeta } from "../lib/shardMeta";
 import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
-import { buildRequestUrl, Shard } from "./Shard";
-import { get, getStream, putStream } from "../services/request";
+import { Shard } from "./";
+import { get, putStream } from "../services/request";
 import AbortController from 'abort-controller';
 
 import { request } from 'https';
