@@ -5,7 +5,7 @@ import axios, { AxiosRequestConfig, AxiosResponse, Canceler } from 'axios';
 
 import { request, streamRequest } from '../services/request';
 import { ProxyManager, getProxy } from '../services/proxy';
-import { EnvironmentConfig } from '..';
+import { EnvironmentConfig } from '../api';
 
 enum Methods {
   Get = 'GET',

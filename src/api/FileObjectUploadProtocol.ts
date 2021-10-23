@@ -1,4 +1,4 @@
-import { UploadProgressCallback } from "..";
+import { UploadProgressCallback } from "../lib/core";
 import { ShardMeta } from "../lib/shardMeta";
 
 export interface FileObjectUploadProtocol {

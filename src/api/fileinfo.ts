@@ -1,7 +1,6 @@
-import { EnvironmentConfig } from '../index';
+import { EnvironmentConfig, Shard } from '../api';
 import { doUntil } from 'async';
 import { request } from '../services/request';
-import { Shard } from './Shard';
 import { AxiosResponse, AxiosError, AxiosRequestConfig } from 'axios';
 
 export interface FileInfo {

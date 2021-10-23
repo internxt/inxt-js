@@ -1,4 +1,3 @@
-import * as Winston from 'winston';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { doUntil, eachLimit } from 'async';
@@ -6,15 +5,13 @@ import { doUntil, eachLimit } from 'async';
 import { GenerateFileKey } from "../lib/crypto";
 
 import { FileInfo, GetFileInfo, GetFileMirrors, ReplacePointer } from "./fileinfo";
-import { EnvironmentConfig } from "..";
-import { Shard } from "./Shard";
+import { Shard, EnvironmentConfig } from "./";
 import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS } from './constants';
 import { wrap } from '../lib/utils/error';
 import { ShardObject } from './ShardObject';
 import { Bridge, InxtApiI } from '../services/api';
-import { DownloadStrategy } from '../lib/download/DownloadStrategy';
-import { Events } from './Events';
+import { DownloadStrategy, Events } from '../lib/core';
 import { Abortable } from './Abortable';
 
 export class FileObject extends EventEmitter {
@@ -35,18 +32,16 @@ export class FileObject extends EventEmitter {
   totalSizeWithECs = 0;
 
   private aborted = false;
-  private debug: Winston.Logger;
   private api: InxtApiI;
 
   private downloader: DownloadStrategy;
   private abortables: Abortable[] = [];
 
-  constructor(config: EnvironmentConfig, bucketId: string, fileId: string, debug: Winston.Logger, downloader: DownloadStrategy) {
+  constructor(config: EnvironmentConfig, bucketId: string, fileId: string, downloader: DownloadStrategy) {
     super();
     this.config = config;
     this.bucketId = bucketId;
     this.fileId = fileId;
-    this.debug = debug;
     this.fileKey = Buffer.alloc(0);
 
     this.api = new Bridge(config);
@@ -173,7 +168,6 @@ export class FileObject extends EventEmitter {
   }
 
   abort(): void {
-    this.debug.info('Aborting file download');
     this.aborted = true;
     this.abortables.forEach((abortable) => abortable.abort());
   }

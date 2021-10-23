@@ -5,7 +5,7 @@ import { Readable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-import { EnvironmentConfig } from '..';
+import { EnvironmentConfig } from '../api';
 import { sha256 } from '../lib/crypto';
 import { getProxy, ProxyManager } from './proxy';
 import needle from 'needle';

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Events } from '.';
+import { Events } from '../lib/core';
 
 export enum ActionTypes {
   Download = 'DOWNLOAD',
