@@ -6,6 +6,5 @@ export * from './ExchangeReport';
 export * from './FileObject';
 export * from './FileObjectUpload';
 export * from './FileObjectUploadProtocol';
-export * from './FileMeta';
 export * from './Shard';
 export * from './ShardObject';
