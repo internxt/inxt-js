@@ -10,7 +10,9 @@ export interface UploadFinishedMessage {
 }
 
 export type UploadStrategyLabel = string;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UploadStrategyObject = { label: UploadStrategyLabel, params: any };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UploadStrategyFunction = (bucketId: string, opts: any, strategyObj: UploadStrategyObject) => ActionState;
 
 export abstract class UploadStrategy extends EventEmitter implements Abortable {
