@@ -88,8 +88,8 @@ export class ShardObject extends EventEmitter {
     return this.meta;
   }
 
-  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void) {
-    get<{ result: string }>(url, { useProxy: true }).then((res) => {
+  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void, useProxy: boolean) {
+    get<{ result: string }>(url, { useProxy }).then((res) => {
       cb(null, res.result);
     }).catch((err) => {
       cb(err, '');

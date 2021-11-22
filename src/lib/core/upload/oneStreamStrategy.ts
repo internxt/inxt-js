@@ -84,7 +84,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     clearInterval(this.progressIntervalId);
   }
 
-  async upload(negotiateContract: NegotiateContract): Promise<void> {
+  async upload(negotiateContract: NegotiateContract, useProxy: boolean): Promise<void> {
     this.emit(Events.Upload.Started);
 
     try {
@@ -125,7 +125,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
               this.uploadsProgress[shardMeta.index] = 1;
 
               nextTry();
-            });
+            }, useProxy);
           }).catch((err) => {
             nextTry(err);
           });
@@ -193,7 +193,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     }
   }
 
-  private uploadShard(shardMeta: ShardMeta, contract: ContractMeta, cb: (err?: Error) => void) {
+  private uploadShard(shardMeta: ShardMeta, contract: ContractMeta, cb: (err?: Error) => void, useProxy: boolean) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
 
     ShardObject.requestPutTwo(url, (err, putUrl) => {
@@ -209,7 +209,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
 
         cb();
       });
-    });
+    }, useProxy);
   }
 
   private addToAbortables(abortFunction: () => void) {

@@ -44,7 +44,7 @@ export abstract class UploadStrategy extends EventEmitter implements Abortable {
    * Should execute the steps to perform an upload
    * @param negotiateContract Injected method to negotiate a contract
    */
-  abstract upload(negotiateContract: NegotiateContract): void;
+  abstract upload(negotiateContract: NegotiateContract, useProxy: boolean): void;
 
   /**
    * Should abort the upload strategy as soon as possible
