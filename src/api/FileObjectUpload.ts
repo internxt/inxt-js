@@ -1,4 +1,4 @@
-import { EventEmitter } from "stream";
+import { EventEmitter } from "events";
 import { randomBytes } from "crypto";
 
 import { EnvironmentConfig } from "./";
@@ -38,8 +38,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   fileEncryptionKey = Buffer.alloc(0);
 
   constructor(config: EnvironmentConfig, name: string, bucketId: string, uploader: UploadStrategy, api?: InxtApiI) {
-    super();
-
+    super()
     this.uploader = uploader;
     this.name = name;
 

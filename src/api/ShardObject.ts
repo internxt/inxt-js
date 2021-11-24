@@ -11,7 +11,8 @@ import { InxtApiI, SendShardToNodeResponse } from "../services/api";
 import { Shard } from "./";
 import { get } from "../services/request";
 
-import { request } from 'https';
+import { request } from 'http';
+import { getProxy } from "../services/proxy";
 
 type PutUrl = string;
 type GetUrl = string;
@@ -104,11 +105,22 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{
-    const formattedUrl = new URL(url);
+  static async putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void, useProxy: boolean): Promise<void>{
+
+    let free: undefined | (() => void);
+    let targetUrl = url
+
+    if (useProxy) {
+      const proxy = await getProxy();
+      free = proxy.free;
+      targetUrl = `${proxy.url}/${targetUrl}`;
+    }
+    const formattedUrl = new URL(targetUrl);
 
     const putRequest = request({
       hostname: formattedUrl.hostname,
+      port: formattedUrl.port,
+      protocol: formattedUrl.protocol,
       path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
       method: 'PUT'
     }, (res) => {
@@ -123,6 +135,7 @@ export class ShardObject extends EventEmitter {
       res.once('end', () => {
         const body = Buffer.concat(chunks);
         // console.log(body.toString());
+        free?.()
         cb(null);
       });
     });

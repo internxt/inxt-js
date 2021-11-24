@@ -201,14 +201,20 @@ export class UploadOneStreamStrategy extends UploadStrategy {
         return cb(err);
       }
 
-      ShardObject.putStreamTwo(putUrl, Readable.from(this.internalBuffer[shardMeta.index]), (err) => {
+      const buffer = this.internalBuffer[shardMeta.index];
+
+      const readableFromBuffer = new Readable()
+      readableFromBuffer.push(buffer)
+      readableFromBuffer.push(null)
+
+      ShardObject.putStreamTwo(putUrl, readableFromBuffer, (err) => {
         if (err) {
           // TODO: Si el error es un 304, hay que dar el shard por subido.
           return cb(err);
         }
 
         cb();
-      });
+      }, useProxy);
     }, useProxy);
   }
 

@@ -235,6 +235,6 @@ export class Environment {
 
     return EncryptFilename(mnemonic, bucketId, newPlainName).then((newEncryptedName) => {
       return new Bridge(this.config).renameFile(bucketId, fileId, newEncryptedName).start();
-    }).then(() => { });
+    })
   }
 }
