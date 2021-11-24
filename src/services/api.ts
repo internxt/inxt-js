@@ -1,9 +1,7 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { EnvironmentConfig } from "..";
-import { ExchangeReport } from "../api/reports";
-import { Shard } from "../api/shard";
+import { EnvironmentConfig, ExchangeReport, Shard } from "../api";
 import { INXTRequest } from "../lib";
-import { ShardMeta } from "../lib/shardMeta";
+import { ShardMeta } from "../lib/models";
 
 export enum Methods {
   Get = 'GET',
@@ -140,42 +138,52 @@ class InxtApi implements InxtApiI {
     this.url = config.bridgeUrl ?? '';
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createFrame(params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
     return exchangeReport.sendReport();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getShardFromNode(shard: Shard): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
     return emptyINXTRequest(this.config);
   }
@@ -261,7 +269,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Put, targetUrl, finalParams, false);
+    return new INXTRequest(this.config, Methods.Put, targetUrl, finalParams, this.config.useProxy ?? true);
   }
 
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {

@@ -5,7 +5,7 @@ import axios, { AxiosRequestConfig, AxiosResponse, Canceler } from 'axios';
 
 import { request, streamRequest } from '../services/request';
 import { ProxyManager, getProxy } from '../services/proxy';
-import { EnvironmentConfig } from '..';
+import { EnvironmentConfig } from '../api';
 
 enum Methods {
   Get = 'GET',
@@ -78,7 +78,7 @@ export class INXTRequest extends EventEmitter {
     return streamRequest(targetUrl);
   }
 
-  private async postStream<K>(content: Readable, size: number): Promise<AxiosResponse<K>> {
+  private async postStream<K>(content: Readable, size: number): Promise<K> {
     this.streaming = true;
 
     let proxy: ProxyManager | undefined;
@@ -93,12 +93,12 @@ export class INXTRequest extends EventEmitter {
       maxContentLength: Infinity,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Length': size
+        'Content-Length': size.toString()
       }
     }).then((res) => {
       proxy?.free();
 
-      return res;
+      return res as unknown as K;
     });
   }
 

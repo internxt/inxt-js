@@ -3,16 +3,16 @@ import { Readable } from "stream";
 import { EventEmitter } from "events";
 
 import { INXTRequest } from "../lib";
-import { ContractNegotiated } from "../lib/contracts";
-import { ShardMeta } from "../lib/shardMeta";
+import { ContractMeta } from "../api";
+import { ShardMeta } from "../lib/models";
 import { wrap } from "../lib/utils/error";
 import { logger } from "../lib/utils/logger";
 import { InxtApiI, SendShardToNodeResponse } from "../services/api";
-import { buildRequestUrl, Shard } from "./shard";
-import { get, getStream, putStream } from "../services/request";
-import AbortController from 'abort-controller';
+import { Shard } from "./";
+import { get } from "../services/request";
 
-import { request } from 'https';
+import { request } from 'http';
+import { getProxy } from "../services/proxy";
 
 type PutUrl = string;
 type GetUrl = string;
@@ -40,8 +40,7 @@ export class ShardObject extends EventEmitter {
       challenges_as_str: [],
       size: 0,
       tree: [],
-      challenges: [],
-      exclude: []
+      challenges: []
     };
     this.api = api;
     this.shard = shard;
@@ -90,8 +89,8 @@ export class ShardObject extends EventEmitter {
     return this.meta;
   }
 
-  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void) {
-    get<{ result: string }>(url, { useProxy: true }).then((res) => {
+  static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void, useProxy: boolean) {
+    get<{ result: string }>(url, { useProxy }).then((res) => {
       cb(null, res.result);
     }).catch((err) => {
       cb(err, '');
@@ -106,15 +105,22 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static putStream(url: PutUrl, content: Readable, controller?: AbortController): Promise<any> {
-    return putStream(url, content, { useProxy: false }, controller);
-  }
+  static async putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void, useProxy: boolean): Promise<void>{
 
-  static putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void): void{
-    const formattedUrl = new URL(url);
+    let free: undefined | (() => void);
+    let targetUrl = url
+
+    if (useProxy) {
+      const proxy = await getProxy();
+      free = proxy.free;
+      targetUrl = `${proxy.url}/${targetUrl}`;
+    }
+    const formattedUrl = new URL(targetUrl);
 
     const putRequest = request({
       hostname: formattedUrl.hostname,
+      port: formattedUrl.port,
+      protocol: formattedUrl.protocol,
       path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
       method: 'PUT'
     }, (res) => {
@@ -129,6 +135,7 @@ export class ShardObject extends EventEmitter {
       res.once('end', () => {
         const body = Buffer.concat(chunks);
         // console.log(body.toString());
+        free?.()
         cb(null);
       });
     });
@@ -136,11 +143,11 @@ export class ShardObject extends EventEmitter {
     content.pipe(putRequest);
   } 
 
-  negotiateContract(): Promise<ContractNegotiated> {
+  negotiateContract(): Promise<ContractMeta> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);
     this.requests.push(req);
 
-    return req.start<ContractNegotiated>()
+    return req.start<ContractMeta>()
       .catch((err) => {
         throw wrap('Contract negotiation error', err);
       });
@@ -153,7 +160,7 @@ export class ShardObject extends EventEmitter {
     let success = true;
 
     return req.start<SendShardToNodeResponse>()
-      .catch((err: AxiosError) => {
+      .catch((err: any) => {
         if (err.response && err.response.status < 400) {
           return { result: err.response.data && err.response.data.error };
         }

@@ -1,5 +1,6 @@
 import { Command } from "commander";
-import { Environment, EnvironmentConfig } from "..";
+import { EnvironmentConfig } from "../api";
+import { Environment } from "..";
 
 export interface CommandOpts {
   version: string;

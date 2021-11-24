@@ -5,13 +5,9 @@ import { Readable } from 'stream';
 import { ClientRequest, IncomingMessage } from 'http';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-import { EnvironmentConfig } from '..';
-import { sha256 } from '../lib/crypto';
+import { EnvironmentConfig } from '../api';
+import { sha256 } from '../lib/utils/crypto';
 import { getProxy, ProxyManager } from './proxy';
-import { Methods } from './api';
-import { wrap } from '../lib/utils/error';
-import AbortController from 'abort-controller';
-import needle from 'needle';
 
 export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
@@ -87,63 +83,10 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
               this.emit('end');
             }).on('close', this.emit.bind(this, 'close'));
         })
-        .on('error', this.emit.bind(this, 'error'))
-        .on('timeout', () => this.emit('error', Error('Request timeout')));
+          .on('error', this.emit.bind(this, 'error'))
+          .on('timeout', () => this.emit('error', Error('Request timeout')));
       }
     }
-  });
-}
-
-interface PostStreamRequestParams {
-  hostname: string;
-  source: Readable;
-}
-
-export async function httpsStreamPostRequest(params: PostStreamRequestParams, useProxy = true): Promise<Buffer> {
-  let targetUrl = params.hostname;
-  let free: () => void;
-
-  if (useProxy) {
-    const proxy = await getProxy();
-    targetUrl = `${proxy.url}/${params.hostname}`;
-    free = proxy.free;
-  }
-
-  const reqUrl = new url.URL(targetUrl);
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      protocol: 'https:',
-      method: 'POST',
-      hostname: reqUrl.hostname,
-      path: reqUrl.pathname,
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    }, (res: IncomingMessage) => {
-      let dataResponse = Buffer.alloc(0);
-
-      res.on('error', (err) => {
-        if (free) {
-          free();
-        }
-        reject(err);
-      });
-      res.on('data', d => {
-        dataResponse = Buffer.concat([dataResponse, d]);
-      });
-      res.on('end', () => {
-        if (free) {
-          free();
-        }
-        if (res.statusCode && res.statusCode > 399) {
-          return reject(new Error(dataResponse.toString()));
-        }
-        resolve(dataResponse);
-      });
-    });
-
-    params.source.pipe(req);
   });
 }
 
@@ -183,30 +126,4 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
   }
 
   return getStream;
-}
-
-export async function putStream<K>(url: string, content: Readable, config = { useProxy: false }, controller?: AbortController): Promise<K> {
-  let targetUrl = url;
-  let free: undefined | (() => void);
-
-  if (config.useProxy) {
-    const proxy = await getProxy();
-    free = proxy.free;
-    targetUrl = `${proxy.url}/${targetUrl}`;
-  }
-
-  const postReq = needle.put(targetUrl, content);
-  const responseBuffers: Buffer[] = [];
-
-  return new Promise((resolve, reject) => {
-    postReq.on('data', (c) => {
-      responseBuffers.push(c);
-    });
-
-    postReq.once('error', reject);
-    postReq.once('end', () => {
-      // console.log('RES', Buffer.concat(responseBuffers).toString())
-      resolve(null as unknown as K);
-    })
-  });
 }

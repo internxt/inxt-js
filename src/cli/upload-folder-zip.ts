@@ -4,11 +4,12 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { v4 } from 'uuid';
 
-import { Environment, EnvironmentConfig } from '..';
+import { Environment } from '..';
+import { EnvironmentConfig } from '../api'
 import { GenerateFileKey } from '../lib/crypto';
 import { HashStream } from '../lib/hasher';
 import { BytesCounter } from '../lib/streams';
-import { OneStreamStrategyObject } from '../lib/upload';
+import { UploadOneStreamStrategyObject } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 
 const pipelineAsync = promisify(pipeline);
@@ -40,7 +41,7 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
 
   setTimeout(archive.finalize.bind(archive), 100);
 
-  hasher.on('data', () => {});
+  hasher.on('data', () => null);
 
   return pipelineAsync(archive.directory(folderPath + '/', false), cipher, counter, hasher)
     .then(() => {
@@ -80,7 +81,7 @@ export async function uploadFolder(path: string) {
   logger.debug('directory ziped size is %s', size);
   logger.info('Network name is %s', networkFilename);
 
-  type ResolveFunction = (res: any) => void;
+  type ResolveFunction = (res: null) => void;
   type RejectFunction = (err: Error) => void;
 
   const finishCbGenerator = (resolve: ResolveFunction, reject: RejectFunction) => {
@@ -97,7 +98,7 @@ export async function uploadFolder(path: string) {
     finishedCallback: finishCbGenerator(resolve, reject)
   });
 
-  const uploadStrategy: OneStreamStrategyObject = {
+  const uploadStrategy: UploadOneStreamStrategyObject = {
     label: 'OneStreamOnly',
     params: {
       source: {

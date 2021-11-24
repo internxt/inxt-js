@@ -1,72 +1,63 @@
-import { Readable } from 'stream';
-import { EventEmitter } from 'events';
-import { randomBytes } from 'crypto';
-import * as Winston from 'winston';
+import { EventEmitter } from "events";
+import { randomBytes } from "crypto";
 
-import { EnvironmentConfig, UploadProgressCallback } from '..';
+import { EnvironmentConfig } from "./";
+import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
+import { ShardObject } from "./ShardObject";
+import { INXTRequest } from "../lib";
+import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI } from "../services/api";
+import { GenerateFileKey, sha512HmacBuffer } from "../lib/utils/crypto";
+import { logger } from "../lib/utils/logger";
+import { wrap } from "../lib/utils/error";
+import { UploadFinishedMessage, UploadStrategy, Events } from "../lib/core";
+import { Abortable } from "./Abortable";
 
-import EncryptStream from '../lib/encryptStream';
-import { GenerateFileKey, sha512HmacBuffer } from "../lib/crypto";
-import { FunnelStream } from "../lib/funnelStream";
-import { getShardMeta, ShardMeta } from '../lib/shardMeta';
-import { ContractNegotiated } from '../lib/contracts';
-
-import { ExchangeReport } from "./reports";
-import { Shard } from "./shard";
-import { wrap } from '../lib/utils/error';
-import { UPLOAD_CANCELLED } from './constants';
-import { UploaderQueue } from '../lib/upload/uploader';
-import { logger } from '../lib/utils/logger';
-import { determineConcurrency, determineShardSize } from '../lib/utils';
-import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI, SendShardToNodeResponse } from '../services/api';
-import { INXTRequest } from '../lib';
-import { ShardObject } from './ShardObject';
-
-export interface FileMeta {
-  size: number;
-  name: string;
-  content: Readable;
+interface ShardMeta {
+  hash: string;
+  size: number; // size of the actual file
+  index: number;
+  parity: boolean;
+  challenges?: Buffer[];
+  challenges_as_str: string[];
+  tree: string[];
 }
 
-export class FileObjectUpload extends EventEmitter {
+export class FileObjectUpload extends EventEmitter implements FileObjectUploadProtocol, Abortable {
+  private name: string;
   private config: EnvironmentConfig;
-  private fileMeta: FileMeta;
   private requests: INXTRequest[] = [];
   private id = '';
   private aborted = false;
   private api: InxtApiI;
-  shardMetas: ShardMeta[] = [];
-  private logger: Winston.Logger;
+  private uploader: UploadStrategy;
 
-  bucketId: string;
-  frameId: string;
+  iv: Buffer;
   index: Buffer;
-  encrypted = false;
+  frameId: string;
+  bucketId: string;
+  fileEncryptionKey = Buffer.alloc(0);
 
-  cipher: EncryptStream;
-  funnel: FunnelStream;
-  fileEncryptionKey: Buffer;
-
-  constructor(config: EnvironmentConfig, fileMeta: FileMeta, bucketId: string, log: Winston.Logger, api?: InxtApiI) {
-    super();
+  constructor(config: EnvironmentConfig, name: string, bucketId: string, uploader: UploadStrategy, api?: InxtApiI) {
+    super()
+    this.uploader = uploader;
+    this.name = name;
 
     this.config = config;
     this.index = Buffer.alloc(0);
-    this.fileMeta = fileMeta;
     this.bucketId = bucketId;
     this.frameId = '';
-    this.funnel = new FunnelStream(determineShardSize(fileMeta.size));
-    this.cipher = new EncryptStream(randomBytes(32), randomBytes(16));
-    this.fileEncryptionKey = randomBytes(32);
     this.api = api ?? new Bridge(this.config);
 
-    this.logger = log;
+    if (this.config.inject && this.config.inject.index) {
+      this.index = this.config.inject.index;
+      logger.debug('Using injected index %s', this.index.toString('hex'));
+    } else {
+      this.index = randomBytes(32);
+    }
 
-    this.once(UPLOAD_CANCELLED, this.abort.bind(this));
-  }
+    this.iv = this.index.slice(0, 16);
 
-  getSize(): number {
-    return this.fileMeta.size;
+    this.once(Events.Upload.Abort, this.abort.bind(this));
   }
 
   getId(): string {
@@ -82,10 +73,12 @@ export class FileObjectUpload extends EventEmitter {
   async init(): Promise<FileObjectUpload> {
     this.checkIfIsAborted();
 
-    this.index = randomBytes(32);
-    this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
-
-    this.cipher = new EncryptStream(this.fileEncryptionKey, this.index.slice(0, 16));
+    if (this.config.inject && this.config.inject.fileEncryptionKey) {
+      this.fileEncryptionKey = this.config.inject.fileEncryptionKey;
+      logger.debug('Using injected file encryption key %s', this.fileEncryptionKey.toString('hex'));
+    } else {
+      this.fileEncryptionKey = await GenerateFileKey(this.config.encryptionKey || '', this.bucketId, this.index);
+    }
 
     return this;
   }
@@ -124,7 +117,7 @@ export class FileObjectUpload extends EventEmitter {
     });
   }
 
-  SaveFileInNetwork(bucketEntry: CreateEntryFromFrameBody): Promise<void | CreateEntryFromFrameResponse> {
+  SaveFileInNetwork(bucketEntry: CreateEntryFromFrameBody): Promise<CreateEntryFromFrameResponse> {
     this.checkIfIsAborted();
 
     const req = this.api.createEntryFromFrame(this.bucketId, bucketEntry);
@@ -133,34 +126,6 @@ export class FileObjectUpload extends EventEmitter {
     return req.start<CreateEntryFromFrameResponse>()
       .catch((err) => {
         throw wrap('Saving file in network error', err);
-      });
-  }
-
-  negotiateContract(frameId: string, shardMeta: ShardMeta): Promise<void | ContractNegotiated> {
-    this.checkIfIsAborted();
-
-    const req = this.api.addShardToFrame(frameId, shardMeta);
-    this.requests.push(req);
-
-    return req.start<ContractNegotiated>()
-      .catch((err) => {
-        throw wrap('Contract negotiation error', err);
-      });
-  }
-
-  NodeRejectedShard(encryptedShard: Buffer, shard: Shard): Promise<boolean> {
-    this.checkIfIsAborted();
-
-    const req = this.api.sendShardToNode(shard, encryptedShard);
-    this.requests.push(req);
-
-    return req.start<SendShardToNodeResponse>()
-      .then(() => false)
-      .catch((err) => {
-        if (err.response && err.response.status < 400) {
-          return true;
-        }
-        throw wrap('Farmer request error', err);
       });
   }
 
@@ -175,104 +140,45 @@ export class FileObjectUpload extends EventEmitter {
     return hmac.digest().toString('hex');
   }
 
-  encrypt(): EncryptStream {
-    this.encrypted = true;
-
-    return this.fileMeta.content.pipe(this.funnel).pipe(this.cipher);
-  }
-
-  private parallelUpload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
-    const shardSize = determineShardSize(this.fileMeta.size);
-    const ramUsage = 200 * 1024 * 1024; // 200Mb
-    const nShards = Math.ceil(this.fileMeta.size / shardSize);
-    const concurrency = Math.min(determineConcurrency(ramUsage, this.fileMeta.size), nShards);
-
-    logger.debug('Using parallel upload (%s shards, %s concurrent uploads)', nShards, concurrency);
-
-    const uploader = new UploaderQueue(concurrency, nShards, this);
-
-    let currentBytesUploaded = 0;
-    uploader.on('upload-progress', ([bytesUploaded]) => {
-      currentBytesUploaded = updateProgress(this.getSize(), currentBytesUploaded, bytesUploaded, callback);
-    });
-
-    this.on(UPLOAD_CANCELLED, () => {
-      uploader.emit('error', Error('Upload aborted'));
-    });
-
-    const uploadStream = uploader.getUpstream();
-
-    this.cipher.on('data', (chunk: Buffer) => uploadStream.write(chunk));
-    this.cipher.once('end', () => uploader.end());
-
-    return new Promise((resolve, reject) => {
-      uploader.once('end', () => {
-        resolve(this.shardMetas);
-      });
-
-      uploader.once('error', ([err]) => {
-        reject(err);
-      });
-    });
-  }
-
-  upload(callback: UploadProgressCallback): Promise<ShardMeta[]> {
+  upload(): Promise<ShardMeta[]> {
     this.checkIfIsAborted();
 
-    if (!this.encrypted) {
-      throw new Error('Tried to upload a file not encrypted. Use .encrypt() before upload()');
-    }
+    this.uploader.setFileEncryptionKey(this.fileEncryptionKey);
+    this.uploader.setIv(this.iv);
 
-    return this.parallelUpload(callback);
-  }
+    this.uploader.once(Events.Upload.Abort, () => this.uploader.emit(Events.Upload.Error, new Error('Upload aborted')));
+    this.uploader.on(Events.Upload.Progress, (progress: number) => this.emit(Events.Upload.Progress, progress));
 
-  uploadShard(encryptedShard: Buffer, shardSize: number, frameId: string, index: number, attemps: number, parity: boolean): Promise<ShardMeta> {
-    const shardMeta: ShardMeta = getShardMeta(encryptedShard, shardSize, index, parity);
+    const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
+      this.uploader.removeAllListeners();
+      reject(err);
+    };
 
-    logger.info('Uploading shard %s index %s size %s parity %s', shardMeta.hash, shardMeta.index, shardMeta.size, parity);
+    const finishHandler = (resolve: (result: ShardMeta[]) => void) => (message: UploadFinishedMessage) => {
+      this.uploader.removeAllListeners();
+      resolve(message.result);
+    };
 
-    const shardObject = new ShardObject(this.api, frameId, shardMeta);
+    const negotiateContract = (shardMeta: ShardMeta) => {
+      return new ShardObject(this.api, this.frameId, shardMeta).negotiateContract();
+    };
 
-    shardObject.once(ShardObject.Events.NodeTransferFinished, ({ success, nodeID, hash }) => {
-      const exchangeReport = new ExchangeReport(this.config);
-      exchangeReport.params.dataHash = hash;
-      exchangeReport.params.farmerId = nodeID;
-      exchangeReport.params.exchangeEnd = new Date();
+    return new Promise((resolve, reject) => {
+      this.uploader.once(Events.Upload.Error, errorHandler(reject));
+      this.uploader.once(Events.Upload.Finished, finishHandler(resolve));
 
-      if (success) {
-        logger.debug('Node %s accepted shard %s', nodeID, hash);
-        exchangeReport.UploadOk();
-      } else {
-        exchangeReport.UploadError();
-      }
-
-      exchangeReport.sendReport().catch(() => {
-        // no op
-      });
+      this.uploader.upload(negotiateContract, this.config.useProxy ?? true);
     });
-
-    return shardObject.upload(encryptedShard)
-      .then((res) => {
-        logger.info('Shard %s uploaded succesfully', shardMeta.hash);
-
-        return res;
-      })
-      .catch((err) => {
-        if (attemps > 1 && !this.aborted) {
-          logger.error('Upload for shard %s failed. Reason %s. Retrying ...', shardMeta.hash, err.message);
-
-          return this.uploadShard(encryptedShard, shardSize, frameId, index, attemps - 1, parity);
-        }
-        throw wrap('Uploading shard error', err);
-      });
   }
 
   createBucketEntry(shardMetas: ShardMeta[]): Promise<void> {
-    return this.SaveFileInNetwork(generateBucketEntry(this, this.fileMeta, shardMetas, false))
+    return this.SaveFileInNetwork(generateBucketEntry(this, this.name, shardMetas, false))
       .then((bucketEntry) => {
         if (!bucketEntry) {
           throw new Error('Can not save the file in the network');
         }
+
+        logger.info('Created bucket entry with id %s', bucketEntry.id);
         this.id = bucketEntry.id;
       })
       .catch((err) => {
@@ -281,17 +187,9 @@ export class FileObjectUpload extends EventEmitter {
   }
 
   abort(): void {
-    logger.info('Aborting file upload');
-
     this.aborted = true;
     this.requests.forEach((r) => r.abort());
-
-    this.funnel.unpipe(this.cipher);
-    this.fileMeta.content.unpipe(this.funnel);
-
-    this.fileMeta.content.destroy();
-    this.funnel.destroy();
-    this.cipher.destroy();
+    this.uploader.abort();
   }
 
   isAborted(): boolean {
@@ -299,19 +197,10 @@ export class FileObjectUpload extends EventEmitter {
   }
 }
 
-function updateProgress(totalBytes: number, currentBytesUploaded: number, newBytesUploaded: number, progress: UploadProgressCallback): number {
-  const newCurrentBytes = currentBytesUploaded + newBytesUploaded;
-  const progressCounter = newCurrentBytes / totalBytes;
-
-  progress(progressCounter, newCurrentBytes, totalBytes);
-
-  return newCurrentBytes;
-}
-
-export function generateBucketEntry(fileObject: FileObjectUpload, fileMeta: FileMeta, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {
+export function generateBucketEntry(fileObject: FileObjectUpload, filename: string, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {    
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
-    filename: fileMeta.name,
+    filename,
     index: fileObject.index.toString('hex'),
     hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
   };

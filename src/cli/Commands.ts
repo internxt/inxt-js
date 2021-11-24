@@ -18,7 +18,16 @@ export const uploadFileCommand = buildCommand({
   description: 'Upload a file',
   options: []
 }).action((path) => {
-  uploadFile(path).finally(notifyProgramFinished('upload-file'));
+  uploadFile(path, 1).finally(notifyProgramFinished('upload-file'));
+});
+
+export const uploadFileCommandParallel = buildCommand({
+  version: '0.0.1',
+  command: 'upload-file-parallel <path>',
+  description: 'Upload a file',
+  options: []
+}).action((path) => {
+  uploadFile(path, 10).finally(notifyProgramFinished('upload-file'));
 });
 
 export const uploadFolderZipCommand = buildCommand({

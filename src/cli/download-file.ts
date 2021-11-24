@@ -1,6 +1,6 @@
 import { createWriteStream } from "fs";
 import { pipeline, Readable } from "stream";
-import { DownloadStrategyLabel } from "../lib/download";
+import { DownloadStrategyLabel } from "../lib/core";
 import { logger } from "../lib/utils/logger";
 import { getEnvironment } from "./CommandInterface";
 
@@ -27,9 +27,6 @@ export async function downloadFile(fileId: string, path: string) {
             }
             resolve(null);
           });
-        },
-        debug: (msg: string) => {
-          logger.debug('DEBUG', msg);
         }
       }, {
         label: 'OneStreamOnly',
@@ -50,7 +47,7 @@ export async function downloadFile(fileId: string, path: string) {
   }
 }
 
-export async function downloadFileParallel(fileId: string, path: string, strategy?: DownloadStrategyLabel) {
+export async function downloadFileParallel(fileId: string, path: string) {
   logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();
@@ -74,9 +71,6 @@ export async function downloadFileParallel(fileId: string, path: string, strateg
             }
             resolve(null);
           });
-        },
-        debug: (msg: string) => {
-          logger.debug('DEBUG', msg);
         }
       }, {
         label: 'OneStreamOnly',
