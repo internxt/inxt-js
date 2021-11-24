@@ -2,7 +2,8 @@
   "name": "@internxt/inxt-js",
   "version": "1.2.4",
   "description": "",
-  "main": "build/index.js",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
   "scripts": {
     "build": "rimraf build/* && tsc",
     "build:js": "npm run build && browserify -s 'inxt' ./build/index.js -o dist/inxt.es6.js",

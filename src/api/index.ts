@@ -4,6 +4,7 @@ export * from './Contract';
 export * from './EnvironmentConfig';
 export * from './ExchangeReport';
 export * from './FileObject';
+export * from './fileinfo'
 export * from './FileObjectUpload';
 export * from './FileObjectUploadProtocol';
 export * from './Shard';
