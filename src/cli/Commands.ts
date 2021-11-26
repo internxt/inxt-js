@@ -1,6 +1,6 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
-import { downloadFile, downloadFileParallel } from './download-file';
+import { downloadFile } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
 import { uploadFile } from './upload-file';
@@ -45,7 +45,7 @@ export const downloadFileCommand = buildCommand({
   description: 'Download a file',
   options: []
 }).action((fileId, path) => {
-  downloadFile(fileId, path).finally(notifyProgramFinished('download-file'));
+  downloadFile(fileId, path, 1).finally(notifyProgramFinished('download-file'));
 });
 
 export const downloadFileCommandParallel = buildCommand({
@@ -54,7 +54,7 @@ export const downloadFileCommandParallel = buildCommand({
   description: 'Download a file',
   options: []
 }).action((fileId, path) => {
-  downloadFileParallel(fileId, path).finally(notifyProgramFinished('download-file-parallel'));
+  downloadFile(fileId, path, 10).finally(notifyProgramFinished('download-file-parallel'));
 });
 
 export const renameFileCommand = buildCommand({
