@@ -104,14 +104,15 @@ export class UploadOneStreamStrategy extends UploadStrategy {
       const shardSize = determineShardSize(fileSize);
       const readable = this.source.stream;
       const tap = new Tap(concurrency * shardSize);
-      const funnel = new Funnel(shardSize);
+      const shardFunnel = new Funnel(shardSize);
+      const cipherFunnel = new Funnel(shardSize);
       const nShards = Math.ceil(fileSize / shardSize);
 
       this.uploadsProgress = new Array(nShards).fill(0);
 
       logger.debug('Slicing file in %s shards', nShards);
 
-      const uploadPipeline = readable.pipe(cipher).pipe(tap).pipe(funnel);
+      const uploadPipeline = readable.pipe(cipher).pipe(cipherFunnel).pipe(tap).pipe(shardFunnel);
       this.addToAbortables(() => uploadPipeline.destroy());
 
       const currentShards: number[] = [];
