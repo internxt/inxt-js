@@ -1,8 +1,8 @@
-import { createWriteStream } from "fs";
-import { pipeline, Readable } from "stream";
+import { createWriteStream } from 'fs';
+import { pipeline, Readable } from 'stream';
 
-import { logger } from "../lib/utils/logger";
-import { getEnvironment } from "./CommandInterface";
+import { logger } from '../lib/utils/logger';
+import { getEnvironment } from './CommandInterface';
 
 export async function downloadFile(fileId: string, path: string, concurrency: number) {
   logger.info('Downloading file %s', fileId);
@@ -12,29 +12,34 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
 
   try {
     await new Promise((resolve, reject) => {
-      const state = network.download(bucketId, fileId, {
-        progressCallback: (progress: number) => {
-          logger.info('Progress: %s %', (progress * 100).toFixed(2));
-        },
-        finishedCallback: (err: Error | null, downloadStream: Readable | null) => {
-          if (err) {
-            return reject(err);
-          }
-
-          pipeline((downloadStream as Readable), createWriteStream(path), (err) => {
+      const state = network.download(
+        bucketId,
+        fileId,
+        {
+          progressCallback: (progress: number) => {
+            logger.info('Progress: %s %', (progress * 100).toFixed(2));
+          },
+          finishedCallback: (err: Error | null, downloadStream: Readable | null) => {
             if (err) {
               return reject(err);
             }
-            resolve(null);
-          });
-        }
-      }, {
-        label: 'OneStreamOnly',
-        params: {
-          useProxy: false,
-          concurrency
-        }
-      });
+
+            pipeline(downloadStream as Readable, createWriteStream(path), (err) => {
+              if (err) {
+                return reject(err);
+              }
+              resolve(null);
+            });
+          },
+        },
+        {
+          label: 'OneStreamOnly',
+          params: {
+            useProxy: false,
+            concurrency,
+          },
+        },
+      );
 
       process.on('SIGINT', () => {
         network.downloadCancel(state);

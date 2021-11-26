@@ -1,25 +1,30 @@
-import { eachLimit, queue, retry } from "async";
-import { createDecipheriv, Decipher, randomBytes } from "crypto";
+import { eachLimit, queue, retry } from 'async';
+import { createDecipheriv, Decipher, randomBytes } from 'crypto';
 import { Readable } from 'stream';
-import { Events } from "..";
+import { Events } from '..';
 
-import { Abortable, ActionState, Shard, ShardObject } from "../../../api";
+import { Abortable, ActionState, Shard, ShardObject } from '../../../api';
 
-import { getStream } from "../../../services/request";
-import { HashStream, ProgressNotifier, Events as ProgressEvents } from "../../utils/streams";
-import { wrap } from "../../utils/error";
-import { logger } from "../../utils/logger";
-import { DownloadStrategy, DownloadParams } from "./strategy";
+import { getStream } from '../../../services/request';
+import { HashStream, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
+import { wrap } from '../../utils/error';
+import { logger } from '../../utils/logger';
+import { DownloadStrategy, DownloadParams } from './strategy';
 import { DownloadOptions } from '.';
 
 interface Params extends DownloadParams {
-  concurrency: number
-  useProxy: boolean
+  concurrency: number;
+  useProxy: boolean;
 }
 
 export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
-export type DownloadOneStreamStrategyObject = { label: DownloadOneStreamStrategyLabel, params: Params };
-export type DownloadOneStreamStrategyFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadOneStreamStrategyObject) => ActionState;
+export type DownloadOneStreamStrategyObject = { label: DownloadOneStreamStrategyLabel; params: Params };
+export type DownloadOneStreamStrategyFunction = (
+  bucketId: string,
+  fileId: string,
+  opts: DownloadOptions,
+  strategyObj: DownloadOneStreamStrategyObject,
+) => ActionState;
 
 export class DownloadOneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
@@ -29,7 +34,7 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
   private concurrency: number;
   private useProxy: boolean;
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 
   constructor(params: Params) {
@@ -43,12 +48,13 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
     logger.debug('Using %s concurrent requests', this.concurrency);
 
     this.addAbortable(() => this.stopProgressInterval());
-    this.addAbortable(() => this.internalBuffer = []);
+    this.addAbortable(() => (this.internalBuffer = []));
   }
 
   private startProgressInterval() {
     this.progressIntervalId = setInterval(() => {
-      const currentProgress = this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.downloadsProgress.length;
+      const currentProgress =
+        this.downloadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.downloadsProgress.length;
       this.emit(Events.Download.Progress, currentProgress);
     }, 5000);
   }
@@ -79,46 +85,54 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
       let lastShardIndexDecrypted = -1;
 
       const downloadTask = (mirror: Shard, cb: (err: Error | null | undefined) => void) => {
-        retry({ times: 3, interval: 500 }, (nextTry) => {
-          getDownloadStream(mirror, (err, shardStream) => {
-            logger.debug('Got stream for mirror %s', mirror.index);
-  
-            if (err) {
-              return nextTry(err);
-            }
-  
-            this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
-              logger.debug('Stream handled for mirror %s', mirror.index);
+        retry(
+          { times: 3, interval: 500 },
+          (nextTry) => {
+            getDownloadStream(
+              mirror,
+              (err, shardStream) => {
+                logger.debug('Got stream for mirror %s', mirror.index);
 
-              if (downloadErr) {
-                return nextTry(downloadErr);
-              }
-  
-              const waitingInterval = setInterval(() => {
-                if (lastShardIndexDecrypted !== mirror.index - 1) {
-                  return;
+                if (err) {
+                  return nextTry(err);
                 }
-  
-                clearInterval(waitingInterval);
 
-                this.decryptShard(mirror.index, (decryptErr) => {
-                  logger.debug('Decrypting shard for mirror %s', mirror.index);
+                this.handleShard(mirror, shardStream as Readable, (downloadErr) => {
+                  logger.debug('Stream handled for mirror %s', mirror.index);
 
-                  if (decryptErr) {
-                    return nextTry(decryptErr);
+                  if (downloadErr) {
+                    return nextTry(downloadErr);
                   }
-                  lastShardIndexDecrypted++;
-                  nextTry(null);
+
+                  const waitingInterval = setInterval(() => {
+                    if (lastShardIndexDecrypted !== mirror.index - 1) {
+                      return;
+                    }
+
+                    clearInterval(waitingInterval);
+
+                    this.decryptShard(mirror.index, (decryptErr) => {
+                      logger.debug('Decrypting shard for mirror %s', mirror.index);
+
+                      if (decryptErr) {
+                        return nextTry(decryptErr);
+                      }
+                      lastShardIndexDecrypted++;
+                      nextTry(null);
+                    });
+                  }, 50);
                 });
-              }, 50);
-            });
-          }, this.useProxy);
-        }, (err: Error | null | undefined) => {
-          if (err) {
-            return cb(err);
-          }
-          cb(null);
-        });
+              },
+              this.useProxy,
+            );
+          },
+          (err: Error | null | undefined) => {
+            if (err) {
+              return cb(err);
+            }
+            cb(null);
+          },
+        );
       };
 
       const downloadQueue = queue(downloadTask, this.concurrency);
@@ -171,26 +185,28 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
 
     progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
       this.downloadsProgress[shard.index] = progress;
-    })
+    });
 
     downloadPipeline.on('data', shardBuffers.push.bind(shardBuffers));
-    downloadPipeline.once('error', (err) => {
-      errored = true;
-      cb(err);
-    }).once('end', () => {
-      if (errored) {
-        return;
-      }
+    downloadPipeline
+      .once('error', (err) => {
+        errored = true;
+        cb(err);
+      })
+      .once('end', () => {
+        if (errored) {
+          return;
+        }
 
-      const hash = hasher.getHash().toString('hex');
+        const hash = hasher.getHash().toString('hex');
 
-      if (hash !== shard.hash) {
-        return cb(new Error(`Hash for downloaded shard ${shard.hash} does not match`));
-      }
+        if (hash !== shard.hash) {
+          return cb(new Error(`Hash for downloaded shard ${shard.hash} does not match`));
+        }
 
-      this.internalBuffer[shard.index] = Buffer.concat(shardBuffers);
-      cb(null);
-    });
+        this.internalBuffer[shard.index] = Buffer.concat(shardBuffers);
+        cb(null);
+      });
   }
 
   private handleError(err: Error) {
@@ -206,12 +222,19 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
   }
 }
 
-function getDownloadStream(shard: Shard, cb: (err: Error | null | undefined, stream: Readable | null) => void, useProxy = false): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then((url) => getStream(url, { useProxy })).then((stream) => {
-    cb(null, stream);
-  }).catch((err) => {
-    cb(err, null);
-  })
+function getDownloadStream(
+  shard: Shard,
+  cb: (err: Error | null | undefined, stream: Readable | null) => void,
+  useProxy = false,
+): void {
+  ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
+    .then((url) => getStream(url, { useProxy }))
+    .then((stream) => {
+      cb(null, stream);
+    })
+    .catch((err) => {
+      cb(err, null);
+    });
 }
 
 function buildRequestUrlShard(shard: Shard) {

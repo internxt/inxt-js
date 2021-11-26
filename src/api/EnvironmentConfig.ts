@@ -5,7 +5,7 @@ export interface EnvironmentConfig {
   encryptionKey?: string;
   logLevel?: number;
   inject?: {
-    fileEncryptionKey?: Buffer,
+    fileEncryptionKey?: Buffer;
     index?: Buffer;
-  }
+  };
 }

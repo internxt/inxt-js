@@ -9,7 +9,13 @@ import { EnvironmentConfig } from '../api';
 import { sha256 } from '../lib/utils/crypto';
 import { getProxy, ProxyManager } from './proxy';
 
-export async function request(config: EnvironmentConfig, method: AxiosRequestConfig['method'], targetUrl: string, params: AxiosRequestConfig, useProxy = true): Promise<AxiosResponse<JSON>> {
+export async function request(
+  config: EnvironmentConfig,
+  method: AxiosRequestConfig['method'],
+  targetUrl: string,
+  params: AxiosRequestConfig,
+  useProxy = true,
+): Promise<AxiosResponse<JSON>> {
   let reqUrl = targetUrl;
   let proxy: ProxyManager;
 
@@ -22,16 +28,18 @@ export async function request(config: EnvironmentConfig, method: AxiosRequestCon
     method,
     auth: {
       username: config.bridgeUser,
-      password: sha256(Buffer.from(config.bridgePass)).toString('hex')
+      password: sha256(Buffer.from(config.bridgePass)).toString('hex'),
     },
     url: reqUrl,
-    maxContentLength: Infinity
+    maxContentLength: Infinity,
   };
 
   const options = { ...DefaultOptions, ...params };
 
   return axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
-    if (useProxy && proxy) { proxy.free(); }
+    if (useProxy && proxy) {
+      proxy.free();
+    }
 
     return value;
   });
@@ -48,8 +56,8 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
       port: uriParts.port,
       path: uriParts.path,
       headers: {
-        'content-type': 'application/octet-stream'
-      }
+        'content-type': 'application/octet-stream',
+      },
     };
 
     return uriParts.protocol === 'http:' ? http.get(requestOpts) : https.get(requestOpts);
@@ -74,19 +82,21 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
           this.destroy();
         });
 
-        downloader.on('response', (res: IncomingMessage) => {
-          res
-            .on('data', this.push.bind(this))
-            .on('error', this.emit.bind(this, 'error'))
-            .on('end', () => {
-              this.push.bind(this, null);
-              this.emit('end');
-            }).on('close', this.emit.bind(this, 'close'));
-        })
+        downloader
+          .on('response', (res: IncomingMessage) => {
+            res
+              .on('data', this.push.bind(this))
+              .on('error', this.emit.bind(this, 'error'))
+              .on('end', () => {
+                this.push.bind(this, null);
+                this.emit('end');
+              })
+              .on('close', this.emit.bind(this, 'close'));
+          })
           .on('error', this.emit.bind(this, 'error'))
           .on('timeout', () => this.emit('error', Error('Request timeout')));
       }
-    }
+    },
   });
 }
 

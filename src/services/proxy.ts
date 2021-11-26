@@ -33,7 +33,7 @@ export class ProxyBalancer {
   }
 
   del(p: Proxy): void {
-    this.proxies = this.proxies.filter(proxy => proxy.url !== p.url);
+    this.proxies = this.proxies.filter((proxy) => proxy.url !== p.url);
   }
 }
 
@@ -55,7 +55,7 @@ export class Proxy {
   }
 
   removeReq(p: ProxyRequest): void {
-    this.currentRequests = this.currentRequests.filter(req => req.id !== p.id);
+    this.currentRequests = this.currentRequests.filter((req) => req.id !== p.id);
   }
 }
 
@@ -80,7 +80,12 @@ const proxyBalancer = new ProxyBalancer()
 const mutex = new Mutex();
 
 export const getProxy = async (): Promise<ProxyManager> => {
-  let response = { ...new Proxy(''), free: () => { null; } };
+  let response = {
+    ...new Proxy(''),
+    free: () => {
+      null;
+    },
+  };
 
   await mutex.dispatch(async () => {
     const proxy = await proxyBalancer.getProxy(MAX_CONCURRENT_BROWSER_CONNECTIONS);

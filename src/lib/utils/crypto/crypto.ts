@@ -64,7 +64,7 @@ export async function EncryptFilename(mnemonic: string, bucketId: string, filena
   };
 
   const encryptionKey = GenerateEncryptionKey();
-  const encryptionIv  = GenerateEncryptionIv();
+  const encryptionIv = GenerateEncryptionIv();
 
   return EncryptMeta(filename, encryptionKey, encryptionIv);
 }
@@ -76,7 +76,10 @@ export async function DecryptFileName(mnemonic: string, bucketId: string, encryp
     throw Error('Bucket key missing');
   }
 
-  const key = crypto.createHmac('sha512', Buffer.from(bucketKey, 'hex')).update(Buffer.from(BUCKET_META_MAGIC)).digest('hex');
+  const key = crypto
+    .createHmac('sha512', Buffer.from(bucketKey, 'hex'))
+    .update(Buffer.from(BUCKET_META_MAGIC))
+    .digest('hex');
 
   return decryptMeta(encryptedName, key);
 }

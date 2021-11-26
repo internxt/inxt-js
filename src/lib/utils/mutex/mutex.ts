@@ -6,7 +6,7 @@ export class Mutex {
 
     this.mutex = this.mutex.then(() => new Promise(begin));
 
-    return new Promise(res => begin = res);
+    return new Promise((res) => (begin = res));
   }
 
   async dispatch(fn: (() => void) | (() => PromiseLike<void>)): Promise<void> {

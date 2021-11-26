@@ -7,12 +7,12 @@ export interface Shard {
   token: string;
   healthy?: boolean;
   farmer: {
-    userAgent: string
-    protocol: string
-    address: string
-    port: number
-    nodeID: string
-    lastSeen: Date
+    userAgent: string;
+    protocol: string;
+    address: string;
+    port: number;
+    nodeID: string;
+    lastSeen: Date;
   };
   operation: string;
 }

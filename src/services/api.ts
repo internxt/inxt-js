@@ -1,13 +1,13 @@
-import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { EnvironmentConfig, ExchangeReport, Shard } from "../api";
-import { INXTRequest } from "../lib";
-import { ShardMeta } from "../lib/models";
+import { AxiosRequestConfig, AxiosResponse } from 'axios';
+import { EnvironmentConfig, ExchangeReport, Shard } from '../api';
+import { INXTRequest } from '../lib';
+import { ShardMeta } from '../lib/models';
 
 export enum Methods {
   Get = 'GET',
   Post = 'POST',
   Put = 'PUT',
-  Patch = 'PATCH'
+  Patch = 'PATCH',
 }
 
 export interface GetBucketByIdResponse {
@@ -47,11 +47,11 @@ export interface CreateEntryFromFrameBody {
   filename: string;
   index: string;
   hmac: {
-    type: string,
-    value: string
+    type: string;
+    value: string;
   };
   erasure?: {
-    type: string
+    type: string;
   };
 }
 
@@ -68,11 +68,11 @@ export interface CreateEntryFromFrameResponse {
   renewal: string;
   created: string;
   hmac: {
-    value: string,
-    type: string
+    value: string;
+    type: string;
   };
   erasure: {
-    type: string
+    type: string;
   };
   size: number;
 }
@@ -125,7 +125,7 @@ export interface InxtApiI {
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
-  return new INXTRequest(config, Methods.Get, '', { }, false);
+  return new INXTRequest(config, Methods.Get, '', {}, false);
 }
 
 class InxtApi implements InxtApiI {
@@ -204,7 +204,7 @@ export class Bridge extends InxtApi {
     const defParams: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/octet-stream',
-      }
+      },
     };
 
     const finalParams = { ...defParams, ...params };
@@ -217,7 +217,7 @@ export class Bridge extends InxtApi {
     const defParams: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/octet-stream',
-      }
+      },
     };
 
     const finalParams = { ...defParams, ...params };
@@ -230,7 +230,7 @@ export class Bridge extends InxtApi {
     const defParams: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/octet-stream',
-      }
+      },
     };
 
     const finalParams = { ...defParams, ...params };
@@ -244,7 +244,7 @@ export class Bridge extends InxtApi {
       headers: {
         'Content-Type': 'application/json',
       },
-      data: body
+      data: body,
     };
 
     const finalParams = { ...defParams, ...params };
@@ -258,7 +258,7 @@ export class Bridge extends InxtApi {
       headers: {
         'Content-Type': 'application/json',
       },
-      data: { ...body, challenges: body.challenges_as_str }
+      data: { ...body, challenges: body.challenges_as_str },
     };
 
     const finalParams = { ...defParams, ...params };

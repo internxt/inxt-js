@@ -1,5 +1,5 @@
-import { request } from "../services/request";
-import { EnvironmentConfig, Shard } from ".";
+import { request } from '../services/request';
+import { EnvironmentConfig, Shard } from '.';
 
 export interface ExchangeReportParams {
   dataHash: string | null;
@@ -41,7 +41,7 @@ export class ExchangeReport {
       exchangeStart: new Date(),
       exchangeEnd: null,
       exchangeResultCode: 1000,
-      exchangeResultMessage: ""
+      exchangeResultMessage: '',
     };
   }
 
@@ -66,10 +66,12 @@ export class ExchangeReport {
   validate() {
     const expectedResultCode = this.expectedResultCode();
 
-    if (!this.params.dataHash
-      || !this.params.farmerId
-      || expectedResultCode === 0
-      || expectedResultCode !== this.params.exchangeResultCode) {
+    if (
+      !this.params.dataHash ||
+      !this.params.farmerId ||
+      expectedResultCode === 0 ||
+      expectedResultCode !== this.params.exchangeResultCode
+    ) {
       return false;
     }
 
@@ -115,9 +117,9 @@ export class ExchangeReport {
     report.params.farmerId = mirror.farmer.nodeID;
     report.params.dataHash = mirror.hash;
 
-    return report; 
+    return report;
   }
-  
+
   error() {
     this.DownloadError();
     // eslint-disable-next-line @typescript-eslint/no-empty-function

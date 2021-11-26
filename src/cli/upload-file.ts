@@ -21,11 +21,11 @@ export async function uploadFile(filepath: string, concurrency: number) {
       params: {
         source: {
           stream: createReadStream(filepath),
-          size: statSync(filepath).size
+          size: statSync(filepath).size,
         },
         useProxy: false,
-        concurrency
-      }
+        concurrency,
+      },
     };
 
     await new Promise((resolve, reject) => {
@@ -39,7 +39,7 @@ export async function uploadFile(filepath: string, concurrency: number) {
             return reject(err);
           }
           resolve(res);
-        }
+        },
       };
 
       const state = network.upload(bucketId, uploadOpts, uploadStrategy);
@@ -53,5 +53,5 @@ export async function uploadFile(filepath: string, concurrency: number) {
     console.log(err);
     logger.error('Error uploading file: %s', err.message);
     process.exit(-1);
-  }  
+  }
 }

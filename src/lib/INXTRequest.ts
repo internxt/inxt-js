@@ -11,7 +11,7 @@ enum Methods {
   Get = 'GET',
   Post = 'POST',
   Put = 'PUT',
-  Patch = 'PATCH'
+  Patch = 'PATCH',
 }
 
 export class INXTRequest extends EventEmitter {
@@ -27,10 +27,16 @@ export class INXTRequest extends EventEmitter {
 
   static Events = {
     UploadProgress: 'upload-progress',
-    DownloadProgress: 'download-progress'
+    DownloadProgress: 'download-progress',
   };
 
-  constructor(config: EnvironmentConfig, method: Methods, targetUrl: string, params: AxiosRequestConfig, useProxy?: boolean) {
+  constructor(
+    config: EnvironmentConfig,
+    method: Methods,
+    targetUrl: string,
+    params: AxiosRequestConfig,
+    useProxy?: boolean,
+  ) {
     super();
 
     this.method = method;
@@ -49,7 +55,13 @@ export class INXTRequest extends EventEmitter {
 
     const cancelToken = source.token;
 
-    this.req = request(this.config, this.method, this.targetUrl, { ...this.params, cancelToken }, this.useProxy).then<JSON>(res => res.data);
+    this.req = request(
+      this.config,
+      this.method,
+      this.targetUrl,
+      { ...this.params, cancelToken },
+      this.useProxy,
+    ).then<JSON>((res) => res.data);
 
     return this.req;
   }
@@ -89,17 +101,19 @@ export class INXTRequest extends EventEmitter {
 
     const targetUrl = `${proxy && proxy.url ? proxy.url + '/' : ''}${this.targetUrl}`;
 
-    return axios.post<K>(targetUrl, content, {
-      maxContentLength: Infinity,
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Length': size.toString()
-      }
-    }).then((res) => {
-      proxy?.free();
+    return axios
+      .post<K>(targetUrl, content, {
+        maxContentLength: Infinity,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': size.toString(),
+        },
+      })
+      .then((res) => {
+        proxy?.free();
 
-      return res as unknown as K;
-    });
+        return res as unknown as K;
+      });
   }
 
   abort() {

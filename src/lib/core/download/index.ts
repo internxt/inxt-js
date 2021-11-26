@@ -9,7 +9,11 @@ export * from './strategy';
 export * from './oneStreamStrategy';
 
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
-export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
+export type DownloadProgressCallback = (
+  progress: number,
+  downloadedBytes: number | null,
+  totalBytes: number | null,
+) => void;
 
 export interface DownloadOptions {
   /**
@@ -29,18 +33,18 @@ export interface DownloadOptions {
  * @param config Environment config
  * @param bucketId id of the bucket that has the file
  * @param fileId id of the file to be downloaded
- * @param params 
- * @param state 
+ * @param params
+ * @param state
  * @param strategy strategy used to download the file
- * @returns 
+ * @returns
  */
 export async function download(
-  config: EnvironmentConfig, 
-  bucketId: string, 
-  fileId: string, 
-  params: DownloadOptions, 
-  state: ActionState, 
-  downloader: DownloadStrategy
+  config: EnvironmentConfig,
+  bucketId: string,
+  fileId: string,
+  params: DownloadOptions,
+  state: ActionState,
+  downloader: DownloadStrategy,
 ): Promise<Readable> {
   const file = new FileObject(config, bucketId, fileId, downloader);
 
@@ -58,10 +62,11 @@ export async function download(
   });
 
   file.on(Events.Download.Progress, (progress) => {
-    params.progressCallback(progress, 0, 0)
+    params.progressCallback(progress, 0, 0);
   });
 
-  return file.getInfo()
+  return file
+    .getInfo()
     .then(() => file.getMirrors())
     .then(() => file.download());
 }

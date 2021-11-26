@@ -6,10 +6,10 @@ import EventEmitter from 'events';
 import { PassThrough, Readable } from 'stream';
 
 interface RequestOptions {
-  hostname: string,
-  pathname: string,
-  method: string,
-  protocol: string
+  hostname: string;
+  pathname: string;
+  method: string;
+  protocol: string;
 }
 
 type FinishCallback = (res: Buffer | null, err?: Error) => void;
@@ -34,8 +34,8 @@ export class ChunkedRequest extends EventEmitter {
       res.once('error', (err) => {
         res.removeAllListeners();
 
-        this.emit('err', err)
-        this.destroy();         
+        this.emit('err', err);
+        this.destroy();
       });
     });
 
@@ -43,7 +43,8 @@ export class ChunkedRequest extends EventEmitter {
   }
 
   write(b: Buffer, end = false, finishCb: FinishCallback): void {
-    Readable.from(b).pipe(this.stream, { end })
+    Readable.from(b)
+      .pipe(this.stream, { end })
       .once('error', (err) => finishCb(null, err))
       .once('end', finishCb);
   }
@@ -56,7 +57,7 @@ export class ChunkedRequest extends EventEmitter {
         cb(Buffer.concat(this.response));
       }
       this.destroy();
-    });   
+    });
   }
 
   destroy() {

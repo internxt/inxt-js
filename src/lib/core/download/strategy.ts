@@ -5,7 +5,12 @@ import { Abortable, ActionState, Shard } from '../../../api';
 
 export type DownloadStrategyLabel = string;
 export type DownloadStrategyObject = DownloadOneStreamStrategyObject;
-export type DownloadStrategyFunction = (bucketId: string, fileId: string, opts:any, strategyObj: DownloadStrategyObject) => ActionState;
+export type DownloadStrategyFunction = (
+  bucketId: string,
+  fileId: string,
+  opts: any,
+  strategyObj: DownloadStrategyObject,
+) => ActionState;
 
 export abstract class DownloadStrategy extends EventEmitter implements Abortable {
   fileEncryptionKey = Buffer.alloc(0);

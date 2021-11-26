@@ -1,13 +1,13 @@
-import { Transform, TransformOptions } from "stream";
+import { Transform, TransformOptions } from 'stream';
 
 export enum TapEvents {
   Opened = 'tap-opened',
-  Closed = 'tap-closed'
+  Closed = 'tap-closed',
 }
 
 type ContinueCallback = (err: Error | null) => void;
 
-// preconditions: 
+// preconditions:
 // diameterSize >= chunk size on each transform
 export class Tap extends Transform {
   private diameterSize: number;
@@ -34,7 +34,7 @@ export class Tap extends Transform {
     if (this.temporalBuffer.length > 0) {
       const diffToRefill = this.diameterSize - this.temporalBuffer.length;
 
-      this.pump(Buffer.concat([ this.temporalBuffer, chunk.slice(0, diffToRefill) ]));
+      this.pump(Buffer.concat([this.temporalBuffer, chunk.slice(0, diffToRefill)]));
 
       this.bytesRead = 0;
       this.temporalBuffer = Buffer.alloc(0);

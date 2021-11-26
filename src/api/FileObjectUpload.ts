@@ -1,16 +1,22 @@
-import { EventEmitter } from "events";
-import { randomBytes } from "crypto";
+import { EventEmitter } from 'events';
+import { randomBytes } from 'crypto';
 
-import { EnvironmentConfig } from "./";
-import { FileObjectUploadProtocol } from "./FileObjectUploadProtocol";
-import { ShardObject } from "./ShardObject";
-import { INXTRequest } from "../lib";
-import { Bridge, CreateEntryFromFrameBody, CreateEntryFromFrameResponse, FrameStaging, InxtApiI } from "../services/api";
-import { GenerateFileKey, sha512HmacBuffer } from "../lib/utils/crypto";
-import { logger } from "../lib/utils/logger";
-import { wrap } from "../lib/utils/error";
-import { UploadFinishedMessage, UploadStrategy, Events } from "../lib/core";
-import { Abortable } from "./Abortable";
+import { EnvironmentConfig } from './';
+import { FileObjectUploadProtocol } from './FileObjectUploadProtocol';
+import { ShardObject } from './ShardObject';
+import { INXTRequest } from '../lib';
+import {
+  Bridge,
+  CreateEntryFromFrameBody,
+  CreateEntryFromFrameResponse,
+  FrameStaging,
+  InxtApiI,
+} from '../services/api';
+import { GenerateFileKey, sha512HmacBuffer } from '../lib/utils/crypto';
+import { logger } from '../lib/utils/logger';
+import { wrap } from '../lib/utils/error';
+import { UploadFinishedMessage, UploadStrategy, Events } from '../lib/core';
+import { Abortable } from './Abortable';
 
 interface ShardMeta {
   hash: string;
@@ -38,7 +44,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   fileEncryptionKey = Buffer.alloc(0);
 
   constructor(config: EnvironmentConfig, name: string, bucketId: string, uploader: UploadStrategy, api?: InxtApiI) {
-    super()
+    super();
     this.uploader = uploader;
     this.name = name;
 
@@ -89,13 +95,16 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
     const req = this.api.getBucketById(this.bucketId);
     this.requests.push(req);
 
-    return req.start().then(() => {
-      logger.info('Bucket %s exists', this.bucketId);
+    return req
+      .start()
+      .then(() => {
+        logger.info('Bucket %s exists', this.bucketId);
 
-      return true;
-    }).catch((err) => {
-      throw wrap('Bucket existence check error', err);
-    });
+        return true;
+      })
+      .catch((err) => {
+        throw wrap('Bucket existence check error', err);
+      });
   }
 
   stage(): Promise<void> {
@@ -104,17 +113,20 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
     const req = this.api.createFrame();
     this.requests.push(req);
 
-    return req.start<FrameStaging>().then((frame) => {
-      if (!frame || !frame.id) {
-        throw new Error('Frame response is empty');
-      }
+    return req
+      .start<FrameStaging>()
+      .then((frame) => {
+        if (!frame || !frame.id) {
+          throw new Error('Frame response is empty');
+        }
 
-      this.frameId = frame.id;
+        this.frameId = frame.id;
 
-      logger.info('Staged a file with frame %s', this.frameId);
-    }).catch((err) => {
-      throw wrap('Bridge frame creation error', err);
-    });
+        logger.info('Staged a file with frame %s', this.frameId);
+      })
+      .catch((err) => {
+        throw wrap('Bridge frame creation error', err);
+      });
   }
 
   SaveFileInNetwork(bucketEntry: CreateEntryFromFrameBody): Promise<CreateEntryFromFrameResponse> {
@@ -123,10 +135,9 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
     const req = this.api.createEntryFromFrame(this.bucketId, bucketEntry);
     this.requests.push(req);
 
-    return req.start<CreateEntryFromFrameResponse>()
-      .catch((err) => {
-        throw wrap('Saving file in network error', err);
-      });
+    return req.start<CreateEntryFromFrameResponse>().catch((err) => {
+      throw wrap('Saving file in network error', err);
+    });
   }
 
   GenerateHmac(shardMetas: ShardMeta[]): string {
@@ -197,16 +208,21 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   }
 }
 
-export function generateBucketEntry(fileObject: FileObjectUpload, filename: string, shardMetas: ShardMeta[], rs: boolean): CreateEntryFromFrameBody {    
+export function generateBucketEntry(
+  fileObject: FileObjectUpload,
+  filename: string,
+  shardMetas: ShardMeta[],
+  rs: boolean,
+): CreateEntryFromFrameBody {
   const bucketEntry: CreateEntryFromFrameBody = {
     frame: fileObject.frameId,
     filename,
     index: fileObject.index.toString('hex'),
-    hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) }
+    hmac: { type: 'sha512', value: fileObject.GenerateHmac(shardMetas) },
   };
 
   if (rs) {
-    bucketEntry.erasure = { type: "reedsolomon" };
+    bucketEntry.erasure = { type: 'reedsolomon' };
   }
 
   return bucketEntry;

@@ -16,23 +16,27 @@ export class ConcurrentQueue<K> {
 
     if (task) {
       this.queue = queue(async (content: K, cb: ErrorCallback<Error>) => {
-        task(content).then(() => {
-          this.finishedTasks++;
-          cb();
-        }).catch(cb);
+        task(content)
+          .then(() => {
+            this.finishedTasks++;
+            cb();
+          })
+          .catch(cb);
       }, concurrency);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      this.queue = queue(() => { }, 1);
+      this.queue = queue(() => {}, 1);
     }
   }
 
   setQueueTask(task: (content: K) => Promise<void>) {
     this.queue = queue(async (content: K, cb: ErrorCallback<Error>) => {
-      task(content).then(() => {
-        this.finishedTasks++;
-        cb();
-      }).catch(cb);
+      task(content)
+        .then(() => {
+          this.finishedTasks++;
+          cb();
+        })
+        .catch(cb);
     }, this.concurrency);
   }
 

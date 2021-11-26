@@ -1,19 +1,19 @@
-import { Readable } from "stream";
-import { EventEmitter } from "events";
+import { Readable } from 'stream';
+import { EventEmitter } from 'events';
 
-import { INXTRequest } from "../lib";
-import { ContractMeta } from "../api";
-import { ShardMeta } from "../lib/models";
-import { wrap } from "../lib/utils/error";
-import { logger } from "../lib/utils/logger";
-import { InxtApiI, SendShardToNodeResponse } from "../services/api";
-import { Shard } from "./";
-import { get } from "../services/request";
+import { INXTRequest } from '../lib';
+import { ContractMeta } from '../api';
+import { ShardMeta } from '../lib/models';
+import { wrap } from '../lib/utils/error';
+import { logger } from '../lib/utils/logger';
+import { InxtApiI, SendShardToNodeResponse } from '../services/api';
+import { Shard } from './';
+import { get } from '../services/request';
 
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 
-import { getProxy } from "../services/proxy";
+import { getProxy } from '../services/proxy';
 
 type PutUrl = string;
 type GetUrl = string;
@@ -26,7 +26,7 @@ export class ShardObject extends EventEmitter {
   private shard?: Shard;
 
   static Events = {
-    NodeTransferFinished: 'node-transfer-finished'
+    NodeTransferFinished: 'node-transfer-finished',
   };
 
   constructor(api: InxtApiI, frameId: string | null, meta: ShardMeta | null, shard?: Shard) {
@@ -41,7 +41,7 @@ export class ShardObject extends EventEmitter {
       challenges_as_str: [],
       size: 0,
       tree: [],
-      challenges: []
+      challenges: [],
     };
     this.api = api;
     this.shard = shard;
@@ -66,11 +66,12 @@ export class ShardObject extends EventEmitter {
 
     const contract = await this.negotiateContract();
 
-    logger.debug('Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
+    logger.debug(
+      'Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
       this.hash,
       this.index,
       this.size,
-      contract.token
+      contract.token,
     );
 
     const farmer = { ...contract.farmer, lastSeen: new Date() };
@@ -82,7 +83,7 @@ export class ShardObject extends EventEmitter {
       parity: this.meta.parity,
       token: contract.token,
       farmer,
-      operation: contract.operation
+      operation: contract.operation,
     };
 
     await this.sendShardToNode(content, shard);
@@ -91,11 +92,13 @@ export class ShardObject extends EventEmitter {
   }
 
   static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void, useProxy: boolean) {
-    get<{ result: string }>(url, { useProxy }).then((res) => {
-      cb(null, res.result);
-    }).catch((err) => {
-      cb(err, '');
-    });
+    get<{ result: string }>(url, { useProxy })
+      .then((res) => {
+        cb(null, res.result);
+      })
+      .catch((err) => {
+        cb(err, '');
+      });
   }
 
   static requestPut(url: string): Promise<PutUrl> {
@@ -106,10 +109,14 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static async putStreamTwo(url: PutUrl, content: Readable, cb: (err: Error | null) => void, useProxy: boolean): Promise<void>{
-
+  static async putStreamTwo(
+    url: PutUrl,
+    content: Readable,
+    cb: (err: Error | null) => void,
+    useProxy: boolean,
+  ): Promise<void> {
     let free: undefined | (() => void);
-    let targetUrl = url
+    let targetUrl = url;
 
     if (useProxy) {
       const proxy = await getProxy();
@@ -118,40 +125,42 @@ export class ShardObject extends EventEmitter {
     }
     const formattedUrl = new URL(targetUrl);
     const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
-    const putRequest = request({
-      hostname: formattedUrl.hostname,
-      port: formattedUrl.port,
-      protocol: formattedUrl.protocol,
-      path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
-      method: 'PUT'
-    }, (res) => {
-      if (res.statusCode !== 200) {
-        return cb(new Error('Request failed with status ' + res.statusCode));
-      }
+    const putRequest = request(
+      {
+        hostname: formattedUrl.hostname,
+        port: formattedUrl.port,
+        protocol: formattedUrl.protocol,
+        path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
+        method: 'PUT',
+      },
+      (res) => {
+        if (res.statusCode !== 200) {
+          return cb(new Error('Request failed with status ' + res.statusCode));
+        }
 
-      const chunks: Buffer[] = [];
+        const chunks: Buffer[] = [];
 
-      res.on('data', chunks.push.bind(chunks));
-      res.once('error', cb);
-      res.once('end', () => {
-        const body = Buffer.concat(chunks);
-        // console.log(body.toString());
-        free?.()
-        cb(null);
-      });
-    });
+        res.on('data', chunks.push.bind(chunks));
+        res.once('error', cb);
+        res.once('end', () => {
+          const body = Buffer.concat(chunks);
+          // console.log(body.toString());
+          free?.();
+          cb(null);
+        });
+      },
+    );
 
     content.pipe(putRequest);
-  } 
+  }
 
   negotiateContract(): Promise<ContractMeta> {
     const req = this.api.addShardToFrame(this.frameId, this.meta);
     this.requests.push(req);
 
-    return req.start<ContractMeta>()
-      .catch((err) => {
-        throw wrap('Contract negotiation error', err);
-      });
+    return req.start<ContractMeta>().catch((err) => {
+      throw wrap('Contract negotiation error', err);
+    });
   }
 
   private sendShardToNode(content: Buffer, shard: Shard): Promise<SendShardToNodeResponse> {
@@ -160,7 +169,8 @@ export class ShardObject extends EventEmitter {
 
     let success = true;
 
-    return req.start<SendShardToNodeResponse>()
+    return req
+      .start<SendShardToNodeResponse>()
       .catch((err: any) => {
         if (err.response && err.response.status < 400) {
           return { result: err.response.data && err.response.data.error };
@@ -169,7 +179,8 @@ export class ShardObject extends EventEmitter {
         success = false;
 
         throw wrap('Farmer request error', err);
-      }).finally(() => {
+      })
+      .finally(() => {
         const hash = shard.hash;
         const nodeID = shard.farmer.nodeID;
 

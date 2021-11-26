@@ -31,13 +31,13 @@ export class Funnel extends Transform {
 
   _transform(chunk: Buffer, enc: string, done: (err: Error | null) => void): void {
     if (this.bufferStillHasData()) {
-      const bytesToPush = (this.limit - this.bufferOffset);
+      const bytesToPush = this.limit - this.bufferOffset;
 
       const enoughToFillBuffer = () => chunk.length >= bytesToPush;
       const completeBuffer = () => chunk.copy(this.buffer, this.bufferOffset, 0, bytesToPush);
       const addToBuffer = () => chunk.copy(this.buffer, this.bufferOffset);
-      const resetOffset = () => this.bufferOffset = 0;
-      const incrementOffset = (increment: number) => this.bufferOffset += increment;
+      const resetOffset = () => (this.bufferOffset = 0);
+      const incrementOffset = (increment: number) => (this.bufferOffset += increment);
 
       if (enoughToFillBuffer()) {
         completeBuffer();
