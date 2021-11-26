@@ -120,7 +120,6 @@ export interface InxtApiI {
   addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
-  getShardFromNode(shard: Shard): INXTRequest;
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
 }
@@ -170,11 +169,6 @@ class InxtApi implements InxtApiI {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest {
-    return emptyINXTRequest(this.config);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getShardFromNode(shard: Shard): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 
@@ -280,14 +274,6 @@ export class Bridge extends InxtApi {
     const targetUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: shardContent }, true);
-  }
-
-  getShardFromNode(shard: Shard): INXTRequest {
-    const { farmer, hash, token } = shard;
-    const { address, port } = farmer;
-    const targetUrl = `http://${address}:${port}/shards/${hash}?token=${token}`;
-
-    return new INXTRequest(this.config, Methods.Get, targetUrl, { }, this.config.useProxy ?? true);
   }
 
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {

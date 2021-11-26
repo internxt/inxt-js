@@ -182,15 +182,4 @@ export class ShardObject extends EventEmitter {
       r.abort();
     });
   }
-
-  download(): Promise<Readable> {
-    if (!this.shard) {
-      throw new Error('Provide shard info before trying to download a shard');
-    }
-
-    const req = this.api.getShardFromNode(this.shard);
-    this.requests.push(req);
-
-    return req.stream<Readable>();
-  }
 }
