@@ -143,13 +143,17 @@ export class ShardObject extends EventEmitter {
         res.on('data', chunks.push.bind(chunks));
         res.once('error', cb);
         res.once('end', () => {
-          const body = Buffer.concat(chunks);
+          // const body = Buffer.concat(chunks);
           // console.log(body.toString());
           free?.();
           cb(null);
         });
       },
     );
+
+    content.once('error', (err) => {
+      putRequest.emit('error', err);
+    });
 
     content.pipe(putRequest);
   }
