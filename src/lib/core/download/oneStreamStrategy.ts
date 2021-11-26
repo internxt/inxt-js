@@ -102,7 +102,7 @@ export class OneStreamStrategy extends DownloadStrategy {
                 });
               }, 50);
             });
-          }, this.config.useProxy);
+          }, this.config.download?.useProxy || false);
         }, (err: Error | null | undefined) => {
           if (err) {
             return cb(err);

@@ -51,7 +51,7 @@ export async function downloadFileParallel(fileId: string, path: string) {
   logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();
-  network.config.download = { concurrency: 10 };
+  network.config.download = { concurrency: 10, useProxy: false };
   const bucketId = process.env.BUCKET_ID;
 
   try {
