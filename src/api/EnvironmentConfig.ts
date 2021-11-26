@@ -4,10 +4,6 @@ export interface EnvironmentConfig {
   bridgePass: string;
   encryptionKey?: string;
   logLevel?: number;
-  download?: {
-    concurrency: number;
-    useProxy: boolean
-  }
   inject?: {
     fileEncryptionKey?: Buffer,
     index?: Buffer;

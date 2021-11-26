@@ -3,30 +3,40 @@ import { createDecipheriv, Decipher, randomBytes } from "crypto";
 import { Readable } from 'stream';
 import { Events } from "..";
 
-import { Abortable, EnvironmentConfig, ExchangeReport, Shard, ShardObject } from "../../../api";
+import { Abortable, ActionState, Shard, ShardObject } from "../../../api";
 
 import { getStream } from "../../../services/request";
 import { HashStream, ProgressNotifier, Events as ProgressEvents } from "../../utils/streams";
 import { wrap } from "../../utils/error";
 import { logger } from "../../utils/logger";
-import { DownloadStrategy } from "./strategy";
+import { DownloadStrategy, DownloadParams } from "./strategy";
+import { DownloadOptions } from '.';
 
-export class OneStreamStrategy extends DownloadStrategy {
+interface Params extends DownloadParams {
+  concurrency: number
+  useProxy: boolean
+}
+
+export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
+export type DownloadOneStreamStrategyObject = { label: DownloadOneStreamStrategyLabel, params: Params };
+export type DownloadOneStreamStrategyFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadOneStreamStrategyObject) => ActionState;
+
+export class DownloadOneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
   private internalBuffer: Buffer[] = [];
   private downloadsProgress: number[] = [];
   private decipher: Decipher;
-  private config: EnvironmentConfig;
   private concurrency: number;
+  private useProxy: boolean;
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
   private aborted = false;
 
-  constructor(config: EnvironmentConfig) {
+  constructor(params: Params) {
     super();
 
-    this.config = config;
-    this.concurrency = this.config.download?.concurrency ?? 1;
+    this.concurrency = params.concurrency;
+    this.useProxy = params.useProxy;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
     this.startProgressInterval();
 
@@ -102,7 +112,7 @@ export class OneStreamStrategy extends DownloadStrategy {
                 });
               }, 50);
             });
-          }, this.config.download?.useProxy || false);
+          }, this.useProxy);
         }, (err: Error | null | undefined) => {
           if (err) {
             return cb(err);
@@ -155,7 +165,6 @@ export class OneStreamStrategy extends DownloadStrategy {
     let errored = false;
 
     const shardBuffers: Buffer[] = [];
-    const exchangeReport = ExchangeReport.build(this.config, shard);
     const progressNotifier = new ProgressNotifier(shard.size, 2000);
     const hasher = new HashStream();
     const downloadPipeline = stream.pipe(progressNotifier).pipe(hasher);
@@ -167,7 +176,6 @@ export class OneStreamStrategy extends DownloadStrategy {
     downloadPipeline.on('data', shardBuffers.push.bind(shardBuffers));
     downloadPipeline.once('error', (err) => {
       errored = true;
-      exchangeReport.error();
       cb(err);
     }).once('end', () => {
       if (errored) {
@@ -177,10 +185,8 @@ export class OneStreamStrategy extends DownloadStrategy {
       const hash = hasher.getHash().toString('hex');
 
       if (hash !== shard.hash) {
-        exchangeReport.error();
         return cb(new Error(`Hash for downloaded shard ${shard.hash} does not match`));
       }
-      exchangeReport.success();
 
       this.internalBuffer[shard.index] = Buffer.concat(shardBuffers);
       cb(null);

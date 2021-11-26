@@ -12,7 +12,7 @@ export interface UploadOptions {
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
   /**
-   * Name of the content uploaded to the network. This name will be encrypted
+   * Name of the content uploaded to the network. This name SHOULD be encrypted
    */
   name: string;
 }
@@ -34,14 +34,14 @@ export async function upload(
   filename: string, 
   bucketId: string, 
   params: UploadOptions, 
-  actionState: ActionState, 
+  state: ActionState, 
   uploader: UploadStrategy
 ): Promise<FileId> {
   const file = new FileObjectUpload(config, filename, bucketId, uploader);
 
-  actionState.once(Events.Upload.Abort, () => {
+  state.once(Events.Upload.Abort, () => {
     file.emit(Events.Upload.Abort);
-    actionState.removeAllListeners();
+    state.removeAllListeners();
   });
 
   file.on(Events.Upload.Progress, (progress) => {

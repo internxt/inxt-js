@@ -269,7 +269,7 @@ export class Bridge extends InxtApi {
 
     const finalParams = { ...defParams, ...params };
 
-    return new INXTRequest(this.config, Methods.Put, targetUrl, finalParams, this.config.useProxy ?? true);
+    return new INXTRequest(this.config, Methods.Put, targetUrl, finalParams, false);
   }
 
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {

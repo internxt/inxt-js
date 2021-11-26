@@ -8,11 +8,11 @@ import {
   UploadStrategyObject,
   UploadOneStreamStrategy,
   download, 
-  DownloadFunction, 
+  DownloadStrategyFunction, 
   DownloadStrategy,
-  DownloadFileOptions,
+  DownloadOptions,
   DownloadStrategyObject, 
-  OneStreamStrategy as DownloadOneStreamStrategy 
+  DownloadOneStreamStrategy 
 } from './lib/core';
 
 import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
@@ -185,7 +185,7 @@ export class Environment {
     return uploadState;
   }
 
-  download: DownloadFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: DownloadStrategyObject) => {
+  download: DownloadStrategyFunction = (bucketId: string, fileId: string, opts: DownloadOptions, strategyObj: DownloadStrategyObject) => {
     const downloadState = new ActionState(ActionTypes.Download);
 
     if (!this.config.encryptionKey) {
@@ -206,7 +206,17 @@ export class Environment {
       return downloadState;
     }
 
-    const strategy: DownloadStrategy = new DownloadOneStreamStrategy(this.config);
+    let strategy: DownloadStrategy | null = null;
+
+    if (strategyObj.label === 'OneStreamOnly') {
+      strategy = new DownloadOneStreamStrategy(strategyObj.params);
+    }
+
+    if (!strategy) {
+      opts.finishedCallback(Error('Unknown strategy'), null);
+
+      return downloadState;
+    }
 
     download(this.config, bucketId, fileId, opts, downloadState, strategy).then((res) => {
       opts.finishedCallback(null, res);
