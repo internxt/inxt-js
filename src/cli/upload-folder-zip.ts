@@ -103,7 +103,9 @@ export async function uploadFolder(path: string) {
       source: {
         stream: directoryStream,
         size
-      }
+      },
+      concurrency: 1,
+      useProxy: false
     }
   };
 

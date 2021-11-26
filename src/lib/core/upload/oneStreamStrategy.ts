@@ -12,8 +12,6 @@ import { ShardMeta } from '../../models';
 import { ContractMeta } from '../../../api';
 import { logger } from '../../utils/logger';
 
-
-import { UploadStrategyLabel, UploadStrategyObject } from './strategy';
 import { UploadOptions } from './';
 import { Events } from '../';
 
@@ -23,11 +21,13 @@ interface Source {
 }
 
 interface Params extends UploadParams {
-  source: Source;
+  source: Source
+  concurrency: number
+  useProxy: boolean
 }
 
-export type UploadOneStreamStrategyLabel = UploadStrategyLabel & 'OneStreamOnly';
-export type UploadOneStreamStrategyObject = UploadStrategyObject & { label: UploadOneStreamStrategyLabel, params: Params };
+export type UploadOneStreamStrategyLabel = 'OneStreamOnly';
+export type UploadOneStreamStrategyObject = { label: UploadOneStreamStrategyLabel, params: Params };
 export type UploadOneStreamStrategyFunction = (bucketId: string, fileId: string, opts: UploadOptions, strategyObj: UploadOneStreamStrategyObject) => ActionState;
 
 /**
@@ -44,6 +44,8 @@ export class UploadOneStreamStrategy extends UploadStrategy {
   private shardMetas: ShardMeta[] = [];
   private aborted = false;
 
+  private concurrency: number;
+  private useProxy: boolean;
   private uploadsProgress: number[] = [];
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
@@ -52,6 +54,8 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     super();
 
     this.source = params.source;
+    this.useProxy = params.useProxy;
+    this.concurrency = params.concurrency;
     this.startProgressInterval();
 
     this.once(Events.Upload.Abort, this.abort.bind(this));
@@ -84,11 +88,11 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     clearInterval(this.progressIntervalId);
   }
 
-  async upload(negotiateContract: NegotiateContract, useProxy: boolean): Promise<void> {
+  async upload(negotiateContract: NegotiateContract): Promise<void> {
     this.emit(Events.Upload.Started);
 
     try {
-      const concurrency = 2;
+      const concurrency = this.concurrency;
       const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const fileSize = this.source.size;
       const shardSize = determineShardSize(fileSize);
@@ -125,7 +129,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
               this.uploadsProgress[shardMeta.index] = 1;
 
               nextTry();
-            }, useProxy);
+            }, this.useProxy);
           }).catch((err) => {
             nextTry(err);
           });

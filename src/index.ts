@@ -7,7 +7,6 @@ import {
   UploadOptions,
   UploadStrategyObject,
   UploadOneStreamStrategy,
-  UploadOneStreamStrategyObject,
   download, 
   DownloadFunction, 
   DownloadStrategy,
@@ -166,7 +165,7 @@ export class Environment {
       let strategy: UploadStrategy | null = null;
 
       if (strategyObj.label === 'OneStreamOnly') {
-        strategy = new UploadOneStreamStrategy((strategyObj as UploadOneStreamStrategyObject).params);
+        strategy = new UploadOneStreamStrategy(strategyObj.params);
       }
 
       if (!strategy) {

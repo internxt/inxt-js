@@ -13,7 +13,6 @@ export async function uploadFile(filepath: string, concurrency: number) {
 
   try {
     const network = getEnvironment();
-    network.config.upload = { concurrency };
 
     const uuid = v4();
     const bucketId = process.env.BUCKET_ID;
@@ -23,7 +22,9 @@ export async function uploadFile(filepath: string, concurrency: number) {
         source: {
           stream: createReadStream(filepath),
           size: statSync(filepath).size
-        } 
+        },
+        useProxy: false,
+        concurrency
       }
     };
 

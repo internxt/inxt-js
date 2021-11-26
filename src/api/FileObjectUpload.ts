@@ -167,7 +167,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
       this.uploader.once(Events.Upload.Error, errorHandler(reject));
       this.uploader.once(Events.Upload.Finished, finishHandler(resolve));
 
-      this.uploader.upload(negotiateContract, this.config.useProxy ?? true);
+      this.uploader.upload(negotiateContract);
     });
   }
 
