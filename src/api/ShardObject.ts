@@ -1,4 +1,3 @@
-import { AxiosError } from "axios";
 import { Readable } from "stream";
 import { EventEmitter } from "events";
 
@@ -11,7 +10,9 @@ import { InxtApiI, SendShardToNodeResponse } from "../services/api";
 import { Shard } from "./";
 import { get } from "../services/request";
 
-import { request } from 'http';
+import { request as httpRequest } from 'http';
+import { request as httpsRequest } from 'https';
+
 import { getProxy } from "../services/proxy";
 
 type PutUrl = string;
@@ -116,7 +117,7 @@ export class ShardObject extends EventEmitter {
       targetUrl = `${proxy.url}/${targetUrl}`;
     }
     const formattedUrl = new URL(targetUrl);
-
+    const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
     const putRequest = request({
       hostname: formattedUrl.hostname,
       port: formattedUrl.port,

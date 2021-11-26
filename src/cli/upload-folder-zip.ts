@@ -6,9 +6,8 @@ import { v4 } from 'uuid';
 
 import { Environment } from '..';
 import { EnvironmentConfig } from '../api'
-import { GenerateFileKey } from '../lib/crypto';
-import { HashStream } from '../lib/hasher';
-import { BytesCounter } from '../lib/streams';
+import { GenerateFileKey } from '../lib/utils/crypto';
+import { HashStream, BytesCounter } from '../lib/utils/streams';
 import { UploadOneStreamStrategyObject } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 

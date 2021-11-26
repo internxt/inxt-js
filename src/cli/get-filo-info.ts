@@ -1,6 +1,6 @@
 import { FileInfo } from "../api/fileinfo";
 
-import { DecryptFileName } from "../lib/crypto";
+import { DecryptFileName } from "../lib/utils/crypto";
 import { logger } from "../lib/utils/logger";
 
 import { getEnvironment } from "./CommandInterface";
