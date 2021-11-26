@@ -1,7 +1,7 @@
 import { Transform, TransformOptions } from 'stream';
 
 export enum Events {
-  Progress = 'progress'
+  Progress = 'progress',
 }
 
 export class ProgressNotifier extends Transform {

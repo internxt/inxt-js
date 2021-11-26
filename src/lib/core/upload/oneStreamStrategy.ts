@@ -12,8 +12,6 @@ import { ShardMeta } from '../../models';
 import { ContractMeta } from '../../../api';
 import { logger } from '../../utils/logger';
 
-
-import { UploadStrategyLabel, UploadStrategyObject } from './strategy';
 import { UploadOptions } from './';
 import { Events } from '../';
 
@@ -24,15 +22,22 @@ interface Source {
 
 interface Params extends UploadParams {
   source: Source;
+  concurrency: number;
+  useProxy: boolean;
 }
 
-export type UploadOneStreamStrategyLabel = UploadStrategyLabel & 'OneStreamOnly';
-export type UploadOneStreamStrategyObject = UploadStrategyObject & { label: UploadOneStreamStrategyLabel, params: Params };
-export type UploadOneStreamStrategyFunction = (bucketId: string, fileId: string, opts: UploadOptions, strategyObj: UploadOneStreamStrategyObject) => ActionState;
+export type UploadOneStreamStrategyLabel = 'OneStreamOnly';
+export type UploadOneStreamStrategyObject = { label: UploadOneStreamStrategyLabel; params: Params };
+export type UploadOneStreamStrategyFunction = (
+  bucketId: string,
+  fileId: string,
+  opts: UploadOptions,
+  strategyObj: UploadOneStreamStrategyObject,
+) => ActionState;
 
 /**
- * TODO:  
- * - Fix progress notification. 
+ * TODO:
+ * - Fix progress notification.
  * - Clean shardmeta array whenever is possible.
  * - Tests
  */
@@ -44,14 +49,18 @@ export class UploadOneStreamStrategy extends UploadStrategy {
   private shardMetas: ShardMeta[] = [];
   private aborted = false;
 
+  private concurrency: number;
+  private useProxy: boolean;
   private uploadsProgress: number[] = [];
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
 
   constructor(params: Params) {
     super();
 
     this.source = params.source;
+    this.useProxy = params.useProxy;
+    this.concurrency = params.concurrency;
     this.startProgressInterval();
 
     this.once(Events.Upload.Abort, this.abort.bind(this));
@@ -75,7 +84,8 @@ export class UploadOneStreamStrategy extends UploadStrategy {
 
   private startProgressInterval() {
     this.progressIntervalId = setInterval(() => {
-      const currentProgress = this.uploadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.uploadsProgress.length;
+      const currentProgress =
+        this.uploadsProgress.reduce((acumm, progress) => acumm + progress, 0) / this.uploadsProgress.length;
       this.emit(Events.Upload.Progress, currentProgress);
     }, 5000);
   }
@@ -84,11 +94,11 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     clearInterval(this.progressIntervalId);
   }
 
-  async upload(negotiateContract: NegotiateContract, useProxy: boolean): Promise<void> {
+  async upload(negotiateContract: NegotiateContract): Promise<void> {
     this.emit(Events.Upload.Started);
 
     try {
-      const concurrency = 2;
+      const concurrency = this.concurrency;
       const cipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const fileSize = this.source.size;
       const shardSize = determineShardSize(fileSize);
@@ -110,31 +120,42 @@ export class UploadOneStreamStrategy extends UploadStrategy {
       const totalFinishedTasks: number[] = [];
 
       const uploadQueue = queue<ShardMeta>((shardMeta, next) => {
-        retry({ times: 3, interval: 500 }, (nextTry) => {
-          logger.debug('Negotiating contract for shard %s, hash %s', shardMeta.index, shardMeta.hash);
+        retry(
+          { times: 3, interval: 500 },
+          (nextTry) => {
+            logger.debug('Negotiating contract for shard %s, hash %s', shardMeta.index, shardMeta.hash);
 
-          negotiateContract(shardMeta).then((contract) => {
-            logger.debug('Negotiated contract for shard %s. Uploading ...', shardMeta.index);
+            negotiateContract(shardMeta)
+              .then((contract) => {
+                logger.debug('Negotiated contract for shard %s. Uploading ...', shardMeta.index);
 
-            this.uploadShard(shardMeta, contract, (err) => {
-              if (err) {
-                return nextTry(err);
-              }
+                this.uploadShard(
+                  shardMeta,
+                  contract,
+                  (err) => {
+                    if (err) {
+                      return nextTry(err);
+                    }
 
-              this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
-              this.uploadsProgress[shardMeta.index] = 1;
+                    this.internalBuffer[shardMeta.index] = Buffer.alloc(0);
+                    this.uploadsProgress[shardMeta.index] = 1;
 
-              nextTry();
-            }, useProxy);
-          }).catch((err) => {
-            nextTry(err);
-          });
-        }, (err: Error | null | undefined) => {
-          if (err) {
-            return next(err);
-          }
-          next(null);
-        });
+                    nextTry();
+                  },
+                  this.useProxy,
+                );
+              })
+              .catch((err) => {
+                nextTry(err);
+              });
+          },
+          (err: Error | null | undefined) => {
+            if (err) {
+              return next(err);
+            }
+            next(null);
+          },
+        );
       }, concurrency);
 
       this.addToAbortables(() => uploadQueue.kill());
@@ -158,7 +179,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
             parity: false,
             size: shard.length,
             tree: mTree.leaf,
-            challenges_as_str: mTree.challenges_as_str
+            challenges_as_str: mTree.challenges_as_str,
           };
 
           this.shardMetas.push(shardMeta);
@@ -196,26 +217,35 @@ export class UploadOneStreamStrategy extends UploadStrategy {
   private uploadShard(shardMeta: ShardMeta, contract: ContractMeta, cb: (err?: Error) => void, useProxy: boolean) {
     const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
 
-    ShardObject.requestPutTwo(url, (err, putUrl) => {
-      if (err) {
-        return cb(err);
-      }
-
-      const buffer = this.internalBuffer[shardMeta.index];
-
-      const readableFromBuffer = new Readable()
-      readableFromBuffer.push(buffer)
-      readableFromBuffer.push(null)
-
-      ShardObject.putStreamTwo(putUrl, readableFromBuffer, (err) => {
+    ShardObject.requestPutTwo(
+      url,
+      (err, putUrl) => {
         if (err) {
-          // TODO: Si el error es un 304, hay que dar el shard por subido.
           return cb(err);
         }
 
-        cb();
-      }, useProxy);
-    }, useProxy);
+        const buffer = this.internalBuffer[shardMeta.index];
+
+        const readableFromBuffer = new Readable();
+        readableFromBuffer.push(buffer);
+        readableFromBuffer.push(null);
+
+        ShardObject.putStreamTwo(
+          putUrl,
+          readableFromBuffer,
+          (err) => {
+            if (err) {
+              // TODO: Si el error es un 304, hay que dar el shard por subido.
+              return cb(err);
+            }
+
+            cb();
+          },
+          useProxy,
+        );
+      },
+      useProxy,
+    );
   }
 
   private addToAbortables(abortFunction: () => void) {
@@ -245,7 +275,5 @@ export class UploadOneStreamStrategy extends UploadStrategy {
 }
 
 function calculateShardHash(shard: Buffer): Buffer {
-  return createHash('ripemd160').update(
-    createHash('sha256').update(shard).digest()
-  ).digest();
+  return createHash('ripemd160').update(createHash('sha256').update(shard).digest()).digest();
 }

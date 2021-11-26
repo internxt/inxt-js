@@ -7,47 +7,54 @@ import { DownloadStrategy } from './strategy';
 
 export * from './strategy';
 export * from './oneStreamStrategy';
+
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
-export type DownloadProgressCallback = (progress: number, downloadedBytes: number | null, totalBytes: number | null) => void;
+export type DownloadProgressCallback = (
+  progress: number,
+  downloadedBytes: number | null,
+  totalBytes: number | null,
+) => void;
 
-export type OneStreamStrategyLabel = 'OneStreamOnly';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OneStreamStrategyObject = { label: OneStreamStrategyLabel, params: any};
-export type OneStreamStrategyFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: OneStreamStrategyObject) => ActionState;
-
-export type MultipleStreamsStrategyLabel = 'MultipleStreams';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MultipleStreamsStrategyObject = { label: MultipleStreamsStrategyLabel, params: any};
-export type MultipleStreamsStrategyFunction = (bucketId: string, fileId: string, opts: DownloadFileOptions, strategyObj: MultipleStreamsStrategyObject) => ActionState;
-
-export type DownloadStrategyLabel = OneStreamStrategyLabel;
-export type DownloadStrategyObject = OneStreamStrategyObject | MultipleStreamsStrategyObject;
-export type DownloadFunction = OneStreamStrategyFunction & MultipleStreamsStrategyFunction;
-
-export interface DownloadFileOptions {
+export interface DownloadOptions {
+  /**
+   * Token used for retrieving a shared file with you
+   */
   fileToken?: string;
+  /**
+   * Custom file encryption key injected (p.e: for shared files)
+   */
   fileEncryptionKey?: Buffer;
   progressCallback: DownloadProgressCallback;
   finishedCallback: DownloadFinishedCallback;
 }
 
+/**
+ * Download entry point
+ * @param config Environment config
+ * @param bucketId id of the bucket that has the file
+ * @param fileId id of the file to be downloaded
+ * @param params
+ * @param state
+ * @param strategy strategy used to download the file
+ * @returns
+ */
 export async function download(
-  config: EnvironmentConfig, 
-  bucketId: string, 
-  fileId: string, 
-  options: DownloadFileOptions, 
-  state: ActionState, 
-  strategy: DownloadStrategy
+  config: EnvironmentConfig,
+  bucketId: string,
+  fileId: string,
+  params: DownloadOptions,
+  state: ActionState,
+  downloader: DownloadStrategy,
 ): Promise<Readable> {
-  const file = new FileObject(config, bucketId, fileId, strategy);
+  const file = new FileObject(config, bucketId, fileId, downloader);
 
-  if (options.fileEncryptionKey) {
-    file.setFileEncryptionKey(options.fileEncryptionKey);
+  if (params.fileEncryptionKey) {
+    file.setFileEncryptionKey(params.fileEncryptionKey);
   }
 
-  if (options.fileToken) {
-    logger.info('Using file token %s to download', options.fileToken);
-    file.setFileToken(options.fileToken);
+  if (params.fileToken) {
+    logger.info('Using file token %s to download', params.fileToken);
+    file.setFileToken(params.fileToken);
   }
 
   state.once(Events.Download.Abort, () => {
@@ -55,10 +62,11 @@ export async function download(
   });
 
   file.on(Events.Download.Progress, (progress) => {
-    options.progressCallback(progress, 0, 0)
+    params.progressCallback(progress, 0, 0);
   });
 
-  return file.getInfo()
+  return file
+    .getInfo()
     .then(() => file.getMirrors())
     .then(() => file.download());
 }

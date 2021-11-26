@@ -1,6 +1,6 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
-import { downloadFile, downloadFileParallel } from './download-file';
+import { downloadFile } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
 import { uploadFile } from './upload-file';
@@ -16,7 +16,7 @@ export const uploadFileCommand = buildCommand({
   version: '0.0.1',
   command: 'upload-file <path>',
   description: 'Upload a file',
-  options: []
+  options: [],
 }).action((path) => {
   uploadFile(path, 1).finally(notifyProgramFinished('upload-file'));
 });
@@ -25,7 +25,7 @@ export const uploadFileCommandParallel = buildCommand({
   version: '0.0.1',
   command: 'upload-file-parallel <path>',
   description: 'Upload a file',
-  options: []
+  options: [],
 }).action((path) => {
   uploadFile(path, 10).finally(notifyProgramFinished('upload-file'));
 });
@@ -34,7 +34,7 @@ export const uploadFolderZipCommand = buildCommand({
   version: '0.0.1',
   command: 'upload-folder-zip <path>',
   description: 'Upload a folder zipped',
-  options: []
+  options: [],
 }).action((path: string) => {
   uploadFolder(path).finally(notifyProgramFinished('upload-folder-zip'));
 });
@@ -43,25 +43,25 @@ export const downloadFileCommand = buildCommand({
   version: '0.0.1',
   command: 'download-file <fileId> <path> [downloadStrategy]',
   description: 'Download a file',
-  options: []
+  options: [],
 }).action((fileId, path) => {
-  downloadFile(fileId, path).finally(notifyProgramFinished('download-file'));
+  downloadFile(fileId, path, 1).finally(notifyProgramFinished('download-file'));
 });
 
 export const downloadFileCommandParallel = buildCommand({
   version: '0.0.1',
   command: 'download-file-parallel <fileId> <path>',
   description: 'Download a file',
-  options: []
+  options: [],
 }).action((fileId, path) => {
-  downloadFileParallel(fileId, path).finally(notifyProgramFinished('download-file-parallel'));
+  downloadFile(fileId, path, 10).finally(notifyProgramFinished('download-file-parallel'));
 });
 
 export const renameFileCommand = buildCommand({
   version: '0.0.1',
   command: 'rename-file <fileId> <newName>',
   description: 'Renames a file in the network',
-  options: []
+  options: [],
 }).action((fileId, newName) => {
   renameFile(fileId, newName).finally(notifyProgramFinished('rename-file'));
 });
@@ -70,10 +70,10 @@ export const getFileInfoCommand = buildCommand({
   version: '0.0.1',
   command: 'get-file-info <fileId>',
   description: 'Gets file info',
-  options: []
+  options: [],
 }).action((fileId) => {
-  getFileInfo(fileId).finally(notifyProgramFinished('get-file-info'))
-})
+  getFileInfo(fileId).finally(notifyProgramFinished('get-file-info'));
+});
 
 // export const downloadFolderZippedCommand = buildCommand({
 //   version: '0.0.1',

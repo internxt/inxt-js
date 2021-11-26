@@ -5,14 +5,18 @@ import { Events } from '../';
 export * from './strategy';
 export * from './oneStreamStrategy';
 
-export type UploadProgressCallback = (progress: number, uploadedBytes: number | null, totalBytes: number | null) => void;
+export type UploadProgressCallback = (
+  progress: number,
+  uploadedBytes: number | null,
+  totalBytes: number | null,
+) => void;
 export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export interface UploadOptions {
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
   /**
-   * Name of the content uploaded to the network. This name will be encrypted
+   * Name of the content uploaded to the network. This name SHOULD be encrypted
    */
   name: string;
 }
@@ -26,29 +30,30 @@ type FileId = string;
  * @param fileMeta file metadata
  * @param progress upload progress callback
  * @param finish finish progress callback
- * 
+ *
  * @returns {FileId} The id of the created file
  */
 export async function upload(
-  config: EnvironmentConfig, 
-  filename: string, 
-  bucketId: string, 
-  params: UploadOptions, 
-  actionState: ActionState, 
-  uploader: UploadStrategy
+  config: EnvironmentConfig,
+  filename: string,
+  bucketId: string,
+  params: UploadOptions,
+  state: ActionState,
+  uploader: UploadStrategy,
 ): Promise<FileId> {
   const file = new FileObjectUpload(config, filename, bucketId, uploader);
 
-  actionState.once(Events.Upload.Abort, () => {
+  state.once(Events.Upload.Abort, () => {
     file.emit(Events.Upload.Abort);
-    actionState.removeAllListeners();
+    state.removeAllListeners();
   });
 
   file.on(Events.Upload.Progress, (progress) => {
     params.progressCallback(progress, 0, 0);
   });
 
-  return file.init()
+  return file
+    .init()
     .then(() => file.checkBucketExistence())
     .then(() => file.stage())
     .then(() => file.upload())

@@ -7,7 +7,7 @@ enum DownloadEvents {
   Ready = 'download-ready',
   Progress = 'download-progress',
   Abort = 'download-abort',
-  Finish = 'download-finish'
+  Finish = 'download-finish',
 }
 
 enum UploadEvents {
@@ -21,5 +21,5 @@ enum UploadEvents {
 
 export const Events = {
   Upload: UploadEvents,
-  Download: DownloadEvents
-}
+  Download: DownloadEvents,
+};

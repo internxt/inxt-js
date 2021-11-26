@@ -1,6 +1,6 @@
-import { Command } from "commander";
-import { EnvironmentConfig } from "../api";
-import { Environment } from "..";
+import { Command } from 'commander';
+import { EnvironmentConfig } from '../api';
+import { Environment } from '..';
 
 export interface CommandOpts {
   version: string;
@@ -28,10 +28,7 @@ export function getEnvironment(): Environment {
 }
 
 export function buildCommand(opts: CommandOpts): Command {
-  const command = new Command()
-    .command(opts.command)
-    .version(opts.version)
-    .description(opts.description);
+  const command = new Command().command(opts.command).version(opts.version).description(opts.description);
 
   opts.options.forEach((option) => {
     command.option(option.flags, option.description, option.defaultValue);

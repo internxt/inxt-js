@@ -1,7 +1,7 @@
 import { MAX_SHARD_SIZE, MIN_SHARD_SIZE, SHARD_MULTIPLE_BACK } from '../../api/constants';
 
 /**
- * Determines the best concurrency number of chunks in memory to fit 
+ * Determines the best concurrency number of chunks in memory to fit
  * desired ram usage
  * @param desiredRamUsage Desired ram usage in bytes
  * @param fileSize Size of the file to work with
@@ -18,9 +18,11 @@ function shardSize(hops: number): number {
 }
 
 export function _determineShardSize(fileSize: number, accumulator = 0): number {
-  if (fileSize < 0) { return 0; }
+  if (fileSize < 0) {
+    return 0;
+  }
 
-  let hops = ((accumulator - SHARD_MULTIPLE_BACK) < 0) ? 0 : accumulator - SHARD_MULTIPLE_BACK;
+  let hops = accumulator - SHARD_MULTIPLE_BACK < 0 ? 0 : accumulator - SHARD_MULTIPLE_BACK;
 
   const byteMultiple = shardSize(accumulator);
 
@@ -42,7 +44,7 @@ export function _determineShardSize(fileSize: number, accumulator = 0): number {
 }
 
 export function determineParityShards(totalShards: number) {
-  return Math.ceil(totalShards * 2 / 3);
+  return Math.ceil((totalShards * 2) / 3);
 }
 
 /**

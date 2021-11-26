@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import { v4 } from 'uuid';
 
 import { Environment } from '..';
-import { EnvironmentConfig } from '../api'
+import { EnvironmentConfig } from '../api';
 import { GenerateFileKey } from '../lib/utils/crypto';
 import { HashStream, BytesCounter } from '../lib/utils/streams';
 import { UploadOneStreamStrategyObject } from '../lib/core';
@@ -20,7 +20,7 @@ function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment
     bridgeUser: process.env.BRIDGE_USER,
     encryptionKey: process.env.MNEMONIC,
     bridgeUrl: process.env.BRIDGE_URL,
-    inject: {}
+    inject: {},
   };
 
   if (envConfig.inject && fileEncryptionKey) {
@@ -34,7 +34,7 @@ function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment
   return new Environment(envConfig);
 }
 
-function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ hash: string, size: number }> {
+function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ hash: string; size: number }> {
   const hasher = new HashStream();
   const counter = new BytesCounter();
 
@@ -42,13 +42,12 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
 
   hasher.on('data', () => null);
 
-  return pipelineAsync(archive.directory(folderPath + '/', false), cipher, counter, hasher)
-    .then(() => {
-      return {
-        hash: hasher.getHash().toString('hex'),
-        size: counter.count
-      };
-    })
+  return pipelineAsync(archive.directory(folderPath + '/', false), cipher, counter, hasher).then(() => {
+    return {
+      hash: hasher.getHash().toString('hex'),
+      size: counter.count,
+    };
+  });
 }
 
 export async function uploadFolder(path: string) {
@@ -61,18 +60,19 @@ export async function uploadFolder(path: string) {
   const network = getEnvironment(fileEncryptionKey, index);
 
   logger.info('Uploading folder "%s"', path);
-  logger.debug('Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, directoryPath: %s }',
+  logger.debug(
+    'Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, directoryPath: %s }',
     process.env.BUCKET_ID,
     network.config.bridgeUrl,
     network.config.bridgeUser,
-    path
+    path,
   );
 
   const cipher = createCipheriv('aes-256-ctr', fileEncryptionKey, iv);
   const { hash, size } = await getEncryptedFolderMeta(path, cipher);
   const networkFilename = v4();
 
-  const archiverSetup = archiver('zip', { zlib: { level: 9 } })
+  const archiverSetup = archiver('zip', { zlib: { level: 9 } });
   const directoryStream = archiverSetup.directory(path + '/', false);
   archiverSetup.finalize();
 
@@ -86,15 +86,15 @@ export async function uploadFolder(path: string) {
   const finishCbGenerator = (resolve: ResolveFunction, reject: RejectFunction) => {
     return (err: Error | null) => {
       err ? reject(err) : resolve(null);
-    }
-  }
+    };
+  };
 
   const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction) => ({
     filename: networkFilename,
     progressCallback: (progress: number) => {
       logger.debug('Progress %s%', (progress * 100).toFixed(2));
     },
-    finishedCallback: finishCbGenerator(resolve, reject)
+    finishedCallback: finishCbGenerator(resolve, reject),
   });
 
   const uploadStrategy: UploadOneStreamStrategyObject = {
@@ -102,22 +102,26 @@ export async function uploadFolder(path: string) {
     params: {
       source: {
         stream: directoryStream,
-        size
-      }
-    }
+        size,
+      },
+      concurrency: 1,
+      useProxy: false,
+    },
   };
 
   await new Promise((resolve, reject) => {
     const state = network.upload(bucketId, uploadOptionsGenerator(resolve, reject), uploadStrategy);
 
     process.on('SIGINT', () => network.uploadCancel(state));
-  }).then((fileId) => {
-    logger.info('File upload finished. File id: %s', fileId);
+  })
+    .then((fileId) => {
+      logger.info('File upload finished. File id: %s', fileId);
 
-    process.exit(0);
-  }).catch((err) => {
-    logger.error('Error uploading file: %s', err.message);
+      process.exit(0);
+    })
+    .catch((err) => {
+      logger.error('Error uploading file: %s', err.message);
 
-    process.exit(-1);
-  });
+      process.exit(-1);
+    });
 }

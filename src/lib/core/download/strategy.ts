@@ -1,6 +1,16 @@
 import { EventEmitter } from 'events';
 
-import { Shard, Abortable } from '../../../api';
+import { DownloadOneStreamStrategyObject } from '.';
+import { Abortable, ActionState, Shard } from '../../../api';
+
+export type DownloadStrategyLabel = string;
+export type DownloadStrategyObject = DownloadOneStreamStrategyObject;
+export type DownloadStrategyFunction = (
+  bucketId: string,
+  fileId: string,
+  opts: any,
+  strategyObj: DownloadStrategyObject,
+) => ActionState;
 
 export abstract class DownloadStrategy extends EventEmitter implements Abortable {
   fileEncryptionKey = Buffer.alloc(0);
@@ -47,3 +57,6 @@ export abstract class DownloadStrategy extends EventEmitter implements Abortable
    */
   abstract abort(): void;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface DownloadParams {}

@@ -1,4 +1,6 @@
 import { EventEmitter } from 'events';
+
+import { UploadOneStreamStrategyObject } from '.';
 import { Abortable, ActionState, ContractMeta } from '../../../api';
 import { ShardMeta } from '../../models';
 
@@ -10,7 +12,7 @@ export interface UploadFinishedMessage {
 
 export type UploadStrategyLabel = string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type UploadStrategyObject = { label: UploadStrategyLabel, params: any };
+export type UploadStrategyObject = UploadOneStreamStrategyObject;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UploadStrategyFunction = (bucketId: string, opts: any, strategyObj: UploadStrategyObject) => ActionState;
 
@@ -44,7 +46,7 @@ export abstract class UploadStrategy extends EventEmitter implements Abortable {
    * Should execute the steps to perform an upload
    * @param negotiateContract Injected method to negotiate a contract
    */
-  abstract upload(negotiateContract: NegotiateContract, useProxy: boolean): void;
+  abstract upload(negotiateContract: NegotiateContract): void;
 
   /**
    * Should abort the upload strategy as soon as possible

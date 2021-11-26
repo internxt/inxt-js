@@ -1,4 +1,4 @@
-import { Farmer } from ".";
+import { Farmer } from '.';
 
 export interface Mirror {
   index: number;

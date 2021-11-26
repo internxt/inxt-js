@@ -8,8 +8,8 @@ const loggerOptions = {
     warn: 0,
     debug: 1,
     error: 2,
-    info: 3
-  }
+    info: 3,
+  },
 };
 
 function parseLogLevel(level: number): string {
@@ -44,7 +44,10 @@ export class Logger {
   }
 }
 
-const getLoggerInstance = (level: number, debug?: { enabled: boolean, debugCallback: (msg: string) => void }): Winston.Logger => {
+const getLoggerInstance = (
+  level: number,
+  debug?: { enabled: boolean; debugCallback: (msg: string) => void },
+): Winston.Logger => {
   const levelName = parseLogLevel(level);
   const _logger = Winston.createLogger({
     level: levelName,
@@ -60,9 +63,9 @@ const getLoggerInstance = (level: number, debug?: { enabled: boolean, debugCallb
         }
 
         return `${info.timestamp} ${info.level}: ${info.message}`;
-      })
+      }),
     ),
-    transports: [new Winston.transports.Console()]
+    transports: [new Winston.transports.Console()],
   });
 
   if (process.env.STAGE !== 'development') {
