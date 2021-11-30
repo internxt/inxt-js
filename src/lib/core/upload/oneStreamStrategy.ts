@@ -7,7 +7,7 @@ import { generateMerkleTree } from '../../utils/MerkleTree';
 import { Abortable, ActionState, ShardObject } from '../../../api';
 import { wrap } from '../../utils/error';
 import { determineShardSize } from '../../utils';
-import { Tap, Funnel } from '../../utils/streams';
+import { Tap, Funnel, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
 import { ShardMeta } from '../../models';
 import { ContractMeta } from '../../../api';
 import { logger } from '../../utils/logger';
@@ -162,6 +162,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
       this.addToAbortables(() => uploadQueue.kill());
 
       await new Promise((resolve, reject) => {
+        uploadPipeline.once('error', reject);
         uploadPipeline.on('data', (shard: Buffer) => {
           const currentShardIndex = currentShards.length;
 
@@ -226,14 +227,22 @@ export class UploadOneStreamStrategy extends UploadStrategy {
         }
 
         const buffer = this.internalBuffer[shardMeta.index];
-
+        const progressNotifier = new ProgressNotifier(shardMeta.size, 1000);
         const readableFromBuffer = new Readable();
         readableFromBuffer.push(buffer);
         readableFromBuffer.push(null);
 
+        readableFromBuffer.once('error', (err) => {
+          progressNotifier.emit('error', err);
+        });
+
+        progressNotifier.on(ProgressEvents.Progress, (progress) => {
+          this.uploadsProgress[shardMeta.index] = progress;
+        });
+
         ShardObject.putStreamTwo(
           putUrl,
-          readableFromBuffer,
+          readableFromBuffer.pipe(new Funnel(shardMeta.size / 10)).pipe(progressNotifier),
           (err) => {
             if (err) {
               // TODO: Si el error es un 304, hay que dar el shard por subido.
