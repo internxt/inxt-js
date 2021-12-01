@@ -242,7 +242,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
 
         ShardObject.putStreamTwo(
           putUrl,
-          readableFromBuffer.pipe(new Funnel(Math.floor(shardMeta.size / 10))).pipe(progressNotifier),
+          readableFromBuffer.pipe(progressNotifier),
           (err) => {
             if (err) {
               // TODO: Si el error es un 304, hay que dar el shard por subido.
