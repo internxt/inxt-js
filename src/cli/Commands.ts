@@ -1,6 +1,7 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
 import { createBucket } from './create-bucket';
+import { deleteBucket } from './delete-bucket';
 import { downloadFile } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
@@ -83,6 +84,15 @@ export const createBucketCommand = buildCommand({
   options: []
 }).action((bucketName: string) => {
   createBucket(bucketName).finally(notifyProgramFinished('create-bucket'));
+});
+
+export const deleteBucketCommand = buildCommand({
+  version: '0.0.1',
+  command: 'delete-bucket <bucketId>',
+  description: 'Deletes a bucket given its id',
+  options: []
+}).action((bucketId: string) => {
+  deleteBucket(bucketId).finally(notifyProgramFinished('delete-bucket'));
 });
 
 // export const downloadFolderZippedCommand = buildCommand({
