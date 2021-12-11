@@ -361,6 +361,11 @@
     "@typescript-eslint/parser" "^5.4.0"
     eslint-config-prettier "^8.3.0"
 
+"@internxt/lib@^1.1.6":
+  version "1.1.6"
+  resolved "https://npm.pkg.github.com/download/@internxt/lib/1.1.6/f756c6d77338d351ab797f40cc1bf3c25ecccf9ac0c8298c939ee5000ebc42d1#ea931ba39aa0e715704400603beb8833c73c05e4"
+  integrity sha512-xpnSpDsWr+jemV2aI71B39LGfXnNCsyv2VKND0JAgrOeyHXjnChH+IHxGLq/8f73HT47mpkNXrK4nfpzH4OaaQ==
+
 "@internxt/prettier-config@^1.0.1":
   version "1.0.1"
   resolved "https://npm.pkg.github.com/download/@internxt/prettier-config/1.0.1/e90f9fa863768b01404b71f8c9aa56296f2d515f65ef3fef9a6546218a37c9d8#2eeb3ae2222dffdb3d694a56b547fd6d71823e69"
@@ -1806,10 +1811,10 @@ commander@*:
   resolved "https://registry.yarnpkg.com/commander/-/commander-8.0.0.tgz#1da2139548caef59bd23e66d18908dfb54b02258"
   integrity sha512-Xvf85aAtu6v22+E5hfVoLHqyul/jyxh91zvqk/ioJTQuJR7Z78n7H558vMPKanPSRgIEeZemT92I2g9Y8LPbSQ==
 
-commander@^8.2.0:
-  version "8.2.0"
-  resolved "https://registry.yarnpkg.com/commander/-/commander-8.2.0.tgz#37fe2bde301d87d47a53adeff8b5915db1381ca8"
-  integrity sha512-LLKxDvHeL91/8MIyTAD5BFMNtoIwztGPMiM/7Bl8rIPmHCZXRxmSWr91h57dpOpnQ6jIUqEWdXE/uBYMfiVZDA==
+commander@^8.3.0:
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-8.3.0.tgz#4837ea1b2da67b9c616a67afbb0fafee567bca66"
+  integrity sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==
 
 compress-commons@^4.1.0:
   version "4.1.1"
