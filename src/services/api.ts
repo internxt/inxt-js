@@ -122,6 +122,7 @@ export interface InxtApiI {
   sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
+  createBucket(bucketName: string): INXTRequest;
 }
 
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
@@ -179,6 +180,10 @@ class InxtApi implements InxtApiI {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
+    return emptyINXTRequest(this.config);
+  }
+
+  createBucket(bucketName: string): INXTRequest {
     return emptyINXTRequest(this.config);
   }
 }
@@ -287,4 +292,10 @@ export class Bridge extends InxtApi {
 
     return new INXTRequest(this.config, Methods.Patch, targetUrl, { data: { name: newName } });
   }
+
+  createBucket(bucketName: string) {
+    const targetUrl = `${this.config.bridgeUrl}/buckets`;
+
+    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { name: bucketName }});
+  };
 }
