@@ -1,5 +1,6 @@
 import { logger } from '../lib/utils/logger';
 import { buildCommand } from './CommandInterface';
+import { createBucket } from './create-bucket';
 import { downloadFile } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
@@ -73,6 +74,15 @@ export const getFileInfoCommand = buildCommand({
   options: [],
 }).action((fileId) => {
   getFileInfo(fileId).finally(notifyProgramFinished('get-file-info'));
+});
+
+export const createBucketCommand = buildCommand({
+  version: '0.0.1',
+  command: 'create-bucket <bucketName>',
+  description: 'Creates a bucket with the given name',
+  options: []
+}).action((bucketName: string) => {
+  createBucket(bucketName).finally(notifyProgramFinished('create-bucket'));
 });
 
 // export const downloadFolderZippedCommand = buildCommand({
