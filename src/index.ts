@@ -1,4 +1,5 @@
 import * as Winston from 'winston';
+import { request } from '@internxt/lib';
 
 import {
   upload,
@@ -19,7 +20,7 @@ import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
 
 // TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
-import { ActionState, ActionTypes, EnvironmentConfig } from './api';
+import { ActionState, ActionTypes, Bucket, EnvironmentConfig } from './api';
 import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
@@ -29,8 +30,6 @@ import { HashStream } from './lib/utils/streams';
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
 type GetBucketIdCallback = (err: Error | null, result: any) => void;
-
-type CreateBucketCallback = (err: Error | null, result: any) => void;
 
 type DeleteBucketCallback = (err: Error | null, result: any) => void;
 
@@ -86,11 +85,18 @@ export class Environment {
   /**
    * Creates a bucket
    * @param bucketName Name of the new bucket
-   * @param cb Callback that will receive the response after creation
+   * @returns Bucket id
    */
-  createBucket(bucketName: string, cb: CreateBucketCallback): void {
-    /* TODO */
-    cb(Error('Not implemented yet'), null);
+  createBucket(bucketName: string): Promise<string> {
+    return new Bridge(this.config)
+      .createBucket(bucketName)
+      .start<Bucket>()
+      .then((bucket) => {
+        return bucket.id;
+      })
+      .catch((err) => {
+        throw new Error(request.extractMessageFromError(err));
+      });
   }
 
   /**

@@ -13,6 +13,7 @@ program.addCommand(commands.downloadFileCommand);
 program.addCommand(commands.downloadFileCommandParallel);
 program.addCommand(commands.renameFileCommand);
 program.addCommand(commands.getFileInfoCommand);
+program.addCommand(commands.createBucketCommand);
 // program.addCommand(commands.downloadFolderZippedCommand);
 
 program.parse(process.argv);

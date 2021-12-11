@@ -1,5 +1,6 @@
 export * from './ActionState';
 export * from './Abortable';
+export * from './Bucket';
 export * from './Contract';
 export * from './EnvironmentConfig';
 export * from './ExchangeReport';

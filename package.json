@@ -37,7 +37,7 @@
     "browserify": "^16.5.1",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "commander": "^8.2.0",
+    "commander": "^8.3.0",
     "dotenv": "^10.0.0",
     "eslint": "^8.0.1",
     "express": "^4.17.1",
@@ -53,6 +53,7 @@
     "uuid": "^8.3.2"
   },
   "dependencies": {
+    "@internxt/lib": "^1.1.6",
     "async": "^3.2.0",
     "axios": "^0.23.0",
     "bip39": "^3.0.2",
