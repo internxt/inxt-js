@@ -120,9 +120,13 @@ export class Environment {
    * @param bucketId Id whose bucket is going to be deleted
    * @param cb Callback that will receive the response after deletion
    */
-  deleteBucket(bucketId: string, cb: DeleteBucketCallback): void {
-    /* TODO */
-    cb(Error('Not implemented yet'), null);
+  deleteBucket(bucketId: string): Promise<void> {
+    return new Bridge(this.config)
+      .deleteBucket(bucketId)
+      .start<void>()
+      .catch((err) => {
+        throw new Error(request.extractMessageFromError(err));
+      });
   }
 
   /**

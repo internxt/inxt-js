@@ -7,11 +7,12 @@ import { request, streamRequest } from '../services/request';
 import { ProxyManager, getProxy } from '../services/proxy';
 import { EnvironmentConfig } from '../api';
 
-enum Methods {
+export enum Methods {
   Get = 'GET',
   Post = 'POST',
   Put = 'PUT',
   Patch = 'PATCH',
+  Delete = 'DELETE'
 }
 
 export class INXTRequest extends EventEmitter {

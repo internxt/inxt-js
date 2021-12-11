@@ -1,14 +1,7 @@
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { EnvironmentConfig, ExchangeReport, Shard } from '../api';
-import { INXTRequest } from '../lib';
+import { INXTRequest, Methods } from '../lib';
 import { ShardMeta } from '../lib/models';
-
-export enum Methods {
-  Get = 'GET',
-  Post = 'POST',
-  Put = 'PUT',
-  Patch = 'PATCH',
-}
 
 export interface GetBucketByIdResponse {
   user: string;
@@ -298,4 +291,10 @@ export class Bridge extends InxtApi {
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { name: bucketName }});
   };
+
+  deleteBucket(bucketId: string) {
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}`;
+
+    return new INXTRequest(this.config, Methods.Delete, targetUrl, {});
+  }
 }
