@@ -227,7 +227,7 @@ function getDownloadStream(
   cb: (err: Error | null | undefined, stream: Readable | null) => void,
   useProxy = false,
 ): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
+  ShardObject.requestGet(buildRequestUrlShard(shard))
     .then((url) => getStream(url, { useProxy }))
     .then((stream) => {
       cb(null, stream);
