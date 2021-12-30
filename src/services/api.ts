@@ -275,7 +275,7 @@ export class Bridge extends InxtApi {
   }
 
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
-    const targetUrl = `https://api.internxt.com/buckets/${bucketId}/tokens`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/tokens`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation, file: fileId } }, false);
   }
