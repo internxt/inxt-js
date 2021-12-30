@@ -132,7 +132,7 @@ export class UploadOneStreamStrategy extends UploadStrategy {
 
                 this.uploadShard(
                   shardMeta,
-                  contract,
+                  contract.url,
                   (err) => {
                     if (err) {
                       return nextTry(err);
@@ -216,43 +216,31 @@ export class UploadOneStreamStrategy extends UploadStrategy {
     }
   }
 
-  private uploadShard(shardMeta: ShardMeta, contract: ContractMeta, cb: (err?: Error) => void, useProxy: boolean) {
-    const url = `http://${contract.farmer.address}:${contract.farmer.port}/upload/link/${shardMeta.hash}`;
+  private uploadShard(shardMeta: ShardMeta, putUrl: string, cb: (err?: Error) => void, useProxy: boolean) {
+    const buffer = this.internalBuffer[shardMeta.index];
+    const progressNotifier = new ProgressNotifier(shardMeta.size, 1000);
+    const readableFromBuffer = new Readable();
+    readableFromBuffer.push(buffer);
+    readableFromBuffer.push(null);
 
-    ShardObject.requestPutTwo(
-      url,
-      (err, putUrl) => {
+    readableFromBuffer.once('error', (err) => {
+      progressNotifier.emit('error', err);
+    });
+
+    progressNotifier.on(ProgressEvents.Progress, (progress) => {
+      this.uploadsProgress[shardMeta.index] = progress;
+    });
+
+    ShardObject.putStreamTwo(
+      putUrl,
+      readableFromBuffer.pipe(progressNotifier),
+      (err) => {
         if (err) {
+          // TODO: Si el error es un 304, hay que dar el shard por subido.
           return cb(err);
         }
 
-        const buffer = this.internalBuffer[shardMeta.index];
-        const progressNotifier = new ProgressNotifier(shardMeta.size, 1000);
-        const readableFromBuffer = new Readable();
-        readableFromBuffer.push(buffer);
-        readableFromBuffer.push(null);
-
-        readableFromBuffer.once('error', (err) => {
-          progressNotifier.emit('error', err);
-        });
-
-        progressNotifier.on(ProgressEvents.Progress, (progress) => {
-          this.uploadsProgress[shardMeta.index] = progress;
-        });
-
-        ShardObject.putStreamTwo(
-          putUrl,
-          readableFromBuffer.pipe(progressNotifier),
-          (err) => {
-            if (err) {
-              // TODO: Si el error es un 304, hay que dar el shard por subido.
-              return cb(err);
-            }
-
-            cb();
-          },
-          useProxy,
-        );
+        cb();
       },
       useProxy,
     );
