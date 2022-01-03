@@ -13,7 +13,7 @@ import {
   DownloadStrategy,
   DownloadOptions,
   DownloadStrategyObject,
-  DownloadOneStreamStrategy,
+  UploadOneShardStrategy,
 } from './lib/core';
 
 import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
@@ -179,6 +179,10 @@ export class Environment {
 
         if (strategyObj.label === 'OneStreamOnly') {
           strategy = new UploadOneStreamStrategy(strategyObj.params);
+        }
+
+        if (strategyObj.label === 'OneShardOnly') {
+          strategy = new UploadOneShardStrategy(strategyObj.params);
         }
 
         if (!strategy) {
