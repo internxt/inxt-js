@@ -14,6 +14,8 @@ import {
   DownloadOptions,
   DownloadStrategyObject,
   UploadOneShardStrategy,
+  DownloadDynamicStrategy,
+  DownloadOneShardStrategy,
 } from './lib/core';
 
 import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
@@ -203,11 +205,11 @@ export class Environment {
     return uploadState;
   };
 
-  download: DownloadStrategyFunction = (
+  download: DownloadStrategyFunction<any> = (
     bucketId: string,
     fileId: string,
     opts: DownloadOptions,
-    strategyObj: DownloadStrategyObject,
+    strategyObj: DownloadStrategyObject<any>,
   ) => {
     const downloadState = new ActionState(ActionTypes.Download);
 
@@ -231,9 +233,10 @@ export class Environment {
 
     let strategy: DownloadStrategy | null = null;
 
-    if (strategyObj.label === 'OneStreamOnly') {
-      strategy = new DownloadOneStreamStrategy(strategyObj.params);
-    }
+    strategy = new DownloadOneShardStrategy(strategyObj.params);
+    // if (strategyObj.label === 'Dynamic') {
+    //   strategy = new DownloadDynamicStrategy(strategyObj.params);
+    // }
 
     if (!strategy) {
       opts.finishedCallback(Error('Unknown strategy'), null);

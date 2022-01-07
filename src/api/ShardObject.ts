@@ -127,6 +127,9 @@ export class ShardObject extends EventEmitter {
     const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
     const putRequest = request(
       {
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
         hostname: formattedUrl.hostname,
         port: formattedUrl.port,
         protocol: formattedUrl.protocol,

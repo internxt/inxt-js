@@ -1,15 +1,15 @@
 import { EventEmitter } from 'events';
 
-import { DownloadOneStreamStrategyObject } from '.';
+import { DownloadDynamicStrategyObject } from '.';
 import { Abortable, ActionState, Shard } from '../../../api';
 
 export type DownloadStrategyLabel = string;
-export type DownloadStrategyObject = DownloadOneStreamStrategyObject;
-export type DownloadStrategyFunction = (
+export type DownloadStrategyObject<T> = DownloadDynamicStrategyObject<T>;
+export type DownloadStrategyFunction<T> = (
   bucketId: string,
   fileId: string,
   opts: any,
-  strategyObj: DownloadStrategyObject,
+  strategyObj: DownloadStrategyObject<T>,
 ) => ActionState;
 
 export abstract class DownloadStrategy extends EventEmitter implements Abortable {

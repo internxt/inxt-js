@@ -56,7 +56,7 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
       port: uriParts.port,
       path: uriParts.path,
       headers: {
-        Accept: 'binary/octet-stream',
+        Accept: 'application/octet-stream',
       },
     };
 
