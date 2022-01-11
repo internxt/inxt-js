@@ -10,7 +10,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
   const network = getEnvironment();
   const bucketId = process.env.BUCKET_ID;
 
-  const destination = createWriteStream(path); 
+  const destination = createWriteStream(path);
 
   try {
     await new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
               return reject(err);
             }
 
-            pipeline(downloadStream as Readable, createWriteStream(path), (err) => {
+            pipeline(downloadStream as Readable, destination, (err) => {
               if (err) {
                 return reject(err);
               }
@@ -39,7 +39,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
           params: {
             useProxy: false,
             concurrency,
-            writeTo: destination
+            writeTo: destination,
           },
         },
       );
