@@ -1,4 +1,3 @@
-import { retry } from 'async';
 import { createDecipheriv, Decipher, randomBytes } from 'crypto';
 import { pipeline, Readable, Writable } from 'stream';
 import { Events } from '..';
@@ -14,13 +13,13 @@ import { logger } from '../../utils/logger';
 
 export interface DownloadOneShardStrategyParams extends DownloadParams {
   useProxy: boolean;
-  writeTo: Writable
-};
+  writeTo: Writable;
+}
 
 export type DownloadOneShardStrategyLabel = 'OneShardOnly';
 export type DownloadOneShardStrategyObject = {
-  label: DownloadOneShardStrategyLabel
-  params: DownloadOneShardStrategyParams
+  label: DownloadOneShardStrategyLabel;
+  params: DownloadOneShardStrategyParams;
 };
 export type DownloadOneShardStrategyFunction = (
   bucketId: string,
@@ -35,7 +34,7 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
   private decipher: Decipher;
   private useProxy: boolean;
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private progressIntervalId: NodeJS.Timeout = setTimeout(() => { });
+  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 
   private destination: Writable;
@@ -83,60 +82,40 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
       this.decipher = createDecipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
 
       this.emit(Events.Download.Start);
-      this.emit(Events.Download.Ready, this.decipher);
-      this.once(Events.Download.Error, (err) => this.decipher.emit('error', err));
 
-      await retry({ times: 3, interval: 500 }, (nextTry) => {
-        getDownloadStream(onlyMirror, this.useProxy).then((encryptedFileStream) => {
-          const hasher = new HashStream();
-          const progressNotifier = new ProgressNotifier(onlyMirror.size, 2000);
+      const encryptedFileStream = await getDownloadStream(onlyMirror, this.useProxy);
+      const hasher = new HashStream();
+      const progressNotifier = new ProgressNotifier(onlyMirror.size, 2000);
 
-          const downloadPipeline = pipeline(encryptedFileStream, progressNotifier, hasher, (err) => {
-            console.log(err);
-          });
+      progressNotifier.on(ProgressEvents.Progress, (progress: number) => {
+        this.downloadProgress = progress;
+      });
 
-          this.decipher.once('end', () => {
-            const hashCalculatedDownloading = hasher.getHash().toString('hex');
-            const hashCalculatedUploading = onlyMirror.hash;
+      await new Promise((resolve, reject) => {
+        const downloadPipeline = pipeline(encryptedFileStream, progressNotifier, hasher, this.decipher, reject);
+        this.addAbortable(() => downloadPipeline.destroy());
 
-            logger.info(
-              'Download/OneShardStrategy/Downloading: File hash encrypted is %s',
-              hashCalculatedDownloading
-            );
+        this.emit(Events.Download.Ready, downloadPipeline);
 
-            logger.info(
-              'Download/OneShardStrategy/StoredHash: File hash encrypted is %s',
-              hashCalculatedUploading
-            );
+        hasher.once('end', () => {
+          const hashCalculatedDownloading = hasher.getHash().toString('hex');
+          const hashCalculatedUploading = onlyMirror.hash;
 
-            if (hashCalculatedDownloading === hashCalculatedUploading) {
-              return nextTry();
-            }
+          logger.info('Download/OneShardStrategy/Downloading: File hash encrypted is %s', hashCalculatedDownloading);
+          logger.info('Download/OneShardStrategy/StoredHash:  File hash encrypted is %s', hashCalculatedUploading);
 
-            nextTry(new Error(
+          if (hashCalculatedDownloading === hashCalculatedUploading) {
+            return resolve(null);
+          }
+
+          reject(
+            new Error(
               'Hash mismatch: Uploading was ' +
-              hashCalculatedUploading +
-              ' downloading was ' +
-              hashCalculatedDownloading
-            ));
-          });
-
-          downloadPipeline.once('end', () => {
-            this.decipher.end();
-          });
-
-          downloadPipeline.on('data', (chunk) => {
-            const canReceiveMore = this.decipher.write(chunk);
-
-            if (!canReceiveMore) {
-              downloadPipeline.pause();
-              this.decipher.once('drain', () => {
-                downloadPipeline.resume();
-              });
-            }
-          });
-        }).catch((err) => {
-          nextTry(err);
+                hashCalculatedUploading +
+                ' downloading was ' +
+                hashCalculatedDownloading,
+            ),
+          );
         });
       });
     } catch (err) {
@@ -163,8 +142,7 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
 }
 
 function getDownloadStream(shard: Shard, useProxy = false): Promise<Readable> {
-  return ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
-    .then((url) => getStream(url, { useProxy }));
+  return ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then((url) => getStream(url, { useProxy }));
 }
 
 function buildRequestUrlShard(shard: Shard) {
