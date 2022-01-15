@@ -56,7 +56,7 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
       port: uriParts.port,
       path: uriParts.path,
       headers: {
-        Accept: 'binary/octet-stream',
+        Accept: 'application/octet-stream',
       },
     };
 
@@ -129,11 +129,12 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  const getStream = streamRequest(targetUrl);
-
-  if (free) {
-    free();
-  }
-
-  return getStream;
+  return new Promise((resolve) => {
+    https.get(targetUrl, (res) => {
+      if (free) {
+        free();
+      }
+      resolve(res);
+    });
+  });
 }

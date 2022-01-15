@@ -7,6 +7,8 @@ import { DownloadStrategy } from './strategy';
 
 export * from './strategy';
 export * from './oneStreamStrategy';
+export * from './oneShardStrategy';
+export * from './dynamicStrategy';
 
 export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export type DownloadProgressCallback = (

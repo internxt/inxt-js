@@ -182,7 +182,10 @@ export class FileObject extends EventEmitter {
     this.downloader.once(Events.Download.Abort, () =>
       this.downloader.emit(Events.Download.Error, new Error('Download aborted')),
     );
-    this.downloader.on(Events.Download.Progress, (progress) => this.emit(Events.Download.Progress, progress));
+
+    this.downloader.on(Events.Download.Progress, (progress) => {
+      this.emit(Events.Download.Progress, progress);
+    });
 
     return new Promise((resolve, reject) => {
       this.downloader.once(Events.Download.Ready, resolve);

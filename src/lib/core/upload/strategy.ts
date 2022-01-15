@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { UploadOneStreamStrategyObject } from '.';
+import { UploadOneStreamStrategyObject, UploadOneShardStrategyObject } from '.';
 import { Abortable, ActionState, ContractMeta } from '../../../api';
 import { ShardMeta } from '../../models';
 
@@ -12,7 +12,7 @@ export interface UploadFinishedMessage {
 
 export type UploadStrategyLabel = string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type UploadStrategyObject = UploadOneStreamStrategyObject;
+export type UploadStrategyObject = UploadOneStreamStrategyObject | UploadOneShardStrategyObject;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UploadStrategyFunction = (bucketId: string, opts: any, strategyObj: UploadStrategyObject) => ActionState;
 

@@ -11,6 +11,7 @@
     "build": "rimraf build/* && tsc",
     "build:js": "npm run build && browserify -s 'inxt' ./build/index.js -o dist/inxt.es6.js",
     "test": "jest",
+    "test:watch": "jest --watch --detectOpenHandles",
     "lint": "eslint ./src",
     "lint:fix": "npm run lint -- --fix",
     "cli": "ts-node --files src/cli/index.ts"

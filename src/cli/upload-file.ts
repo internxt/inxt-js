@@ -5,7 +5,7 @@ import { UploadStrategyObject, UploadOptions } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
 
-export async function uploadFile(filepath: string, concurrency: number) {
+export async function uploadFileMultipleShards(filepath: string, concurrency: number) {
   if (!existsSync(filepath)) {
     logger.error('File "%s" does not exist', filepath);
     process.exit(-1);
@@ -49,6 +49,63 @@ export async function uploadFile(filepath: string, concurrency: number) {
         network.uploadCancel(state);
       });
     });
+  } catch (err) {
+    console.log(err);
+    logger.error('Error uploading file: %s', err.message);
+    process.exit(-1);
+  }
+}
+
+
+export async function uploadFileOneShard(filepath: string) {
+  if (!existsSync(filepath)) {
+    logger.error('File "%s" does not exist', filepath);
+    process.exit(-1);
+  }
+
+  try {
+    const network = getEnvironment();
+
+    const uuid = v4();
+    const bucketId = process.env.BUCKET_ID;
+    const uploadStrategy: UploadStrategyObject = {
+      label: 'OneShardOnly',
+      params: {
+        sourceToHash: {
+          stream: createReadStream(filepath),
+          size: statSync(filepath).size,
+        },
+        sourceToUpload: {
+          stream: createReadStream(filepath),
+          size: statSync(filepath).size,
+        },
+        useProxy: false,
+      },
+    };
+
+    await new Promise((resolve, reject) => {
+      const uploadOpts: UploadOptions = {
+        name: uuid,
+        progressCallback: (progress: number) => {
+          logger.debug('Progress %s%', (progress * 100).toFixed(2));
+        },
+        finishedCallback: (err: Error | null, res: string | null) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(res);
+        },
+      };
+
+      const state = network.upload(bucketId, uploadOpts, uploadStrategy);
+
+      process.on('SIGINT', () => {
+        logger.info('Aborting upload');
+        network.uploadCancel(state);
+      });
+    });
+
+    process.exit(0);
   } catch (err) {
     console.log(err);
     logger.error('Error uploading file: %s', err.message);

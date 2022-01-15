@@ -4,6 +4,7 @@ import { Events } from '../';
 
 export * from './strategy';
 export * from './oneStreamStrategy';
+export * from './oneShardStrategy';
 
 export type UploadProgressCallback = (
   progress: number,

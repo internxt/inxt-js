@@ -5,7 +5,7 @@ import { deleteBucket } from './delete-bucket';
 import { downloadFile } from './download-file';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
-import { uploadFile } from './upload-file';
+import { uploadFileOneShard, uploadFileMultipleShards } from './upload-file';
 import { uploadFolder } from './upload-folder-zip';
 
 function notifyProgramFinished(programName: string) {
@@ -18,9 +18,19 @@ export const uploadFileCommand = buildCommand({
   version: '0.0.1',
   command: 'upload-file <path>',
   description: 'Upload a file',
-  options: [],
-}).action((path) => {
-  uploadFile(path, 1).finally(notifyProgramFinished('upload-file'));
+  options: [{
+    flags: '-s, --shards [one|multiple]',
+    required: true
+  }],
+}).action((path, opts) => {
+  if (opts.shards === 'multiple') {
+    return uploadFileMultipleShards(path, 1)
+      .finally(notifyProgramFinished('upload-file'));
+  } 
+  if (opts.shards === 'one') {
+    return uploadFileOneShard(path)
+      .finally(notifyProgramFinished('upload-file'));
+  }  
 });
 
 export const uploadFileCommandParallel = buildCommand({
@@ -29,7 +39,7 @@ export const uploadFileCommandParallel = buildCommand({
   description: 'Upload a file',
   options: [],
 }).action((path) => {
-  uploadFile(path, 10).finally(notifyProgramFinished('upload-file'));
+  uploadFileMultipleShards(path, 10).finally(notifyProgramFinished('upload-file'));
 });
 
 export const uploadFolderZipCommand = buildCommand({

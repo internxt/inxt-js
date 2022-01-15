@@ -1,6 +1,6 @@
 import { eachLimit, queue, retry } from 'async';
 import { createDecipheriv, Decipher, randomBytes } from 'crypto';
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import { Events } from '..';
 
 import { Abortable, ActionState, Shard, ShardObject } from '../../../api';
@@ -12,13 +12,17 @@ import { logger } from '../../utils/logger';
 import { DownloadStrategy, DownloadParams } from './strategy';
 import { DownloadOptions } from '.';
 
-interface Params extends DownloadParams {
+export interface DownloadOneStreamStrategyParams extends DownloadParams {
   concurrency: number;
   useProxy: boolean;
+  writeTo: Writable
 }
 
 export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
-export type DownloadOneStreamStrategyObject = { label: DownloadOneStreamStrategyLabel; params: Params };
+export type DownloadOneStreamStrategyObject = { 
+  label: DownloadOneStreamStrategyLabel
+  params: DownloadOneStreamStrategyParams 
+};
 export type DownloadOneStreamStrategyFunction = (
   bucketId: string,
   fileId: string,
@@ -37,7 +41,7 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 
-  constructor(params: Params) {
+  constructor(params: DownloadOneStreamStrategyParams) {
     super();
 
     this.concurrency = params.concurrency;
@@ -198,6 +202,9 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
           return;
         }
 
+        console.log('calculatedHash', hasher.getHash().toString('hex'));
+        console.log('contract Hash', shard.hash);
+
         const hash = hasher.getHash().toString('hex');
 
         if (hash !== shard.hash) {
@@ -228,7 +235,10 @@ function getDownloadStream(
   useProxy = false,
 ): void {
   ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
-    .then((url) => getStream(url, { useProxy }))
+    .then((url) => {
+      console.log('download url', url);
+      return getStream(url, { useProxy });
+    })
     .then((stream) => {
       cb(null, stream);
     })
