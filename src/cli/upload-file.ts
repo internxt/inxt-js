@@ -104,6 +104,8 @@ export async function uploadFileOneShard(filepath: string) {
         network.uploadCancel(state);
       });
     });
+
+    process.exit(0);
   } catch (err) {
     console.log(err);
     logger.error('Error uploading file: %s', err.message);
