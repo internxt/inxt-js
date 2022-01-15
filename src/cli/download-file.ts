@@ -38,8 +38,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
           label: 'Dynamic',
           params: {
             useProxy: false,
-            concurrency,
-            writeTo: destination,
+            concurrency
           },
         },
       );

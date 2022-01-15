@@ -13,7 +13,6 @@ import { logger } from '../../utils/logger';
 
 export interface DownloadOneShardStrategyParams extends DownloadParams {
   useProxy: boolean;
-  writeTo: Writable;
 }
 
 export type DownloadOneShardStrategyLabel = 'OneShardOnly';
@@ -37,13 +36,10 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 
-  private destination: Writable;
-
   constructor(params: DownloadOneShardStrategyParams) {
     super();
 
     this.useProxy = params.useProxy;
-    this.destination = params.writeTo;
     this.decipher = createDecipheriv('aes-256-ctr', randomBytes(32), randomBytes(16));
     this.startProgressInterval();
 

@@ -233,10 +233,9 @@ export class Environment {
 
     let strategy: DownloadStrategy | null = null;
 
-    strategy = new DownloadOneShardStrategy(strategyObj.params);
-    // if (strategyObj.label === 'Dynamic') {
-    //   strategy = new DownloadDynamicStrategy(strategyObj.params);
-    // }
+    if (strategyObj.label === 'Dynamic') {
+      strategy = new DownloadDynamicStrategy(strategyObj.params);
+    }
 
     if (!strategy) {
       opts.finishedCallback(Error('Unknown strategy'), null);

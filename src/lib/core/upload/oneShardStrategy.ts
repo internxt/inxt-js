@@ -205,7 +205,7 @@ export class UploadOneShardStrategy extends UploadStrategy {
   private handleError(err: Error) {
     this.abortables.forEach((abortable) => abortable.abort());
 
-    this.emit(Events.Upload.Error, wrap('OneStreamStrategyError', err as Error));
+    this.emit(Events.Upload.Error, wrap('OneShardStrategyError', err as Error));
   }
 
   abort(): void {
