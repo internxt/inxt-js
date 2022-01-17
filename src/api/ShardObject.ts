@@ -1,4 +1,4 @@
-import { Readable } from 'stream';
+import { Readable, Writable } from 'stream';
 import { EventEmitter } from 'events';
 
 import { INXTRequest } from '../lib';
@@ -109,6 +109,35 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
+  static async getPutStream(
+    url: PutUrl,
+    useProxy: boolean,
+  ): Promise<Writable> {
+    let free: undefined | (() => void);
+    let targetUrl = url;
+
+    if (useProxy) {
+      const proxy = await getProxy();
+      free = proxy.free;
+      targetUrl = `${proxy.url}/${targetUrl}`;
+    }
+    const formattedUrl = new URL(targetUrl);
+    const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
+    
+    return request({
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      },
+      hostname: formattedUrl.hostname,
+      port: formattedUrl.port,
+      protocol: formattedUrl.protocol,
+      path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
+      method: 'PUT',
+    }, (res) => {
+      if (free) free();
+    });
+  } 
+
   static async putStreamTwo(
     url: PutUrl,
     content: Readable,
@@ -153,9 +182,13 @@ export class ShardObject extends EventEmitter {
         });
       },
     );
-
     content.once('error', (err) => {
-      putRequest.emit('error', err);
+      content.unpipe(putRequest);
+      cb(err);
+    });
+    putRequest.once('error', (err) => {
+      content.unpipe(putRequest);
+      cb(err);
     });
 
     content.pipe(putRequest);
