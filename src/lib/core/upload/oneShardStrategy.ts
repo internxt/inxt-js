@@ -130,6 +130,9 @@ export class UploadOneShardStrategy extends UploadStrategy {
         .pipe(hashingStepHasher)
         .pipe(hashingStepProgress);
 
+      hashingStepCipher.once('error', (err) => hashingPipeline.emit('error', err));
+      hashingStepHasher.once('error', (err) => hashingPipeline.emit('error', err));
+      hashingStepProgress.once('error', (err) => hashingPipeline.emit('error', err));
 
       this.startNotifyingEncryptProgress();
       this.addToAbortables(() => this.stopNotifyingEncryptProgress());
@@ -137,25 +140,22 @@ export class UploadOneShardStrategy extends UploadStrategy {
 
       const merkleTree = generateMerkleTree();
 
-      await retry({ times: 3, interval: 500 }, (nextTry) => {
-        hashingPipeline
-          .on('data', () => {
-            // 
-          })
-          .on('error', (err) => {
-            nextTry(err);
-          })
-          .on('end', () => {
-            this.shardMeta = {
-              hash: hashingStepHasher.getHash().toString('hex'),
-              challenges_as_str: merkleTree.challenges_as_str,
-              index: 0,
-              parity: false,
-              size: this.sourceToUpload.size,
-              tree: merkleTree.leaf,
-            };
-            nextTry();
-          });
+      await new Promise((resolve, reject) => {
+        hashingPipeline.on('data', () => {
+          // forces stream to flow
+        }).once('error', (err) => {
+          reject(err);
+        }).once('end', () => {
+          this.shardMeta = {
+            hash: hashingStepHasher.getHash().toString('hex'),
+            challenges_as_str: merkleTree.challenges_as_str,
+            index: 0,
+            parity: false,
+            size: this.sourceToUpload.size,
+            tree: merkleTree.leaf,
+          };
+          resolve(null);
+        });
       });
 
       this.stopNotifyingEncryptProgress();
@@ -181,37 +181,45 @@ export class UploadOneShardStrategy extends UploadStrategy {
         .pipe(uploadStepHasher)
         .pipe(uploadStepProgressNotifier);
 
+      uploadStepContent.once('error', (err) => uploadPipeline.emit('error', err));
+      uploadStepCipher.once('error', (err) => uploadPipeline.emit('error', err));
+      uploadStepHasher.once('error', (err) => uploadPipeline.emit('error', err));
+      uploadStepProgressNotifier.once('error', (err) => uploadPipeline.emit('error', err));
+
       this.startNotifyingUploadProgress();
       this.addToAbortables(() => uploadPipeline.destroy());
       this.addToAbortables(() => this.stopNotifyingUploadProgress());
 
       await retry({ times: 3, interval: 500 }, (nextTry) => {
-        ShardObject.putStreamTwo(
-          contract.url,
-          uploadPipeline,
-          (err) => {
-            if (err) {
-              return nextTry(err);
-            }
-            
-            const hashCalculatedUploading = uploadStepHasher.getHash().toString('hex');
-            const hashCalculatedHashing = hashingStepHasher.getHash().toString('hex');
+        ShardObject.getPutStream(contract.url, this.useProxy).then((upstream) => {
+          upstream.once('error', (err) => upstream.emit('error', err));
 
-            logger.info('Upload/OneShardStrategy/Uploading: File hash encrypted is %s', hashCalculatedUploading);
+          return new Promise((resolve, reject) => {
+            uploadPipeline
+              .pipe(upstream)
+              .once('error', reject)
+              .once('end', resolve);
+          });
+        }).then(() => {
+          const hashCalculatedUploading = uploadStepHasher.getHash().toString('hex');
+          const hashCalculatedHashing = hashingStepHasher.getHash().toString('hex');
 
-            if (hashCalculatedUploading === hashCalculatedHashing) {
-              return nextTry();
-            }
+          logger.info('Upload/OneShardStrategy/Uploading: File hash encrypted is %s', hashCalculatedUploading);
 
-            nextTry(new Error(
-              'Hash mismatch: Uploading was ' + 
-              hashCalculatedUploading + 
-              ' hashing was ' + 
-              hashCalculatedHashing
-            ));
-          },
-          this.useProxy
-        );
+          if (hashCalculatedUploading === hashCalculatedHashing) {
+            logger.info('Upload/OneShardStrategy: File uploaded');
+            return nextTry();
+          }
+
+          nextTry(new Error(
+            'Hash mismatch: Uploading was ' + 
+            hashCalculatedUploading + 
+            ' hashing was ' + 
+            hashCalculatedHashing
+          ));
+        }).catch((err) => {
+          nextTry(err);
+        });
       });
 
       this.stopNotifyingUploadProgress();
