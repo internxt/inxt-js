@@ -47,8 +47,11 @@ export class UploadOneShardStrategy extends UploadStrategy {
 
   private useProxy: boolean;
   private uploadProgress = 0;
+  private encryptProgress = 0;
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
+  private uploadProgressIntervalId: NodeJS.Timeout = setTimeout(() => {});
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  private encryptProgressIntervalId: NodeJS.Timeout = setTimeout(() => {});
 
   constructor(params: Params) {
     super();
@@ -57,7 +60,6 @@ export class UploadOneShardStrategy extends UploadStrategy {
     this.sourceToUpload = params.sourceToUpload;
 
     this.useProxy = params.useProxy;
-    this.startProgressInterval();
 
     this.once(Events.Upload.Abort, this.abort.bind(this));
   }
@@ -86,14 +88,24 @@ export class UploadOneShardStrategy extends UploadStrategy {
     }
   }
 
-  private startProgressInterval() {
-    this.progressIntervalId = setInterval(() => {
+  private startNotifyingUploadProgress() {
+    this.uploadProgressIntervalId = setInterval(() => {
       this.emit(Events.Upload.Progress, this.uploadProgress);
     }, 5000);
   }
 
-  private stopProgressInterval() {
-    clearInterval(this.progressIntervalId);
+  private stopNotifyingUploadProgress() {
+    clearInterval(this.uploadProgressIntervalId);
+  }
+
+  private startNotifyingEncryptProgress() {
+    this.encryptProgressIntervalId = setInterval(() => {
+      this.emit(Events.Upload.EncryptProgress, this.encryptProgress);
+    }, 5000);
+  }
+
+  private stopNotifyingEncryptProgress() {
+    clearInterval(this.encryptProgressIntervalId);
   }
 
   async upload(negotiateContract: NegotiateContract): Promise<void> {
@@ -101,17 +113,26 @@ export class UploadOneShardStrategy extends UploadStrategy {
       throw new Error('Set file encryption key and iv before trying to upload');
     }
 
-    this.emit(Events.Upload.Started);
-
     try {
+      this.emit(Events.Upload.EncryptStarted);
+
       const hashingStepCipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const hashingStepContent = this.sourceToHash.stream;
       const hashingStepHasher = new HashStream();
+      const hashingStepProgress = new ProgressNotifier(this.sourceToHash.size, 5000);
+
+      hashingStepProgress.on(ProgressEvents.Progress, (progress) => {
+        this.encryptProgress = progress;
+      });
 
       const hashingPipeline = hashingStepContent
         .pipe(hashingStepCipher)
-        .pipe(hashingStepHasher);
+        .pipe(hashingStepHasher)
+        .pipe(hashingStepProgress);
 
+
+      this.startNotifyingEncryptProgress();
+      this.addToAbortables(() => this.stopNotifyingEncryptProgress());
       this.addToAbortables(() => hashingPipeline.destroy());
 
       const merkleTree = generateMerkleTree();
@@ -137,9 +158,14 @@ export class UploadOneShardStrategy extends UploadStrategy {
           });
       });
 
+      this.stopNotifyingEncryptProgress();
+      this.emit(Events.Upload.EncryptFinished);
+
       logger.info('Upload/OneShardStrategy/Hashing: File hash encrypted is %s', this.shardMeta?.hash);
 
       const contract = await negotiateContract(this.shardMeta!);
+
+      this.emit(Events.Upload.Started);
 
       const uploadStepCipher = createCipheriv('aes-256-ctr', this.fileEncryptionKey, this.iv);
       const uploadStepContent = this.sourceToUpload.stream;
@@ -155,7 +181,9 @@ export class UploadOneShardStrategy extends UploadStrategy {
         .pipe(uploadStepHasher)
         .pipe(uploadStepProgressNotifier);
 
+      this.startNotifyingUploadProgress();
       this.addToAbortables(() => uploadPipeline.destroy());
+      this.addToAbortables(() => this.stopNotifyingUploadProgress());
 
       await retry({ times: 3, interval: 500 }, (nextTry) => {
         ShardObject.putStreamTwo(
@@ -186,8 +214,7 @@ export class UploadOneShardStrategy extends UploadStrategy {
         );
       });
 
-      logger.info('Upload/OneShardStrategy: File uploaded');
-
+      this.stopNotifyingUploadProgress();
       this.emit(Events.Upload.Finished, { result: [this.shardMeta] });
     } catch (err) {
       this.handleError(err as Error);
@@ -213,9 +240,5 @@ export class UploadOneShardStrategy extends UploadStrategy {
     this.emit(Events.Upload.Abort);
     this.abortables.forEach((abortable) => abortable.abort());
     this.removeAllListeners();
-  }
-
-  cleanup() {
-    this.stopProgressInterval();
   }
 }

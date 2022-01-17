@@ -159,6 +159,9 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
 
     this.uploader.once(Events.Upload.Abort, () => this.uploader.emit(Events.Upload.Error, new Error('Upload aborted')));
     this.uploader.on(Events.Upload.Progress, (progress: number) => this.emit(Events.Upload.Progress, progress));
+    this.uploader.on(Events.Upload.EncryptProgress, (progress: number) => {
+      this.emit(Events.Upload.EncryptProgress, progress);
+    });
 
     const errorHandler = (reject: (err: Error) => void) => (err: Error) => {
       this.uploader.removeAllListeners();

@@ -13,6 +13,9 @@ enum DownloadEvents {
 enum UploadEvents {
   Error = 'upload-error',
   Started = 'upload-start',
+  EncryptStarted = 'encrypt-start',
+  EncryptProgress = 'encrypt-progress',
+  EncryptFinished = 'encrypt-finished',
   Progress = 'upload-progress',
   Abort = 'upload-aborted',
   Finished = 'upload-finished',

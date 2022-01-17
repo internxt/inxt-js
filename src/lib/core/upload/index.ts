@@ -11,11 +11,13 @@ export type UploadProgressCallback = (
   uploadedBytes: number | null,
   totalBytes: number | null,
 ) => void;
+export type EncryptProgressCallback = (progress: number) => void;
 export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export interface UploadOptions {
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
+  encryptProgressCallback?: EncryptProgressCallback;
   /**
    * Name of the content uploaded to the network. This name SHOULD be encrypted
    */
@@ -52,6 +54,10 @@ export async function upload(
   file.on(Events.Upload.Progress, (progress) => {
     params.progressCallback(progress, 0, 0);
   });
+
+  if (params.encryptProgressCallback) {
+    file.on(Events.Upload.EncryptProgress, params.encryptProgressCallback);
+  }
 
   return file
     .init()
