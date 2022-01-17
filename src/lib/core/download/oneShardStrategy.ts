@@ -1,5 +1,5 @@
 import { createDecipheriv, Decipher, randomBytes } from 'crypto';
-import { pipeline, Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import { Events } from '..';
 
 import { Abortable, ActionState, Shard, ShardObject } from '../../../api';
@@ -88,12 +88,19 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
       });
 
       await new Promise((resolve, reject) => {
-        const downloadPipeline = pipeline(encryptedFileStream, progressNotifier, hasher, this.decipher, reject);
+        const downloadPipeline = encryptedFileStream
+          .pipe(progressNotifier)
+          .pipe(hasher)
+          .pipe(this.decipher);
+
         this.addAbortable(() => downloadPipeline.destroy());
 
         this.emit(Events.Download.Ready, downloadPipeline);
 
         hasher.once('end', () => {
+          this.emit(Events.Download.Progress, this.downloadProgress);
+          this.stopProgressInterval();
+
           const hashCalculatedDownloading = hasher.getHash().toString('hex');
           const hashCalculatedUploading = onlyMirror.hash;
 
