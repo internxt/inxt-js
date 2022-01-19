@@ -134,7 +134,21 @@ export class ShardObject extends EventEmitter {
       path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
       method: 'PUT',
     }, (res) => {
-      if (free) free();
+      if (res.statusCode !== 200) {
+        console.log('Request failed with status ' + res.statusCode);
+      }
+
+      const chunks: Buffer[] = [];
+
+      res.on('data', chunks.push.bind(chunks));
+      res.once('error', (err) => {
+        console.log('err', err);
+      });
+      res.once('end', () => {
+        // const body = Buffer.concat(chunks);
+        // console.log(body.toString());
+        free?.();
+      });
     });
   } 
 
