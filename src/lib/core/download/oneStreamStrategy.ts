@@ -15,7 +15,6 @@ import { DownloadOptions } from '.';
 export interface DownloadOneStreamStrategyParams extends DownloadParams {
   concurrency: number;
   useProxy: boolean;
-  writeTo: Writable
 }
 
 export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
