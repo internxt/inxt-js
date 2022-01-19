@@ -44,12 +44,8 @@ export class DownloadDynamicStrategy<T = DownloadOneShardStrategy | DownloadOneS
 
     async download(mirrors: Shard[]): Promise<void> {
       if (mirrors.length === 1) {
-        console.log('Using one shard download strategy');
-
         this.strategy = new DownloadOneShardStrategy(this.params);
       } else {
-        console.log('Using multiple shards download strategy');
-
         this.strategy = new DownloadOneStreamStrategy(this.params as DownloadOneStreamStrategyParams);
       }
 

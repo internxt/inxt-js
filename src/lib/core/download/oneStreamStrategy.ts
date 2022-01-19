@@ -202,9 +202,6 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
           return;
         }
 
-        console.log('calculatedHash', hasher.getHash().toString('hex'));
-        console.log('contract Hash', shard.hash);
-
         const hash = hasher.getHash().toString('hex');
 
         if (hash !== shard.hash) {
@@ -236,7 +233,6 @@ function getDownloadStream(
 ): void {
   ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
     .then((url) => {
-      console.log('download url', url);
       return getStream(url, { useProxy });
     })
     .then((stream) => {
