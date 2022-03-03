@@ -61,7 +61,6 @@ export async function upload(
 
   return file
     .init()
-    .then(() => file.checkBucketExistence())
     .then(() => file.stage())
     .then(() => file.upload())
     .then((shardMetas) => file.createBucketEntry(shardMetas))
