@@ -110,7 +110,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   stage(): Promise<void> {
     this.checkIfIsAborted();
 
-    const req = this.api.createFrame();
+    const req = this.api.createFrame({ data: { bucketId: this.bucketId } });
     this.requests.push(req);
 
     return req
