@@ -104,6 +104,7 @@ export interface CreateFileTokenResponse {
   size: number;
   token: string;
 }
+export type GetDownloadLinksResponse = { fileId: string; link: string; index: string }[];
 
 export interface InxtApiI {
   getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest;
@@ -289,12 +290,18 @@ export class Bridge extends InxtApi {
   createBucket(bucketName: string) {
     const targetUrl = `${this.config.bridgeUrl}/buckets`;
 
-    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { name: bucketName }});
-  };
+    return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { name: bucketName } });
+  }
 
   deleteBucket(bucketId: string) {
     const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}`;
 
     return new INXTRequest(this.config, Methods.Delete, targetUrl, {});
+  }
+
+  getDownloadLinks(bucketId: string, fileIds: string[]) {
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/bulk-files?fileIds=${fileIds.join(',')}`;
+
+    return new INXTRequest(this.config, Methods.Get, targetUrl, {});
   }
 }

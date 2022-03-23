@@ -3,6 +3,7 @@ import { buildCommand } from './CommandInterface';
 import { createBucket } from './create-bucket';
 import { deleteBucket } from './delete-bucket';
 import { downloadFile } from './download-file';
+import { getDownloadLinks } from './get-download-links';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
 import { uploadFileOneShard, uploadFileMultipleShards } from './upload-file';
@@ -18,19 +19,19 @@ export const uploadFileCommand = buildCommand({
   version: '0.0.1',
   command: 'upload-file <path>',
   description: 'Upload a file',
-  options: [{
-    flags: '-s, --shards [one|multiple]',
-    required: true
-  }],
+  options: [
+    {
+      flags: '-s, --shards [one|multiple]',
+      required: true,
+    },
+  ],
 }).action((path, opts) => {
   if (opts.shards === 'multiple') {
-    return uploadFileMultipleShards(path, 1)
-      .finally(notifyProgramFinished('upload-file'));
-  } 
+    return uploadFileMultipleShards(path, 1).finally(notifyProgramFinished('upload-file'));
+  }
   if (opts.shards === 'one') {
-    return uploadFileOneShard(path)
-      .finally(notifyProgramFinished('upload-file'));
-  }  
+    return uploadFileOneShard(path).finally(notifyProgramFinished('upload-file'));
+  }
 });
 
 export const uploadFileCommandParallel = buildCommand({
@@ -91,7 +92,7 @@ export const createBucketCommand = buildCommand({
   version: '0.0.1',
   command: 'create-bucket <bucketName>',
   description: 'Creates a bucket with the given name',
-  options: []
+  options: [],
 }).action((bucketName: string) => {
   createBucket(bucketName).finally(notifyProgramFinished('create-bucket'));
 });
@@ -100,9 +101,18 @@ export const deleteBucketCommand = buildCommand({
   version: '0.0.1',
   command: 'delete-bucket <bucketId>',
   description: 'Deletes a bucket given its id',
-  options: []
+  options: [],
 }).action((bucketId: string) => {
   deleteBucket(bucketId).finally(notifyProgramFinished('delete-bucket'));
+});
+
+export const getDownloadLinksCommand = buildCommand({
+  version: '0.0.1',
+  command: 'get-download-links <bucketId> <fileIdsSeparatedByCommas>',
+  description: 'Gets download links of file ids',
+  options: [],
+}).action((bucketId: string, fileIdsSeparatedByCommas: string) => {
+  getDownloadLinks(bucketId, fileIdsSeparatedByCommas.split(',')).finally(notifyProgramFinished('get-download-links'));
 });
 
 // export const downloadFolderZippedCommand = buildCommand({

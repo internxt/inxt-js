@@ -26,7 +26,7 @@ import { ActionState, ActionTypes, Bucket, EnvironmentConfig } from './api';
 import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
-import { Bridge, CreateFileTokenResponse } from './services/api';
+import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './services/api';
 import { HashStream } from './lib/utils/streams';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
@@ -272,5 +272,9 @@ export class Environment {
     return EncryptFilename(mnemonic, bucketId, newPlainName).then((newEncryptedName) => {
       return new Bridge(this.config).renameFile(bucketId, fileId, newEncryptedName).start();
     });
+  }
+
+  getDownloadLinks(bucketId: string, fileIds: string[]) {
+    return new Bridge(this.config).getDownloadLinks(bucketId, fileIds).start<GetDownloadLinksResponse>();
   }
 }
