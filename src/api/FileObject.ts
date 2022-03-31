@@ -185,8 +185,11 @@ export class FileObject extends EventEmitter {
     this.downloader.on(Events.Download.Progress, (progress) => this.emit(Events.Download.Progress, progress));
 
     return new Promise((resolve, reject) => {
+      const onAbort = () => reject(new Error('Download aborted'));
+      if (this.aborted) onAbort();
       this.downloader.once(Events.Download.Ready, resolve);
       this.downloader.once(Events.Download.Error, reject);
+      this.once(Events.Download.Abort, onAbort);
       this.downloader.download(this.rawShards.filter((s) => !s.parity));
     });
   }
