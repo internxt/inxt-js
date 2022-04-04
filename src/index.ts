@@ -65,6 +65,10 @@ export class Environment {
     return GetFileInfo(this.config, bucketId, fileId);
   }
 
+  static getFileInfo(bridgeUrl: string, bucketId: string, fileId: string, token: string): Promise<FileInfo> {
+    return GetFileInfo({ bridgeUrl, bridgePass: '', bridgeUser: '' }, bucketId, fileId, token);
+  }
+
   /**
    * Gets list of available buckets
    * @param cb Callback that will receive the list of buckets
