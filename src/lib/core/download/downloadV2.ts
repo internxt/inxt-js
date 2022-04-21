@@ -3,7 +3,7 @@ import { PassThrough, Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
 import { ALGORITHMS, DecryptFileFunction, DownloadFileFunction, Network } from '@internxt/sdk/dist/network';
-import { downloadFile } from '@internxt/sdk/dist/network/download';
+import { downloadFile, FileVersionOneError } from '@internxt/sdk/dist/network/download';
 
 import { getStream } from '../../../services/request';
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
@@ -13,15 +13,16 @@ import { ActionState } from '../../../api';
 import { Events } from '..';
 import Errors from './errors';
 
-export async function downloadFileV2(
+export function downloadFileV2(
   fileId: string,
   bucketId: string,
   mnemonic: string,
   bridgeUrl: string,
   creds: { pass: string, user: string },
   notifyProgress: DownloadProgressCallback,
-  actionState: ActionState
-): Promise<PassThrough> {
+  actionState: ActionState,
+  onV2Confirmed: () => void
+): [Promise<void>, PassThrough] {
   const abortController = new AbortController();
 
   actionState.once(Events.Download.Abort, () => {
@@ -43,6 +44,8 @@ export async function downloadFileV2(
   }[] = [];
 
   const downloadFileStep: DownloadFileFunction = async (downloadables) => {
+    onV2Confirmed();
+
     for (const downloadable of downloadables.sort((dA, dB) => dA.index - dB.index)) {
       fileEncryptedSlices.push({
         hash: downloadable.hash,
@@ -81,28 +84,27 @@ export async function downloadFileV2(
     await new Promise((res) => progress.end(res));
   };
 
-  const downloadPromise = (async () => {
-    await downloadFile(
-      fileId, 
-      bucketId, 
-      mnemonic, 
-      network, 
-      {
-        algorithm: ALGORITHMS.AES256CTR,
-        randomBytes,
-        generateFileKey: (mnemonic, bucketId, index) => {
-          return GenerateFileKey(mnemonic, bucketId, index as Buffer | string);
-        }
-      }, 
-      Buffer.from, 
-      downloadFileStep, 
-      decryptFileStep
-    );
-  })();
-
-  downloadPromise.catch((err) => {
+  const downloadPromise = downloadFile(
+    fileId, 
+    bucketId, 
+    mnemonic, 
+    network, 
+    {
+      algorithm: ALGORITHMS.AES256CTR,
+      randomBytes,
+      generateFileKey: (mnemonic, bucketId, index) => {
+        return GenerateFileKey(mnemonic, bucketId, index as Buffer | string);
+      }
+    }, 
+    Buffer.from, 
+    downloadFileStep, 
+    decryptFileStep
+  ).catch((err) => {
+    if (err instanceof FileVersionOneError) {
+      throw err;
+    } 
     outStream.emit('error', err);
   });
 
-  return outStream;
+  return [downloadPromise, outStream];
 }

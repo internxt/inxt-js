@@ -243,7 +243,7 @@ export class Environment {
       return downloadState;
     }
 
-    downloadFileV2(
+    const [downloadPromise, stream] = downloadFileV2(
       fileId, 
       bucketId, 
       this.config.encryptionKey, 
@@ -253,10 +253,13 @@ export class Environment {
         pass: this.config.bridgePass
       },
       opts.progressCallback,
-      downloadState
-    ).then((res) => {
-      opts.finishedCallback(null, res);
-    }).catch((err) => {
+      downloadState,
+      () => {
+        opts.finishedCallback(null, stream);
+      }
+    );
+
+    downloadPromise.catch((err) => {
       if (err instanceof FileVersionOneError) {
         let strategy: DownloadStrategy | null = null;
 
@@ -274,9 +277,11 @@ export class Environment {
           .then((res) => {
             opts.finishedCallback(null, res);
           })
-          .catch((err) => {
-            opts.finishedCallback(err, null);
+          .catch((downloadErr) => {
+            opts.finishedCallback(downloadErr, null);
           });
+      } else {
+        opts.finishedCallback(err, null);
       }
     });
 
