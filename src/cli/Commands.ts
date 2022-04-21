@@ -54,7 +54,7 @@ export const uploadFolderZipCommand = buildCommand({
 
 export const downloadFileCommand = buildCommand({
   version: '0.0.1',
-  command: 'download-file <fileId> <path> [downloadStrategy]',
+  command: 'download-file <fileId> <path>',
   description: 'Download a file',
   options: [],
 }).action((fileId, path) => {

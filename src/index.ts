@@ -28,6 +28,8 @@ import { logger, Logger } from './lib/utils/logger';
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './services/api';
 import { HashStream } from './lib/utils/streams';
+import { downloadFileV2 } from './lib/core/download/downloadV2';
+import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -235,25 +237,53 @@ export class Environment {
       return downloadState;
     }
 
-    let strategy: DownloadStrategy | null = null;
-
-    if (strategyObj.label === 'Dynamic') {
-      strategy = new DownloadDynamicStrategy(strategyObj.params);
-    }
-
-    if (!strategy) {
-      opts.finishedCallback(Error('Unknown strategy'), null);
+    if (!this.config.bridgeUrl) {
+      opts.finishedCallback(Error('Missing bridge url'), null);
 
       return downloadState;
     }
 
-    download(this.config, bucketId, fileId, opts, downloadState, strategy)
-      .then((res) => {
-        opts.finishedCallback(null, res);
-      })
-      .catch((err) => {
+    const [downloadPromise, stream] = downloadFileV2(
+      fileId, 
+      bucketId, 
+      this.config.encryptionKey, 
+      this.config.bridgeUrl,
+      {
+        user: this.config.bridgeUser,
+        pass: this.config.bridgePass
+      },
+      opts.progressCallback,
+      downloadState,
+      () => {
+        opts.finishedCallback(null, stream);
+      }
+    );
+
+    downloadPromise.catch((err) => {
+      if (err instanceof FileVersionOneError) {
+        let strategy: DownloadStrategy | null = null;
+
+        if (strategyObj.label === 'Dynamic') {
+          strategy = new DownloadDynamicStrategy(strategyObj.params);
+        }
+
+        if (!strategy) {
+          opts.finishedCallback(Error('Unknown strategy'), null);
+
+          return downloadState;
+        }
+
+        download(this.config, bucketId, fileId, opts, downloadState, strategy)
+          .then((res) => {
+            opts.finishedCallback(null, res);
+          })
+          .catch((downloadErr) => {
+            opts.finishedCallback(downloadErr, null);
+          });
+      } else {
         opts.finishedCallback(err, null);
-      });
+      }
+    });
 
     return downloadState;
   };
