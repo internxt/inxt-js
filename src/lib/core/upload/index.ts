@@ -1,6 +1,7 @@
 import { ActionState, EnvironmentConfig, FileObjectUpload } from '../../../api';
 import { UploadStrategy } from './strategy';
 import { Events } from '../';
+import { Readable } from 'stream';
 
 export * from './strategy';
 export * from './oneStreamStrategy';
@@ -18,10 +19,8 @@ export interface UploadOptions {
   progressCallback: UploadProgressCallback;
   finishedCallback: UploadFinishCallback;
   encryptProgressCallback?: EncryptProgressCallback;
-  /**
-   * Name of the content uploaded to the network. This name SHOULD be encrypted
-   */
-  name: string;
+  fileSize: number;
+  source: Readable;
 }
 
 type FileId = string;

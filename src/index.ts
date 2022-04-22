@@ -1,21 +1,14 @@
-import * as Winston from 'winston';
 import { request } from '@internxt/lib';
 
 import {
-  upload,
   UploadStrategyFunction,
-  UploadStrategy,
   UploadOptions,
-  UploadStrategyObject,
-  UploadOneStreamStrategy,
   download,
   DownloadStrategyFunction,
   DownloadStrategy,
   DownloadOptions,
   DownloadStrategyObject,
-  UploadOneShardStrategy,
   DownloadDynamicStrategy,
-  DownloadOneShardStrategy,
 } from './lib/core';
 
 import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
@@ -23,13 +16,13 @@ import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
 // TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
 import { ActionState, ActionTypes, Bucket, EnvironmentConfig } from './api';
-import { logger, Logger } from './lib/utils/logger';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './services/api';
 import { HashStream } from './lib/utils/streams';
 import { downloadFileV2 } from './lib/core/download/downloadV2';
 import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
+import { uploadFileV2 } from './lib/core/upload/uploadV2';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -48,13 +41,11 @@ const utils = {
 
 export class Environment {
   config: EnvironmentConfig;
-  logger: Winston.Logger;
 
   static utils = utils;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
-    this.logger = Logger.getInstance(1);
   }
 
   /**
@@ -162,12 +153,18 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  upload: UploadStrategyFunction = (bucketId: string, opts: UploadOptions, strategyObj: UploadStrategyObject) => {
+  upload: UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => {
     const uploadState = new ActionState(ActionTypes.Upload);
 
     if (!this.config.encryptionKey) {
       opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
 
+      return uploadState;
+    }
+
+    if (!this.config.bridgeUrl) {
+      opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
+      
       return uploadState;
     }
 
@@ -177,36 +174,27 @@ export class Environment {
       return uploadState;
     }
 
-    EncryptFilename(this.config.encryptionKey, bucketId, opts.name)
-      .then((encryptedFilename) => {
-        logger.debug('Filename %s encrypted is %s', opts.name, encryptedFilename);
-
-        logger.debug('Using %s strategy', strategyObj.label);
-
-        let strategy: UploadStrategy | null = null;
-
-        if (strategyObj.label === 'OneStreamOnly') {
-          strategy = new UploadOneStreamStrategy(strategyObj.params);
-        }
-
-        if (strategyObj.label === 'OneShardOnly') {
-          strategy = new UploadOneShardStrategy(strategyObj.params);
-        }
-
-        if (!strategy) {
-          return opts.finishedCallback(Error('Unknown strategy'), null);
-        }
-
-        return upload(this.config, encryptedFilename, bucketId, opts, uploadState, strategy).then((fileId) => {
-          opts.finishedCallback(null, fileId);
-        });
-      })
-      .catch((err) => {
-        if (err && err.message && err.message.includes('Upload aborted')) {
-          return opts.finishedCallback(new Error('Process killed by user'), null);
-        }
-        opts.finishedCallback(err, null);
-      });
+    uploadFileV2(
+      opts.fileSize,
+      opts.source,
+      bucketId,
+      this.config.encryptionKey,
+      this.config.bridgeUrl,
+      {
+        user: this.config.bridgeUser,
+        pass: this.config.bridgePass
+      },
+      opts.progressCallback,
+      uploadState
+    ).then((fileId) => {
+      opts.finishedCallback(null, fileId);
+    }).catch((err) => {
+      opts.finishedCallback(
+        err.message === 'The operation was aborted' ? 
+          new Error('Process killed by user') : 
+          err, 
+        null);
+    });
 
     return uploadState;
   };
