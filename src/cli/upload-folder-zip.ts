@@ -8,7 +8,6 @@ import { Environment } from '..';
 import { EnvironmentConfig } from '../api';
 import { GenerateFileKey } from '../lib/utils/crypto';
 import { HashStream, BytesCounter } from '../lib/utils/streams';
-import { UploadOneStreamStrategyObject } from '../lib/core';
 import { logger } from '../lib/utils/logger';
 
 const pipelineAsync = promisify(pipeline);
@@ -97,20 +96,8 @@ export async function uploadFolder(path: string) {
     finishedCallback: finishCbGenerator(resolve, reject),
   });
 
-  const uploadStrategy: UploadOneStreamStrategyObject = {
-    label: 'OneStreamOnly',
-    params: {
-      source: {
-        stream: directoryStream,
-        size,
-      },
-      concurrency: 1,
-      useProxy: false,
-    },
-  };
-
   await new Promise((resolve, reject) => {
-    const state = network.upload(bucketId, uploadOptionsGenerator(resolve, reject), uploadStrategy);
+    const state = network.upload(bucketId, uploadOptionsGenerator(resolve, reject));
 
     process.on('SIGINT', () => network.uploadCancel(state));
   })

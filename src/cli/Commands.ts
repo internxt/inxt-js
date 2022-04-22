@@ -6,7 +6,7 @@ import { downloadFile } from './download-file';
 import { getDownloadLinks } from './get-download-links';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
-import { uploadFileOneShard, uploadFileMultipleShards } from './upload-file';
+import { uploadFile } from './upload-file';
 import { uploadFolder } from './upload-folder-zip';
 
 function notifyProgramFinished(programName: string) {
@@ -19,28 +19,9 @@ export const uploadFileCommand = buildCommand({
   version: '0.0.1',
   command: 'upload-file <path>',
   description: 'Upload a file',
-  options: [
-    {
-      flags: '-s, --shards [one|multiple]',
-      required: true,
-    },
-  ],
-}).action((path, opts) => {
-  if (opts.shards === 'multiple') {
-    return uploadFileMultipleShards(path, 1).finally(notifyProgramFinished('upload-file'));
-  }
-  if (opts.shards === 'one') {
-    return uploadFileOneShard(path).finally(notifyProgramFinished('upload-file'));
-  }
-});
-
-export const uploadFileCommandParallel = buildCommand({
-  version: '0.0.1',
-  command: 'upload-file-parallel <path>',
-  description: 'Upload a file',
   options: [],
 }).action((path) => {
-  uploadFileMultipleShards(path, 10).finally(notifyProgramFinished('upload-file'));
+  return uploadFile(path);
 });
 
 export const uploadFolderZipCommand = buildCommand({
