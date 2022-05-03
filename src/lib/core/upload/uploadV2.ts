@@ -3,6 +3,7 @@ import { Readable, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
+import { validateMnemonic } from 'bip39';
 
 import { uploadFile } from '@internxt/sdk/dist/network/upload';
 import { ALGORITHMS, Network } from '@internxt/sdk/dist/network';
@@ -69,6 +70,9 @@ export function uploadFileV2(
   return uploadFile(
     network,
     {
+      validateMnemonic: (mnemonic: string) => {
+        return validateMnemonic(mnemonic);
+      },
       algorithm: ALGORITHMS.AES256CTR,
       generateFileKey: (mnemonic, bucketId, index) => {
         return GenerateFileKey(mnemonic, bucketId, index as Buffer);

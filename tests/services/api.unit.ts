@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 
 import { generateShard, generateShardMeta } from '../mocks';
-import { Bridge, Methods } from '../../src/services/api';
+import { Bridge } from '../../src/services/api';
+import { Methods } from '../../src/lib';
 
 const bridgeUrl = 'https://api.internxt.com';
 const bridgePass = 'bridgePass';
@@ -79,17 +80,6 @@ describe('services/api.ts', () => {
 
         expect(request.targetUrl).to.equal(expectedUrl);
         expect(request.method).to.equal(Methods.Put);
-      });
-    });
-
-    describe('# sendShardToNode()', () => {
-      it('Should POST to farmerPath/shards/:shardHash?token=TOKEN', () => {
-        const shard = generateShard();
-        const request = bridge.sendShardToNode(shard);
-        const expectedUrl = `http://${shard.farmer.address}:${shard.farmer.port}/shards/${shard.hash}?token=${shard.token}`;
-
-        expect(request.targetUrl).to.equal(expectedUrl);
-        expect(request.method).to.equal(Methods.Post);
       });
     });
   });
