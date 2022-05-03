@@ -1,6 +1,7 @@
 import { createDecipheriv, randomBytes } from 'crypto';
 import { PassThrough, Readable } from 'stream';
 import { pipeline } from 'stream/promises';
+import { validateMnemonic } from 'bip39';
 
 import { ALGORITHMS, DecryptFileFunction, DownloadFileFunction, Network } from '@internxt/sdk/dist/network';
 import { downloadFile, FileVersionOneError } from '@internxt/sdk/dist/network/download';
@@ -12,6 +13,7 @@ import { DownloadProgressCallback } from '.';
 import { ActionState } from '../../../api';
 import { Events } from '..';
 import Errors from './errors';
+
 
 export function downloadFileV2(
   fileId: string,
@@ -90,6 +92,9 @@ export function downloadFileV2(
     mnemonic, 
     network, 
     {
+      validateMnemonic: (mnemonic) => {
+        return validateMnemonic(mnemonic);
+      },
       algorithm: ALGORITHMS.AES256CTR,
       randomBytes,
       generateFileKey: (mnemonic, bucketId, index) => {
