@@ -129,10 +129,20 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     https.get(targetUrl, (res) => {
       if (free) {
         free();
+      }
+
+      if (res.statusCode) {
+        if (res.statusCode === 404) {
+          return reject(Error('Object not found'));
+        }
+
+        if (res.statusCode >= 400) {
+          return reject(Error(`Storage failed with status code ${res.statusCode}: ${res.statusMessage}`));
+        }
       }
       resolve(res);
     });

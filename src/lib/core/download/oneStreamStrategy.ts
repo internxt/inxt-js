@@ -1,9 +1,9 @@
 import { eachLimit, queue, retry } from 'async';
 import { createDecipheriv, Decipher, randomBytes } from 'crypto';
-import { Readable, Writable } from 'stream';
+import { Readable } from 'stream';
 import { Events } from '..';
 
-import { Abortable, ActionState, Shard, ShardObject } from '../../../api';
+import { Abortable, ActionState, Shard } from '../../../api';
 
 import { getStream } from '../../../services/request';
 import { HashStream, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
@@ -230,20 +230,11 @@ function getDownloadStream(
   cb: (err: Error | null | undefined, stream: Readable | null) => void,
   useProxy = false,
 ): void {
-  ShardObject.requestGet(buildRequestUrlShard(shard), useProxy)
-    .then((url) => {
-      return getStream(url, { useProxy });
-    })
+  getStream(shard.url, { useProxy })
     .then((stream) => {
       cb(null, stream);
     })
     .catch((err) => {
       cb(err, null);
     });
-}
-
-function buildRequestUrlShard(shard: Shard) {
-  const { address, port } = shard.farmer;
-
-  return `http://${address}:${port}/download/link/${shard.hash}`;
 }

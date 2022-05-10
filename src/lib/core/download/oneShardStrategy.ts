@@ -1,8 +1,7 @@
 import { createDecipheriv, Decipher, randomBytes } from 'crypto';
-import { Readable } from 'stream';
 import { Events } from '..';
 
-import { Abortable, ActionState, Shard, ShardObject } from '../../../api';
+import { Abortable, ActionState, Shard } from '../../../api';
 
 import { getStream } from '../../../services/request';
 import { HashStream, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
@@ -79,7 +78,7 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
 
       this.emit(Events.Download.Start);
 
-      const encryptedFileStream = await getDownloadStream(onlyMirror, this.useProxy);
+      const encryptedFileStream = await getStream(onlyMirror.url, { useProxy: this.useProxy });
       const hasher = new HashStream();
       const progressNotifier = new ProgressNotifier(onlyMirror.size, 2000);
 
@@ -142,14 +141,4 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
     this.abortables.forEach((abortable) => abortable.abort());
     this.emit(Events.Download.Abort);
   }
-}
-
-function getDownloadStream(shard: Shard, useProxy = false): Promise<Readable> {
-  return ShardObject.requestGet(buildRequestUrlShard(shard), useProxy).then((url) => getStream(url, { useProxy }));
-}
-
-function buildRequestUrlShard(shard: Shard) {
-  const { address, port } = shard.farmer;
-
-  return `http://${address}:${port}/download/link/${shard.hash}`;
 }

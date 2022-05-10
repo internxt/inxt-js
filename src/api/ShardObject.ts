@@ -59,38 +59,6 @@ export class ShardObject extends EventEmitter {
     return this.meta.index;
   }
 
-  async upload(content: Buffer): Promise<ShardMeta> {
-    if (!this.frameId) {
-      throw new Error('Frame id not provided');
-    }
-
-    const contract = await this.negotiateContract();
-
-    logger.debug(
-      'Negotiated succesfully contract for shard %s (index %s, size %s) with token %s',
-      this.hash,
-      this.index,
-      this.size,
-      contract.token,
-    );
-
-    const farmer = { ...contract.farmer, lastSeen: new Date() };
-    const shard: Shard = {
-      index: this.index,
-      replaceCount: 0,
-      hash: this.hash,
-      size: this.size,
-      parity: this.meta.parity,
-      token: contract.token,
-      farmer,
-      operation: contract.operation,
-    };
-
-    await this.sendShardToNode(content, shard);
-
-    return this.meta;
-  }
-
   static requestPutTwo(url: string, cb: (err: Error | null, url: PutUrl) => void, useProxy: boolean) {
     get<{ result: string }>(url, { useProxy })
       .then((res) => {

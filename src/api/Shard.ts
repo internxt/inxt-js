@@ -15,6 +15,7 @@ export interface Shard {
     lastSeen: Date;
   };
   operation: string;
+  url: string;
 }
 
 export function buildRequestUrl(shard: Shard) {
