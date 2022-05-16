@@ -1,6 +1,6 @@
 import { Cipher, createCipheriv, randomBytes } from 'crypto';
-import { Readable, Writable } from 'stream';
-import { pipeline } from 'stream/promises';
+import { addAbortSignal, Readable, Writable } from 'stream';
+import { pipeline } from 'stream';
 import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
 import { validateMnemonic } from 'bip39';
@@ -96,8 +96,11 @@ export function uploadFileV2(
 
       const hasher = new HashStream();
 
-      await pipeline(source, cipher, hasher, progress, putStream(url), {
-        signal: abortController.signal
+      await new Promise((resolve, reject) => {
+        pipeline(addAbortSignal(abortController.signal, source), cipher, hasher, progress, putStream(url), (err) => {
+          if (err) reject(err);
+          else resolve(null);
+        });
       });
 
       const fileHash = hasher.getHash().toString('hex');
