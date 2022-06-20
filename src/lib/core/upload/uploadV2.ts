@@ -1,8 +1,7 @@
 import { Cipher, createCipheriv, randomBytes } from 'crypto';
 import { Readable, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { request as httpRequest } from 'http';
-import { request as httpsRequest } from 'https';
+import { pipeline as undiciPipeline } from 'undici';
 import { validateMnemonic } from 'bip39';
 
 import { uploadFile } from '@internxt/sdk/dist/network/upload';
@@ -18,18 +17,17 @@ import { logger } from '../../utils/logger';
 
 function putStream(url: string): Writable {
   const formattedUrl = new URL(url);
-  const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
 
-  return request({
-    headers: {
-      'Content-Type': 'application/octet-stream'
+  return undiciPipeline(
+    formattedUrl,
+    {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
+      method: 'PUT',
     },
-    hostname: formattedUrl.hostname,
-    port: formattedUrl.port,
-    protocol: formattedUrl.protocol,
-    path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
-    method: 'PUT',
-  });
+    (data) => data.body,
+  );
 }
 
 export function uploadFileV2(
@@ -38,7 +36,7 @@ export function uploadFileV2(
   bucketId: string,
   mnemonic: string,
   bridgeUrl: string,
-  creds: { pass: string, user: string },
+  creds: { pass: string; user: string },
   notifyProgress: UploadProgressCallback,
   actionState: ActionState,
 ): Promise<string> {
@@ -52,12 +50,12 @@ export function uploadFileV2(
     bridgeUrl,
     {
       clientName: 'inxt-js',
-      clientVersion: '1.0'
+      clientVersion: '1.0',
     },
     {
       bridgeUser: creds.user,
-      userId: sha256(Buffer.from(creds.pass)).toString('hex')
-    }
+      userId: sha256(Buffer.from(creds.pass)).toString('hex'),
+    },
   );
 
   let cipher: Cipher;
@@ -66,7 +64,7 @@ export function uploadFileV2(
   progress.on(ProgressEvents.Progress, (progress: number) => {
     notifyProgress(progress, null, null);
   });
-  
+
   return uploadFile(
     network,
     {
@@ -77,7 +75,7 @@ export function uploadFileV2(
       generateFileKey: (mnemonic, bucketId, index) => {
         return GenerateFileKey(mnemonic, bucketId, index as Buffer);
       },
-      randomBytes
+      randomBytes,
     },
     bucketId,
     mnemonic,
@@ -89,7 +87,7 @@ export function uploadFileV2(
         throw Errors.uploadUnknownAlgorithmError;
       }
 
-      cipher = createCipheriv('aes-256-ctr', (key as Buffer), (iv as Buffer));
+      cipher = createCipheriv('aes-256-ctr', key as Buffer, iv as Buffer);
     },
     async (url: string) => {
       logger.debug('Uploading file to %s...', url);
@@ -97,7 +95,7 @@ export function uploadFileV2(
       const hasher = new HashStream();
 
       await pipeline(source, cipher, hasher, progress, putStream(url), {
-        signal: abortController.signal
+        signal: abortController.signal,
       });
 
       const fileHash = hasher.getHash().toString('hex');
@@ -105,6 +103,6 @@ export function uploadFileV2(
       logger.debug('File uploaded (hash %s)', fileHash);
 
       return fileHash;
-    }
+    },
   );
 }
