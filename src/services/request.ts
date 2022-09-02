@@ -129,8 +129,10 @@ export async function getStream(url: string, config = { useProxy: false }): Prom
     targetUrl = `${proxy.url}/${targetUrl}`;
   }
 
+  const protocol = new URL(targetUrl).protocol === 'http:' && !config.useProxy ? http : https;
+
   return new Promise((resolve, reject) => {
-    https.get(targetUrl, (res) => {
+    protocol.get(targetUrl, (res) => {
       if (free) {
         free();
       }
