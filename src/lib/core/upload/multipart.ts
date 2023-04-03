@@ -1,4 +1,5 @@
 import https from 'https'
+import { queue } from 'async'
 import { Readable } from 'stream'
 
 type Part = { PartNumber: number, ETag: string };
@@ -27,6 +28,10 @@ async function uploadPart(partUrl: string, partStream: { size: number, stream: B
   });
 }
 
+interface PartUpload {
+  url: string;
+  source: { size: number, stream: Buffer, index: number };
+}
 
 export async function uploadParts(partUrls: string[], stream: Readable) {
   const parts: { PartNumber: number; ETag: string }[] = [];
@@ -36,21 +41,39 @@ export async function uploadParts(partUrls: string[], stream: Readable) {
   let partNumber = 1;
   let partBuffer = Buffer.alloc(0);
 
+  const uploadQueue = queue(async (part: PartUpload, callback) => {
+    console.log('Uploading part', part.source.index, 'of', partUrls.length, '...');
+    try {
+      const etag = await uploadPart(part.url, part.source);
+
+      if (!etag) {
+        throw new Error('ETag header was not returned');
+      }
+      parts.push({ PartNumber: part.source.index, ETag: etag });
+      callback();
+    } catch (err) {
+      callback(err as Error);
+    }
+  }, 6);
+
   for await (const chunk of stream) {
     bytesRead += chunk.length;
     partBuffer = Buffer.concat([partBuffer, chunk]);
 
+    if (uploadQueue.running() === 6) {
+      await uploadQueue.unsaturated();
+    }
+
     while (bytesRead >= partLength) {
       const slice = partBuffer.slice(0, partLength);
-      const etag = await uploadPart(partUrls[partNumber - 1], {
-        size: slice.length,
-        stream: slice,
-        index: partNumber,
+      uploadQueue.push({
+        url: partUrls[partNumber - 1],
+        source: {
+          size: slice.length,
+          stream: slice,
+          index: partNumber,
+        },
       });
-      if (!etag) {
-        throw new Error('ETag header was not returned');
-      }
-      parts.push({ PartNumber: partNumber, ETag: etag });
 
       partBuffer = partBuffer.slice(partLength);
       bytesRead -= partLength;
@@ -59,15 +82,18 @@ export async function uploadParts(partUrls: string[], stream: Readable) {
   }
 
   if (bytesRead > 0) {
-    const etag = await uploadPart(partUrls[partNumber - 1], {
-      size: partBuffer.length,
-      stream: partBuffer,
-      index: partNumber,
+    uploadQueue.push({
+      url: partUrls[partNumber - 1],
+      source: {
+        size: partBuffer.length,
+        stream: partBuffer,
+        index: partNumber,
+      },
     });
-    if (!etag) {
-      throw new Error('ETag header was not returned');
-    }
-    parts.push({ PartNumber: partNumber, ETag: etag });
+  }
+
+  while (uploadQueue.running() > 0 || uploadQueue.length() > 0) {
+    await uploadQueue.drain();
   }
 
   console.log('parts', parts);
