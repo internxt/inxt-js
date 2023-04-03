@@ -15,7 +15,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
   try {
     await new Promise((resolve, reject) => {
       const state = network.download(
-        bucketId,
+        bucketId as string,
         fileId,
         {
           progressCallback: (progress: number) => {

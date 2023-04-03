@@ -1,5 +1,4 @@
 import { request } from '@internxt/lib';
-
 import {
   UploadStrategyFunction,
   UploadOptions,
@@ -22,7 +21,7 @@ import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './ser
 import { HashStream } from './lib/utils/streams';
 import { downloadFileV2 } from './lib/core/download/downloadV2';
 import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
-import { uploadFileV2 } from './lib/core/upload/uploadV2';
+import { uploadFileMultipart, uploadFileV2 } from './lib/core/upload/uploadV2';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -151,6 +150,58 @@ export class Environment {
 
   setEncryptionKey(newEncryptionKey: string): void {
     this.config.encryptionKey = newEncryptionKey;
+  }
+
+  uploadMultipartFile(bucketId: string, opts: UploadOptions): ActionState {
+    const uploadState = new ActionState(ActionTypes.Upload);
+
+    if (!this.config.encryptionKey) {
+      opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
+
+      return uploadState;
+    }
+
+    if (!this.config.bridgeUrl) {
+      opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
+      
+      return uploadState;
+    }
+
+    if (!bucketId) {
+      opts.finishedCallback(Error('Bucket id was not provided'), null);
+
+      return uploadState;
+    }
+
+    // if (!opts.parts || isNaN(opts.parts) || opts.parts < 2) {
+    //   opts.finishedCallback(Error('Invalid "parts" parameter. Expected number > 1'), null);
+
+    //   return uploadState;
+    // }
+
+    uploadFileMultipart(
+      opts.fileSize,
+      opts.source,
+      bucketId,
+      this.config.encryptionKey,
+      this.config.bridgeUrl,
+      {
+        user: this.config.bridgeUser,
+        pass: this.config.bridgePass
+      },
+      opts.progressCallback,
+      uploadState,
+    ).then((fileId) => {
+      opts.finishedCallback(null, fileId);
+    }).catch((err) => {
+      opts.finishedCallback(
+        err.message === 'The operation was aborted' ? 
+          new Error('Process killed by user') : 
+          err, 
+        null);
+    });
+
+    return uploadState;
   }
 
   upload: UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => {

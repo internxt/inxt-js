@@ -7,6 +7,7 @@ import { getDownloadLinks } from './get-download-links';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
 import { uploadFile } from './upload-file';
+import { uploadFileMultipart } from './upload-file-multipart';
 import { uploadFolder } from './upload-folder-zip';
 
 function notifyProgramFinished(programName: string) {
@@ -22,6 +23,15 @@ export const uploadFileCommand = buildCommand({
   options: [],
 }).action((path) => {
   return uploadFile(path);
+});
+
+export const uploadFileMultipartCommand = buildCommand({
+  version: '0.0.1',
+  command: 'upload-file-multipart <path>',
+  description: 'Upload a file using multipart',
+  options: [],
+}).action((path) => {
+  return uploadFileMultipart(path);
 });
 
 export const uploadFolderZipCommand = buildCommand({
