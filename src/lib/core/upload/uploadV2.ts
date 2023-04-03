@@ -122,8 +122,6 @@ export function uploadFileMultipart(
 ): Promise<string> {
   const abortController = new AbortController();
 
-  console.log('doing multipart');
-
   actionState.once(Events.Upload.Abort, () => {
     abortController.abort();
   });

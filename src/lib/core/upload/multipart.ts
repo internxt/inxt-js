@@ -1,12 +1,11 @@
 import https from 'https'
 import { queue } from 'async'
 import { Readable } from 'stream'
+import { logger } from '../../utils/logger';
 
 type Part = { PartNumber: number, ETag: string };
 
-async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
-  console.log('partStream', partStream);
-
+function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
   return new Promise((resolve: (etag: string | undefined) => void, reject) => {
     const options = {
       method: 'PUT',
@@ -33,16 +32,18 @@ interface PartUpload {
   source: { size: number, stream: Buffer, index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable) {
-  const parts: { PartNumber: number; ETag: string }[] = [];
+export async function uploadParts(partUrls: string[], stream: Readable): Promise<Part[]> {
+  const parts: Part[] = [];
+  const concurrency = 10;
 
-  const partLength = 30 * 1024 * 1024;
+  const partLength = 15 * 1024 * 1024;
   let bytesRead = 0;
   let partNumber = 1;
   let partBuffer = Buffer.alloc(0);
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
-    console.log('Uploading part', part.source.index, 'of', partUrls.length, '...');
+    logger.debug('Uploading part', part.source.index, 'of', partUrls.length, '...');
+
     try {
       const etag = await uploadPart(part.url, part.source);
 
@@ -54,13 +55,13 @@ export async function uploadParts(partUrls: string[], stream: Readable) {
     } catch (err) {
       callback(err as Error);
     }
-  }, 6);
+  }, concurrency);
 
   for await (const chunk of stream) {
     bytesRead += chunk.length;
     partBuffer = Buffer.concat([partBuffer, chunk]);
 
-    if (uploadQueue.running() === 6) {
+    while (uploadQueue.running() >= concurrency) {
       await uploadQueue.unsaturated();
     }
 
@@ -95,8 +96,6 @@ export async function uploadParts(partUrls: string[], stream: Readable) {
   while (uploadQueue.running() > 0 || uploadQueue.length() > 0) {
     await uploadQueue.drain();
   }
-
-  console.log('parts', parts);
 
   return parts.sort((pA, pB) => pA.PartNumber - pB.PartNumber);
 }
