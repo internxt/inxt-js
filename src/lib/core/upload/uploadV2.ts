@@ -140,7 +140,7 @@ export function uploadFileMultipart(
 
   let cipher: Cipher;
   const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
-  const partSize = 30 * 1024 * 1024;
+  const partSize = 15 * 1024 * 1024;
   const parts = Math.ceil(fileSize / partSize);
 
   progress.on(ProgressEvents.Progress, (progress: number) => {
