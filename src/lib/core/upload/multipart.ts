@@ -1,30 +1,24 @@
-import https from 'https'
 import { queue } from 'async'
 import { Readable } from 'stream'
 import { logger } from '../../utils/logger';
+import { request } from 'undici';
 
 type Part = { PartNumber: number, ETag: string };
 
-function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
-  return new Promise((resolve: (etag: string | undefined) => void, reject) => {
-    const options = {
-      method: 'PUT',
-      headers: {
-        'Content-Length': partStream.size,
-      },
-    };
-    const req = https.request(partUrl, options, (res) => {
-      if (res.statusCode === 200) {
-        resolve(res.headers.etag);
-      } else {
-        reject(new Error(`Failed to upload part: ${res.statusCode} ${res.statusMessage}`));
-      }
-    });
-    Readable.from(partStream.stream).pipe(req);
-    req.on('error', (err) => {
-      reject(new Error(`Failed to upload part: ${err.message}`));
-    });
+async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
+  const { statusCode, headers, body } = await request(partUrl, {
+    body: partStream.stream,
+    method: 'PUT',
+    headers: {
+      'Content-Length': partStream.size.toString(),
+    }
   });
+
+  if (statusCode === 200) {
+    return headers.etag?.toString();
+  } 
+  
+  throw (new Error(`Failed to upload part: ${statusCode} ${await body.text()}`));
 }
 
 interface PartUpload {
@@ -42,7 +36,12 @@ export async function uploadParts(partUrls: string[], stream: Readable): Promise
   let partBuffer = Buffer.alloc(0);
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
-    logger.debug('Uploading part', part.source.index, 'of', partUrls.length, '...');
+    logger.debug(
+      'Uploading part %s of %s => %s bytes', 
+      part.source.index, 
+      partUrls.length, 
+      part.source.size
+    );
 
     try {
       const etag = await uploadPart(part.url, part.source);
