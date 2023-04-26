@@ -5,8 +5,9 @@ import { request } from 'undici';
 
 type Part = { PartNumber: number, ETag: string };
 
-async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
+async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }, signal?: AbortSignal) {
   const { statusCode, headers, body } = await request(partUrl, {
+    signal,
     body: partStream.stream,
     method: 'PUT',
     headers: {
@@ -27,12 +28,6 @@ interface PartUpload {
 }
 
 export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
-  let aborted = false;
-
-  signal.addEventListener('abort', () => {
-    aborted = true;
-  });
-
   const parts: Part[] = [];
   const concurrency = 10;
 
@@ -42,9 +37,6 @@ export async function uploadParts(partUrls: string[], stream: Readable, signal: 
   let partBuffer = Buffer.alloc(0);
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
-    if (aborted) {
-      return callback(new Error('Upload aborted'));
-    }
     logger.debug(
       'Uploading part %s of %s => %s bytes',
       part.source.index,
@@ -53,7 +45,7 @@ export async function uploadParts(partUrls: string[], stream: Readable, signal: 
     );
 
     try {
-      const etag = await uploadPart(part.url, part.source);
+      const etag = await uploadPart(part.url, part.source, signal);
 
       if (!etag) {
         throw new Error('ETag header was not returned');
