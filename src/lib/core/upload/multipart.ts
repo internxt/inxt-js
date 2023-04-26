@@ -16,8 +16,8 @@ async function uploadPart(partUrl: string, partStream: { size: number, stream: B
 
   if (statusCode === 200) {
     return headers.etag?.toString();
-  } 
-  
+  }
+
   throw (new Error(`Failed to upload part: ${statusCode} ${await body.text()}`));
 }
 
@@ -26,7 +26,13 @@ interface PartUpload {
   source: { size: number, stream: Buffer, index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable): Promise<Part[]> {
+export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
+  let aborted = false;
+
+  signal.addEventListener('abort', () => {
+    aborted = true;
+  });
+
   const parts: Part[] = [];
   const concurrency = 10;
 
@@ -36,10 +42,13 @@ export async function uploadParts(partUrls: string[], stream: Readable): Promise
   let partBuffer = Buffer.alloc(0);
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
+    if (aborted) {
+      return callback(new Error('Upload aborted'));
+    }
     logger.debug(
-      'Uploading part %s of %s => %s bytes', 
-      part.source.index, 
-      partUrls.length, 
+      'Uploading part %s of %s => %s bytes',
+      part.source.index,
+      partUrls.length,
       part.source.size
     );
 
