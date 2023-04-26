@@ -5,8 +5,9 @@ import { request } from 'undici';
 
 type Part = { PartNumber: number, ETag: string };
 
-async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }) {
+async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }, signal?: AbortSignal) {
   const { statusCode, headers, body } = await request(partUrl, {
+    signal,
     body: partStream.stream,
     method: 'PUT',
     headers: {
@@ -16,8 +17,8 @@ async function uploadPart(partUrl: string, partStream: { size: number, stream: B
 
   if (statusCode === 200) {
     return headers.etag?.toString();
-  } 
-  
+  }
+
   throw (new Error(`Failed to upload part: ${statusCode} ${await body.text()}`));
 }
 
@@ -26,7 +27,7 @@ interface PartUpload {
   source: { size: number, stream: Buffer, index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable): Promise<Part[]> {
+export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
   const parts: Part[] = [];
   const concurrency = 10;
 
@@ -37,14 +38,14 @@ export async function uploadParts(partUrls: string[], stream: Readable): Promise
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
     logger.debug(
-      'Uploading part %s of %s => %s bytes', 
-      part.source.index, 
-      partUrls.length, 
+      'Uploading part %s of %s => %s bytes',
+      part.source.index,
+      partUrls.length,
       part.source.size
     );
 
     try {
-      const etag = await uploadPart(part.url, part.source);
+      const etag = await uploadPart(part.url, part.source, signal);
 
       if (!etag) {
         throw new Error('ETag header was not returned');

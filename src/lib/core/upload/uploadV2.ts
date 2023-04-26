@@ -179,9 +179,13 @@ export function uploadFileMultipart(
         signal: abortController.signal,
       });
 
-      const parts = await uploadParts(urls, progress);
+      const parts = await uploadParts(urls, progress, abortController.signal);
 
       await pipelineToFinish;
+
+      if (abortController.signal.aborted) {
+        throw new Error('Process killed by user');
+      }
 
       const fileHash = hasher.getHash().toString('hex');
 
