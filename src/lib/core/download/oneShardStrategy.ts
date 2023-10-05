@@ -12,6 +12,7 @@ import { logger } from '../../utils/logger';
 
 export interface DownloadOneShardStrategyParams extends DownloadParams {
   useProxy: boolean;
+  chunkSize?: number;
 }
 
 export type DownloadOneShardStrategyLabel = 'OneShardOnly';

@@ -28,6 +28,8 @@ export interface DownloadOptions {
   fileEncryptionKey?: Buffer;
   progressCallback: DownloadProgressCallback;
   finishedCallback: DownloadFinishedCallback;
+
+  chunkSize?: number;
 }
 
 /**

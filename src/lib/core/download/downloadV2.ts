@@ -13,6 +13,7 @@ import { DownloadProgressCallback } from '.';
 import { ActionState } from '../../../api';
 import { Events } from '..';
 import Errors from './errors';
+import { ChunkSizeTransform } from '../../utils/streams/Chunker';
 
 
 export function downloadFileV2(
@@ -23,7 +24,8 @@ export function downloadFileV2(
   creds: { pass: string, user: string },
   notifyProgress: DownloadProgressCallback,
   actionState: ActionState,
-  onV2Confirmed: () => void
+  onV2Confirmed: () => void,
+  chunkSize?: number,
 ): [Promise<void>, PassThrough] {
   const abortController = new AbortController();
 
@@ -71,10 +73,17 @@ export function downloadFileV2(
     for (const fileEncryptedSlice of fileEncryptedSlices) {
       const hasher = new HashStream();
 
-      await pipeline(fileEncryptedSlice.stream, hasher, decipher, progress, outStream, {
-        signal: abortController.signal
-      });
-
+      if (chunkSize) {
+        const chunker = new ChunkSizeTransform(chunkSize);
+        await pipeline(fileEncryptedSlice.stream, hasher, decipher, progress, chunker, outStream, {
+          signal: abortController.signal
+        });
+      } else {
+        await pipeline(fileEncryptedSlice.stream, hasher, decipher, progress, outStream, {
+          signal: abortController.signal
+        });
+      }
+      
       const calculatedHash = hasher.getHash().toString('hex');
       const expectedHash = fileEncryptedSlice.hash;
 

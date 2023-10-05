@@ -295,7 +295,8 @@ export class Environment {
       downloadState,
       () => {
         opts.finishedCallback(null, stream);
-      }
+      },
+      strategyObj.params.chunkSize,
     );
 
     downloadPromise.catch((err) => {
