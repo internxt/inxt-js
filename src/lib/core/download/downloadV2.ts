@@ -10,8 +10,6 @@ import { getStream } from '../../../services/request';
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
 import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
 import { DownloadProgressCallback } from '.';
-import { ActionState } from '../../../api';
-import { Events } from '..';
 import Errors from './errors';
 import { ChunkSizeTransform } from '../../utils/streams/Chunker';
 
@@ -23,16 +21,10 @@ export function downloadFileV2(
   bridgeUrl: string,
   creds: { pass: string, user: string },
   notifyProgress: DownloadProgressCallback,
-  actionState: ActionState,
   onV2Confirmed: () => void,
+  abortController: AbortController,
   chunkSize?: number,
 ): [Promise<void>, PassThrough] {
-  const abortController = new AbortController();
-
-  actionState.once(Events.Download.Abort, () => {
-    abortController.abort();
-  });
-
   const outStream = new PassThrough();
   const network = Network.client(bridgeUrl, {
     clientName: 'inxt-js',

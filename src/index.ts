@@ -8,6 +8,7 @@ import {
   DownloadOptions,
   DownloadStrategyObject,
   DownloadDynamicStrategy,
+  Events,
 } from './lib/core';
 
 import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
@@ -256,7 +257,12 @@ export class Environment {
     opts: DownloadOptions,
     strategyObj: DownloadStrategyObject<any>,
   ) => {
+    const abortController = new AbortController();
     const downloadState = new ActionState(ActionTypes.Download);
+
+    downloadState.once(Events.Download.Abort, () => {
+      abortController.abort();
+    });
 
     if (!this.config.encryptionKey) {
       opts.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
@@ -292,10 +298,10 @@ export class Environment {
         pass: this.config.bridgePass
       },
       opts.progressCallback,
-      downloadState,
       () => {
         opts.finishedCallback(null, stream);
       },
+      abortController,
       strategyObj.params.chunkSize,
     );
 
