@@ -18,17 +18,19 @@ import { queue, QueueObject } from 'async';
 import https from 'https';
 import { uploadParts } from './multipart';
 
-function putStream(url: string): Writable {
+function putStream(url: string, fileSize?: number): Writable {
   const formattedUrl = new URL(url);
+  let headers: Record<string, string> = {
+    'Content-Type': 'application/octet-stream',
+  }
+
+  if (fileSize) {
+    headers = { ...headers, 'Content-Length': fileSize.toString() }
+  }
 
   return undiciPipeline(
     formattedUrl,
-    {
-      headers: {
-        'Content-Type': 'application/octet-stream',
-      },
-      method: 'PUT',
-    },
+    { headers, method: 'PUT' },
     (data) => data.body,
   );
 }
@@ -97,7 +99,7 @@ export function uploadFileV2(
 
       const hasher = new HashStream();
 
-      await pipeline(source, cipher, hasher, progress, putStream(url), {
+      await pipeline(source, cipher, hasher, progress, putStream(url, fileSize), {
         signal: abortController.signal,
       });
 
