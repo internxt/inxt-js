@@ -28,4 +28,9 @@ export class ProgressNotifier extends Transform {
     clearInterval(this.progressInterval);
     cb(null);
   }
+
+  _destroy(error: Error | null, cb: (error: Error | null) => void) {
+    clearInterval(this.progressInterval);
+    cb(error);
+  }
 }
