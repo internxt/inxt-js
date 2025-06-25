@@ -58,7 +58,6 @@
     "async": "3.2.6",
     "axios": "1.10.0",
     "bip39": "3.1.0",
-    "stream-browserify": "3.0.0",
     "undici": "7.10.0",
     "winston": "3.17.0"
   }
