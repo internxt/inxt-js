@@ -50,11 +50,11 @@ describe('UploadOneShardStrategy', () => {
   
           expect(() => {
             uploadStrategy.setFileEncryptionKey(tooShortFileEncryptionKey);
-          }).toThrowError();
+          }).toThrow();
 
           expect(() => {
             uploadStrategy.setFileEncryptionKey(tooLongFileEncryptionKey);
-          }).toThrowError();
+          }).toThrow();
         });
 
         it('Should accept a valid size', () => {
