@@ -1,7 +1,7 @@
 name: Publish package in private package registry
 on:
   release:
-    types: [created]
+    types: [published]
   workflow_dispatch:
 jobs:
   build:
@@ -10,11 +10,11 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       # Setup .npmrc file to publish to GitHub Packages
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
-          node-version: '12.x'
+          node-version: '22.x'
           registry-url: 'https://npm.pkg.github.com'
       - run: yarn
         env:
