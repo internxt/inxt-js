@@ -59,7 +59,7 @@ const getLoggerInstance = (
       Winston.format.splat(),
       Winston.format.printf((info: Winston.Logform.TransformableInfo) => {
         if (debug && debug.enabled) {
-          debug.debugCallback(info.message);
+          debug.debugCallback(info.message as string);
         }
 
         return `${info.timestamp} ${info.level}: ${info.message}`;

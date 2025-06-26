@@ -1,7 +1,7 @@
 import sinon from 'sinon';
+import { fail } from 'node:assert';
 import { Readable } from 'stream';
-import { UploadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors'; 
-
+import { UploadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors';
 import { ActionState, ActionTypes } from '../../../../src/api';
 import { uploadFileV2 } from '../../../../src/lib/core/upload/uploadV2';
 import { getBridgeUrl, getBucketId, getFileBytes, getInvalidMnemonic, getNetworkCredentials, getValidMnemonic } from '../fixtures';
@@ -17,7 +17,7 @@ const invalidMnemonic = getInvalidMnemonic();
 
 beforeEach(() => {
   sinon.reset();
-}); 
+});
 
 describe('uploadFileV2()', () => {
   describe('Should handle errors properly', () => {
@@ -26,7 +26,7 @@ describe('uploadFileV2()', () => {
         await uploadFileV2(
           0,
           Readable.from(fileBytes),
-          bucketId, 
+          bucketId,
           invalidMnemonic,
           bridgeUrl,
           creds,
@@ -34,9 +34,10 @@ describe('uploadFileV2()', () => {
           new ActionState(ActionTypes.Upload)
         );
 
-        expect(true).toBeFalsy();
+        fail('Expected function to throw an error, but it did not.');
       } catch (err) {
-        expect(err).toBeInstanceOf(UploadInvalidMnemonicError);
+        const error = err as Error;
+        expect(error.message).toStrictEqual(new UploadInvalidMnemonicError().message);
       }
     });
   });

@@ -1,7 +1,7 @@
 import sinon from 'sinon';
-import { DownloadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors'; 
-
-import { ActionState, ActionTypes } from '../../../../src/api';
+import { beforeEach, describe, expect, it } from '@jest/globals';
+import { fail } from 'node:assert';
+import { DownloadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors';
 import { downloadFileV2 } from '../../../../src/lib/core/download/downloadV2';
 import { getBridgeUrl, getBucketId, getFileId, getInvalidMnemonic, getNetworkCredentials } from '../fixtures';
 
@@ -14,7 +14,7 @@ const invalidMnemonic = getInvalidMnemonic();
 
 beforeEach(() => {
   sinon.reset();
-}); 
+});
 
 describe('downloadFileV2()', () => {
   describe('Should handle errors properly', () => {
@@ -27,8 +27,8 @@ describe('downloadFileV2()', () => {
           bridgeUrl,
           creds,
           () => {},
-          new ActionState(ActionTypes.Upload),
-          () => {}
+          () => {},
+          new AbortController(),
         );
 
         await new Promise((resolve, reject) => {
@@ -36,9 +36,10 @@ describe('downloadFileV2()', () => {
           outStream.once('end', resolve);
         });
 
-        expect(true).toBeFalsy();
+        fail('Expected function to throw an error, but it did not.');
       } catch (err) {
-        expect(err.message).toStrictEqual(new DownloadInvalidMnemonicError().message);
+        const error = err as Error;
+        expect(error.message).toStrictEqual(new DownloadInvalidMnemonicError().message);
       }
     });
   });
