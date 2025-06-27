@@ -509,10 +509,10 @@
     eslint-config-prettier "^9.1.0"
     typescript-eslint "^8.15.0"
 
-"@internxt/lib@1.3.0":
-  version "1.3.0"
-  resolved "https://npm.pkg.github.com/download/@internxt/lib/1.3.0/4ac8adc976906ce009b3398022798935a0e09079#4ac8adc976906ce009b3398022798935a0e09079"
-  integrity sha512-jEKYLav5MdGxSIK9UnoXjpK32633t8djKG6RltAlQGnRHwwj0cva+/aQoQ+II0p+D1vwEaeqPzVYc2vZsbqHYg==
+"@internxt/lib@1.3.1":
+  version "1.3.1"
+  resolved "https://npm.pkg.github.com/download/@internxt/lib/1.3.1/c330ee66e4963469691f448a1716a9f6266ec729#c330ee66e4963469691f448a1716a9f6266ec729"
+  integrity sha512-W0D7aIdH1wg9YNLmLw7iaZ0T0pvG7qtDKkKRZRKVU4zSMWH0Rc+q+ZMLpo5Agyqua07A0gQ3Y8i4M42cglV0bw==
 
 "@internxt/prettier-config@1.0.2":
   version "1.0.2"
