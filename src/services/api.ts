@@ -157,7 +157,6 @@ class InxtApi implements InxtApiI {
     return emptyINXTRequest(this.config);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>> {
     return exchangeReport.sendReport();
   }
@@ -177,6 +176,7 @@ class InxtApi implements InxtApiI {
     return emptyINXTRequest(this.config);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   createBucket(bucketName: string): INXTRequest {
     return emptyINXTRequest(this.config);
   }

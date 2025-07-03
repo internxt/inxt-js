@@ -52,7 +52,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
 
     process.exit(0);
   } catch (err) {
-    logger.error('Error downloading file %s', err.message);
+    logger.error('Error downloading file %s', (err as Error).message ?? '');
 
     process.exit(1);
   }

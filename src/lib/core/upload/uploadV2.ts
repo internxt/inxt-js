@@ -1,31 +1,29 @@
 import { Cipher, createCipheriv, randomBytes } from 'crypto';
 import { Readable, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { Dispatcher, pipeline as undiciPipeline } from 'undici';
+import { pipeline as undiciPipeline } from 'undici';
 import { validateMnemonic } from 'bip39';
 
 import { uploadFile, uploadMultipartFile } from '@internxt/sdk/dist/network/upload';
 import { ALGORITHMS, Network } from '@internxt/sdk/dist/network';
 
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
-import { Events as ProgressEvents, Funnel, HashStream, ProgressNotifier, Tap } from '../../utils/streams';
+import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
 import { ActionState } from '../../../api';
 import { Events } from '..';
 import Errors from '../download/errors';
 import { UploadProgressCallback } from '.';
 import { logger } from '../../utils/logger';
-import { queue, QueueObject } from 'async';
-import https from 'https';
 import { uploadParts } from './multipart';
 
 function putStream(url: string, fileSize?: number): Writable {
   const formattedUrl = new URL(url);
   let headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',
-  }
+  };
 
   if (fileSize) {
-    headers = { ...headers, 'Content-Length': fileSize.toString() }
+    headers = { ...headers, 'Content-Length': fileSize.toString() };
   }
 
   return undiciPipeline(

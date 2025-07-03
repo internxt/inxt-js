@@ -8,6 +8,6 @@ export async function getDownloadLinks(bucketId: string, fileIds: string[]): Pro
     const response = await network.getDownloadLinks(bucketId, fileIds);
     logger.info(`getDownloadLinks response: ${JSON.stringify(response, null, 2)}`);
   } catch (err) {
-    logger.error(`Something went wrong while getting download links ${err.message}`);
+    logger.error(`Something went wrong while getting download links ${(err as Error).message ?? ''}`);
   }
 }

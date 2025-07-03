@@ -9,7 +9,7 @@ export function getFileInfo(fileId: string): Promise<void> {
   logger.info('Retrieving info for file %s', fileId);
 
   const network = getEnvironment();
-  const bucketId = process.env.BUCKET_ID;
+  const bucketId = process.env.BUCKET_ID as string;
 
   if (!network.config.encryptionKey) {
     logger.error('Mnemonic not provided');

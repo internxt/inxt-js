@@ -98,7 +98,7 @@ function decryptMeta(bufferBase64: string, decryptKey: string) {
     const dec = Buffer.concat([decipher.update(buffer), decipher.final()]);
 
     return dec.toString('utf8');
-  } catch (e) {
+  } catch {
     return null;
   }
 }

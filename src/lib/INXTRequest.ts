@@ -68,6 +68,7 @@ export class INXTRequest extends EventEmitter {
   }
 
   async stream<K>(content: Readable, size: number): Promise<AxiosResponse<K>>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async stream<K>(): Promise<Readable>;
   async stream<K>(content?: any, size?: number): Promise<any> {
     if (size) {

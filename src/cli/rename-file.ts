@@ -5,7 +5,7 @@ export function renameFile(fileId: string, newPlainName: string): Promise<void> 
   logger.info('Renaming file %s', fileId);
 
   const network = getEnvironment();
-  const bucketId = process.env.BUCKET_ID;
+  const bucketId = process.env.BUCKET_ID as string;
 
   return network
     .renameFile(bucketId, fileId, newPlainName)

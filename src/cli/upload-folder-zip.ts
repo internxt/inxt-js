@@ -15,8 +15,8 @@ const archive = archiver('zip', { zlib: { level: 9 } });
 
 function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment {
   const envConfig: EnvironmentConfig = {
-    bridgePass: process.env.BRIDGE_PASS,
-    bridgeUser: process.env.BRIDGE_USER,
+    bridgePass: process.env.BRIDGE_PASS as string,
+    bridgeUser: process.env.BRIDGE_USER as string,
     encryptionKey: process.env.MNEMONIC,
     bridgeUrl: process.env.BRIDGE_URL,
     inject: {},
@@ -50,8 +50,8 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
 }
 
 export async function uploadFolder(path: string) {
-  const encryptionKey = process.env.MNEMONIC;
-  const bucketId = process.env.BUCKET_ID;
+  const encryptionKey = process.env.MNEMONIC as string;
+  const bucketId = process.env.BUCKET_ID as string;
   const index = randomBytes(32);
   const iv = index.slice(0, 16);
   const fileEncryptionKey = await GenerateFileKey(encryptionKey, bucketId, index);
@@ -72,6 +72,7 @@ export async function uploadFolder(path: string) {
   const networkFilename = v4();
 
   const archiverSetup = archiver('zip', { zlib: { level: 9 } });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const directoryStream = archiverSetup.directory(path + '/', false);
   archiverSetup.finalize();
 
@@ -84,7 +85,11 @@ export async function uploadFolder(path: string) {
 
   const finishCbGenerator = (resolve: ResolveFunction, reject: RejectFunction) => {
     return (err: Error | null) => {
-      err ? reject(err) : resolve(null);
+      if (err) {
+        reject(err);
+      } else {
+        resolve(null);
+      }
     };
   };
 

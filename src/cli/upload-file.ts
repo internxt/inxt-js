@@ -12,7 +12,7 @@ export async function uploadFile(filepath: string) {
   try {
     const network = getEnvironment();
 
-    const bucketId = process.env.BUCKET_ID;
+    const bucketId = process.env.BUCKET_ID as string;
 
     const fileId = await new Promise((resolve: (fileId: string) => void, reject) => {
       const state = network.upload(
@@ -40,7 +40,7 @@ export async function uploadFile(filepath: string) {
 
     console.log('File %s uploaded', fileId);
   } catch (err) {
-    logger.error('Error uploading file: %s', err.message);
+    logger.error('Error uploading file: %s', (err as Error).message ?? '');
     process.exit(-1);
   }
 }

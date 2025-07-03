@@ -24,7 +24,6 @@ export class ConcurrentQueue<K> {
           .catch(cb);
       }, concurrency);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       this.queue = queue(() => {}, 1);
     }
   }

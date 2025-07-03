@@ -19,8 +19,8 @@ interface Option {
 
 export function getEnvironment(): Environment {
   const envConfig: EnvironmentConfig = {
-    bridgePass: process.env.BRIDGE_PASS,
-    bridgeUser: process.env.BRIDGE_USER,
+    bridgePass: process.env.BRIDGE_PASS as string,
+    bridgeUser: process.env.BRIDGE_USER as string,
     encryptionKey: process.env.MNEMONIC,
     bridgeUrl: process.env.BRIDGE_URL,
   };

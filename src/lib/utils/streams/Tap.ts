@@ -14,7 +14,6 @@ export class Tap extends Transform {
   private bytesRead = 0;
   private temporalBuffer = Buffer.alloc(0);
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private pausedInterval: NodeJS.Timeout = setTimeout(() => {});
   private shouldContinue = false;
 

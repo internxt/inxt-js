@@ -11,9 +11,9 @@ export interface UploadFinishedMessage {
 }
 
 export type UploadStrategyLabel = string;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type UploadStrategyObject = UploadOneStreamStrategyObject | UploadOneShardStrategyObject;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => ActionState;
 
 export abstract class UploadStrategy extends EventEmitter implements Abortable {
@@ -54,5 +54,5 @@ export abstract class UploadStrategy extends EventEmitter implements Abortable {
   abstract abort(): void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface UploadParams {}

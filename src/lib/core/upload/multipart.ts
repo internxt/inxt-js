@@ -1,11 +1,15 @@
-import { queue } from 'async'
-import { Readable } from 'stream'
+import { queue } from 'async';
+import { Readable } from 'stream';
 import { logger } from '../../utils/logger';
 import { request } from 'undici';
 
 type Part = { PartNumber: number, ETag: string };
 
-async function uploadPart(partUrl: string, partStream: { size: number, stream: Buffer, index: number }, signal?: AbortSignal) {
+async function uploadPart(
+  partUrl: string,
+  partStream: { size: number, stream: Buffer, index: number },
+  signal?: AbortSignal
+) {
   const { statusCode, headers, body } = await request(partUrl, {
     signal,
     body: partStream.stream,

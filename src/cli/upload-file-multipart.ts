@@ -40,7 +40,7 @@ export async function uploadFileMultipart(filepath: string) {
 
     console.log('File %s uploaded', fileId);
   } catch (err) {
-    logger.error('Error uploading file: %s. %s', err.message, err.stack);
+    logger.error('Error uploading file: %s. %s', (err as Error).message ?? '', (err as Error).stack ?? '');
     process.exit(-1);
   }
 }

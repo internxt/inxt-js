@@ -122,13 +122,11 @@ export class ExchangeReport {
 
   error() {
     this.DownloadError();
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    this.sendReport().catch(() => {});
+    this.sendReport().catch(() => { });
   }
 
   success() {
     this.DownloadOk();
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    this.sendReport().catch(() => {});
+    this.sendReport().catch(() => { });
   }
 }

@@ -1,4 +1,3 @@
-import { retry } from 'async';
 import { createCipheriv } from 'crypto';
 import { Readable } from 'stream';
 
@@ -48,9 +47,7 @@ export class UploadOneShardStrategy extends UploadStrategy {
   private useProxy: boolean;
   private uploadProgress = 0;
   private encryptProgress = 0;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private uploadProgressIntervalId: NodeJS.Timeout = setTimeout(() => {});
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private encryptProgressIntervalId: NodeJS.Timeout = setTimeout(() => {});
 
   constructor(params: Params) {
