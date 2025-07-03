@@ -9,6 +9,7 @@ import { EnvironmentConfig } from '../api';
 import { GenerateFileKey } from '../lib/utils/crypto';
 import { HashStream, BytesCounter } from '../lib/utils/streams';
 import { logger } from '../lib/utils/logger';
+import { UploadOptions } from '../lib/core';
 
 const pipelineAsync = promisify(pipeline);
 const archive = archiver('zip', { zlib: { level: 9 } });
@@ -72,7 +73,6 @@ export async function uploadFolder(path: string) {
   const networkFilename = v4();
 
   const archiverSetup = archiver('zip', { zlib: { level: 9 } });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const directoryStream = archiverSetup.directory(path + '/', false);
   archiverSetup.finalize();
 
@@ -93,8 +93,9 @@ export async function uploadFolder(path: string) {
     };
   };
 
-  const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction) => ({
-    filename: networkFilename,
+  const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction): UploadOptions => ({
+    source: directoryStream,
+    fileSize: size,
     progressCallback: (progress: number) => {
       logger.debug('Progress %s%', (progress * 100).toFixed(2));
     },

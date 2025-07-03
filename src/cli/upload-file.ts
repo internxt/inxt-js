@@ -14,14 +14,14 @@ export async function uploadFile(filepath: string) {
 
     const bucketId = process.env.BUCKET_ID as string;
 
-    const fileId = await new Promise((resolve: (fileId: string) => void, reject) => {
+    const fileId = await new Promise((resolve: (fileId: string | null) => void, reject) => {
       const state = network.upload(
         bucketId, 
         {
           progressCallback: (progress: number) => {
             logger.info('Progress %s%', (progress * 100).toFixed(2));
           },
-          finishedCallback: (err: Error | null, res: string) => {
+          finishedCallback: (err: Error | null, res: string | null) => {
             if (err) {
               return reject(err);
             }
