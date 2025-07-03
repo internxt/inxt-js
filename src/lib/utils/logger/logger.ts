@@ -1,7 +1,4 @@
 import * as Winston from 'winston';
-import { config } from 'dotenv';
-
-config({ quiet: true });
 
 const loggerOptions = {
   levels: {
@@ -68,7 +65,7 @@ const getLoggerInstance = (
     transports: [new Winston.transports.Console()],
   });
 
-  if (process.env.STAGE !== 'development') {
+  if (process?.env?.STAGE !== 'development') {
     _logger.silent = true;
   }
 
