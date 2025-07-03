@@ -38,7 +38,7 @@
     "chai": "5.2.0",
     "chai-as-promised": "8.0.1",
     "commander": "14.0.0",
-    "dotenv": "16.6.0",
+    "dotenv": "17.0.1",
     "eslint": "9.29.0",
     "express": "^5.1.0",
     "jest": "30.0.3",
