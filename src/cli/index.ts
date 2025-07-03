@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { config } from 'dotenv';
-config();
+config({ quiet: true });
 
 import * as commands from './Commands';
 

@@ -1,7 +1,7 @@
 import * as Winston from 'winston';
 import { config } from 'dotenv';
 
-config();
+config({ quiet: true });
 
 const loggerOptions = {
   levels: {
