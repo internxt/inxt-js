@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { EnvironmentConfig } from '../api';
 import { Environment } from '..';
+import { EnvService } from './EnvService';
 
 export interface CommandOpts {
   version: string;
@@ -19,10 +20,10 @@ interface Option {
 
 export function getEnvironment(): Environment {
   const envConfig: EnvironmentConfig = {
-    bridgePass: process.env.BRIDGE_PASS as string,
-    bridgeUser: process.env.BRIDGE_USER as string,
-    encryptionKey: process.env.MNEMONIC,
-    bridgeUrl: process.env.BRIDGE_URL,
+    bridgePass: EnvService.instance.get('BRIDGE_PASS'),
+    bridgeUser: EnvService.instance.get('BRIDGE_USER'),
+    encryptionKey: EnvService.instance.get('MNEMONIC'),
+    bridgeUrl: EnvService.instance.get('BRIDGE_URL'),
   };
 
   return new Environment(envConfig);

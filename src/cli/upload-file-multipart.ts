@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'fs';
 
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
+import { EnvService } from './EnvService';
 
 export async function uploadFileMultipart(filepath: string) {
   if (!existsSync(filepath)) {
@@ -11,7 +12,7 @@ export async function uploadFileMultipart(filepath: string) {
   try {
     const network = getEnvironment();
 
-    const bucketId = process.env.BUCKET_ID as string;
+    const bucketId = EnvService.instance.get('BUCKET_ID');
 
     const fileId = await new Promise((resolve: (fileId: string) => void, reject) => {
       const state = network.uploadMultipartFile(
