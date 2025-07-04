@@ -32,7 +32,6 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
   private downloadProgress = 0;
   private decipher: Decipher;
   private useProxy: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 

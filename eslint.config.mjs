@@ -8,6 +8,7 @@ export default [
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
+      "no-console": "off"
     }
   }
 ];

@@ -37,7 +37,6 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
   private decipher: Decipher;
   private concurrency: number;
   private useProxy: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
 

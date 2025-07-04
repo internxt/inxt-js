@@ -4,12 +4,13 @@ import { DecryptFileName } from '../lib/utils/crypto';
 import { logger } from '../lib/utils/logger';
 
 import { getEnvironment } from './CommandInterface';
+import { EnvService } from './EnvService';
 
 export function getFileInfo(fileId: string): Promise<void> {
   logger.info('Retrieving info for file %s', fileId);
 
   const network = getEnvironment();
-  const bucketId = process.env.BUCKET_ID;
+  const bucketId = EnvService.instance.get('BUCKET_ID');
 
   if (!network.config.encryptionKey) {
     logger.error('Mnemonic not provided');

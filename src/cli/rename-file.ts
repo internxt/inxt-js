@@ -1,11 +1,12 @@
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
+import { EnvService } from './EnvService';
 
 export function renameFile(fileId: string, newPlainName: string): Promise<void> {
   logger.info('Renaming file %s', fileId);
 
   const network = getEnvironment();
-  const bucketId = process.env.BUCKET_ID;
+  const bucketId = EnvService.instance.get('BUCKET_ID');
 
   return network
     .renameFile(bucketId, fileId, newPlainName)

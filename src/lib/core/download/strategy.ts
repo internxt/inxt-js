@@ -58,5 +58,5 @@ export abstract class DownloadStrategy extends EventEmitter implements Abortable
   abstract abort(): void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface DownloadParams {}

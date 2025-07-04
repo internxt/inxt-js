@@ -28,6 +28,7 @@ type GetBucketsCallback = (err: Error | null, result: any) => void;
 
 type GetBucketIdCallback = (err: Error | null, result: any) => void;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type DeleteBucketCallback = (err: Error | null, result: any) => void;
 
 type ListFilesCallback = (err: Error | null, result: any) => void;

@@ -9,7 +9,6 @@ import { wrap } from '../../utils/error';
 import { determineShardSize } from '../../utils';
 import { Tap, Funnel, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
 import { ShardMeta } from '../../models';
-import { ContractMeta } from '../../../api';
 import { logger } from '../../utils/logger';
 
 import { UploadOptions } from './';
@@ -52,7 +51,6 @@ export class UploadOneStreamStrategy extends UploadStrategy {
   private concurrency: number;
   private useProxy: boolean;
   private uploadsProgress: number[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
 
   constructor(params: Params) {

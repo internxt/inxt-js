@@ -5,7 +5,6 @@ import { INXTRequest } from '../lib';
 import { ContractMeta } from '../api';
 import { ShardMeta } from '../lib/models';
 import { wrap } from '../lib/utils/error';
-import { logger } from '../lib/utils/logger';
 import { InxtApiI, SendShardToNodeResponse } from '../services/api';
 import { Shard } from './';
 import { get } from '../services/request';

@@ -9,16 +9,18 @@ import { EnvironmentConfig } from '../api';
 import { GenerateFileKey } from '../lib/utils/crypto';
 import { HashStream, BytesCounter } from '../lib/utils/streams';
 import { logger } from '../lib/utils/logger';
+import { UploadOptions } from '../lib/core';
+import { EnvService } from './EnvService';
 
 const pipelineAsync = promisify(pipeline);
 const archive = archiver('zip', { zlib: { level: 9 } });
 
 function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment {
   const envConfig: EnvironmentConfig = {
-    bridgePass: process.env.BRIDGE_PASS,
-    bridgeUser: process.env.BRIDGE_USER,
-    encryptionKey: process.env.MNEMONIC,
-    bridgeUrl: process.env.BRIDGE_URL,
+    bridgePass: EnvService.instance.get('BRIDGE_PASS'),
+    bridgeUser: EnvService.instance.get('BRIDGE_USER'),
+    encryptionKey: EnvService.instance.get('MNEMONIC'),
+    bridgeUrl: EnvService.instance.get('BRIDGE_URL'),
     inject: {},
   };
 
@@ -50,8 +52,8 @@ function getEncryptedFolderMeta(folderPath: string, cipher: Cipher): Promise<{ h
 }
 
 export async function uploadFolder(path: string) {
-  const encryptionKey = process.env.MNEMONIC;
-  const bucketId = process.env.BUCKET_ID;
+  const encryptionKey = EnvService.instance.get('MNEMONIC');
+  const bucketId = EnvService.instance.get('BUCKET_ID');
   const index = randomBytes(32);
   const iv = index.slice(0, 16);
   const fileEncryptionKey = await GenerateFileKey(encryptionKey, bucketId, index);
@@ -61,7 +63,7 @@ export async function uploadFolder(path: string) {
   logger.info('Uploading folder "%s"', path);
   logger.debug(
     'Provided params { bucketId: %s, bridgeApi: %s, bridgeUser: %s, directoryPath: %s }',
-    process.env.BUCKET_ID,
+    bucketId,
     network.config.bridgeUrl,
     network.config.bridgeUser,
     path,
@@ -84,12 +86,17 @@ export async function uploadFolder(path: string) {
 
   const finishCbGenerator = (resolve: ResolveFunction, reject: RejectFunction) => {
     return (err: Error | null) => {
-      err ? reject(err) : resolve(null);
+      if (err) {
+        reject(err);
+      } else {
+        resolve(null);
+      }
     };
   };
 
-  const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction) => ({
-    filename: networkFilename,
+  const uploadOptionsGenerator = (resolve: ResolveFunction, reject: RejectFunction): UploadOptions => ({
+    source: directoryStream,
+    fileSize: size,
     progressCallback: (progress: number) => {
       logger.debug('Progress %s%', (progress * 100).toFixed(2));
     },

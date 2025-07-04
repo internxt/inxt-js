@@ -3,12 +3,13 @@ import { pipeline, Readable } from 'stream';
 
 import { logger } from '../lib/utils/logger';
 import { getEnvironment } from './CommandInterface';
+import { EnvService } from './EnvService';
 
 export async function downloadFile(fileId: string, path: string, concurrency: number) {
   logger.info('Downloading file %s', fileId);
 
   const network = getEnvironment();
-  const bucketId = process.env.BUCKET_ID;
+  const bucketId = EnvService.instance.get('BUCKET_ID');
 
   const destination = createWriteStream(path);
 
@@ -52,7 +53,7 @@ export async function downloadFile(fileId: string, path: string, concurrency: nu
 
     process.exit(0);
   } catch (err) {
-    logger.error('Error downloading file %s', err.message);
+    logger.error('Error downloading file %s', (err as Error).message ?? '');
 
     process.exit(1);
   }
