@@ -14,7 +14,7 @@ export async function uploadFile(filepath: string) {
 
     const bucketId = process.env.BUCKET_ID as string;
 
-    const fileId = await new Promise((resolve: (fileId: string | null) => void, reject) => {
+    const fileId = await new Promise((resolve: (fileId: string) => void, reject) => {
       const state = network.upload(
         bucketId, 
         {
@@ -24,6 +24,8 @@ export async function uploadFile(filepath: string) {
           finishedCallback: (err: Error | null, res: string | null) => {
             if (err) {
               return reject(err);
+            } else if (!res) {
+              return reject('No response received from Network download');
             }
             resolve(res);
           },
