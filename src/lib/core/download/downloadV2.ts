@@ -12,6 +12,7 @@ import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../ut
 import { DownloadProgressCallback } from '.';
 import Errors from './errors';
 import { ChunkSizeTransform } from '../../utils/streams/Chunker';
+import { AppDetails } from '@internxt/sdk/dist/shared';
 
 
 export function downloadFileV2(
@@ -20,6 +21,7 @@ export function downloadFileV2(
   mnemonic: string,
   bridgeUrl: string,
   creds: { pass: string, user: string },
+  appDetails: AppDetails,
   notifyProgress: DownloadProgressCallback,
   onV2Confirmed: () => void,
   abortController: AbortController,
@@ -27,8 +29,11 @@ export function downloadFileV2(
 ): [Promise<void>, PassThrough] {
   const outStream = new PassThrough();
   const network = Network.client(bridgeUrl, {
-    clientName: 'inxt-js',
-    clientVersion: '1.0'
+    ...appDetails,
+    customHeaders: {
+      lib: 'inxt-js',
+      ...appDetails.customHeaders,
+    }
   }, {
     bridgeUser: creds.user,
     userId: sha256(Buffer.from(creds.pass)).toString('hex')

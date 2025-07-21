@@ -15,6 +15,7 @@ import Errors from '../download/errors';
 import { UploadProgressCallback } from '.';
 import { logger } from '../../utils/logger';
 import { uploadParts } from './multipart';
+import { AppDetails } from '@internxt/sdk/dist/shared';
 
 function putStream(url: string, fileSize?: number): Writable {
   const formattedUrl = new URL(url);
@@ -40,6 +41,7 @@ export function uploadFileV2(
   mnemonic: string,
   bridgeUrl: string,
   creds: { pass: string; user: string },
+  appDetails: AppDetails,
   notifyProgress: UploadProgressCallback,
   actionState: ActionState,
 ): Promise<string> {
@@ -52,8 +54,11 @@ export function uploadFileV2(
   const network = Network.client(
     bridgeUrl,
     {
-      clientName: 'inxt-js',
-      clientVersion: '1.0',
+      ...appDetails,
+      customHeaders: {
+        lib: 'inxt-js',
+        ...appDetails.customHeaders,
+      }
     },
     {
       bridgeUser: creds.user,
