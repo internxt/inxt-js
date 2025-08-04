@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-import { DownloadDynamicStrategyObject } from '.';
+import { DownloadDynamicStrategyObject, DownloadOptions } from '.';
 import { Abortable, ActionState, Shard } from '../../../api';
 
 export type DownloadStrategyLabel = string;
@@ -8,7 +8,7 @@ export type DownloadStrategyObject<T> = DownloadDynamicStrategyObject<T>;
 export type DownloadStrategyFunction<T> = (
   bucketId: string,
   fileId: string,
-  opts: any,
+  opts: DownloadOptions,
   strategyObj: DownloadStrategyObject<T>,
 ) => ActionState;
 
