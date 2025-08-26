@@ -26,6 +26,7 @@ describe('downloadFileV2()', () => {
           invalidMnemonic,
           bridgeUrl,
           creds,
+          { clientName: 'inxt-js', clientVersion: '1.0' },
           () => {},
           () => {},
           new AbortController(),
