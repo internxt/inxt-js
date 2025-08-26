@@ -9,7 +9,11 @@ beforeEach(() => {
   fileObject = new FileObject({
     bridgePass: '',
     bridgeUser: '',
-    bridgeUrl: ''
+    bridgeUrl: '',
+    appDetails: {
+      clientName: '',
+      clientVersion: '',
+    }
   }, '', '', createStubInstance(DownloadStrategy))
 });
 

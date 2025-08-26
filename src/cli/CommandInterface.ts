@@ -24,6 +24,10 @@ export function getEnvironment(): Environment {
     bridgeUser: EnvService.instance.get('BRIDGE_USER'),
     encryptionKey: EnvService.instance.get('MNEMONIC'),
     bridgeUrl: EnvService.instance.get('BRIDGE_URL'),
+    appDetails: {
+      clientName: 'inxt-js',
+      clientVersion: '1.0',
+    },
   };
 
   return new Environment(envConfig);

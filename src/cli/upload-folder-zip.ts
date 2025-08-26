@@ -21,6 +21,10 @@ function getEnvironment(fileEncryptionKey?: Buffer, index?: Buffer): Environment
     bridgeUser: EnvService.instance.get('BRIDGE_USER'),
     encryptionKey: EnvService.instance.get('MNEMONIC'),
     bridgeUrl: EnvService.instance.get('BRIDGE_URL'),
+    appDetails: {
+      clientName: 'inxt-js',
+      clientVersion: '1.0',
+    },
     inject: {},
   };
 
