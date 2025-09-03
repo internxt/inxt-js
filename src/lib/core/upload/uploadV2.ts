@@ -124,6 +124,7 @@ export function uploadFileMultipart(
   creds: { pass: string; user: string },
   notifyProgress: UploadProgressCallback,
   actionState: ActionState,
+  appDetails: AppDetails,
 ): Promise<string> {
   const abortController = new AbortController();
 
@@ -134,8 +135,11 @@ export function uploadFileMultipart(
   const network = Network.client(
     bridgeUrl,
     {
-      clientName: 'inxt-js',
-      clientVersion: '1.0',
+      ...appDetails,
+      customHeaders: {
+        lib: 'inxt-js',
+        ...appDetails.customHeaders,
+      }
     },
     {
       bridgeUser: creds.user,

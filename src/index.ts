@@ -189,6 +189,7 @@ export class Environment {
       },
       opts.progressCallback,
       uploadState,
+      this.config.appDetails,
     ).then((fileId) => {
       opts.finishedCallback(null, fileId);
     }).catch((err) => {
