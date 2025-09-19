@@ -23,6 +23,7 @@ import { HashStream } from './lib/utils/streams';
 import { downloadFileV2 } from './lib/core/download/downloadV2';
 import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
 import { uploadFileMultipart, uploadFileV2 } from './lib/core/upload/uploadV2';
+import { downloadFileMultipart } from './lib/core/download/multipart';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -333,6 +334,71 @@ export class Environment {
 
     return downloadState;
   };
+
+  downloadMultipartFile(
+    fileId: string,
+    fileSize: number,
+    bucketId: string,
+    opts: DownloadOptions,
+  ) {
+    const abortController = new AbortController();
+    const downloadState = new ActionState(ActionTypes.Download);
+
+    downloadState.once(Events.Download.Abort, () => {
+      abortController.abort();
+    });
+
+    if (!this.config.encryptionKey) {
+      opts.finishedCallback(Error(ENCRYPTION_KEY_NOT_PROVIDED), null);
+
+      return downloadState;
+    }
+
+    if (!bucketId) {
+      opts.finishedCallback(Error(BUCKET_ID_NOT_PROVIDED), null);
+
+      return downloadState;
+    }
+
+    if (!fileId) {
+      opts.finishedCallback(Error('File id not provided'), null);
+
+      return downloadState;
+    }
+
+    if (!this.config.bridgeUrl) {
+      opts.finishedCallback(Error('Missing bridge url'), null);
+
+      return downloadState;
+    }
+
+    const [downloadPromise, stream] = downloadFileMultipart(
+      fileId,
+      fileSize,
+      bucketId,
+      this.config.encryptionKey,
+      this.config.bridgeUrl,
+      {
+        user: this.config.bridgeUser,
+        pass: this.config.bridgePass
+      },
+      opts.progressCallback,
+      () => {
+        opts.finishedCallback(null, stream);
+      },
+      abortController.signal,
+    );
+  
+    downloadPromise.catch((err) => {
+      if (err instanceof FileVersionOneError) {
+        opts.finishedCallback(new Error('Invalid method for v1 files'), null)
+      } else {
+        opts.finishedCallback(err, null);
+      }
+    });
+
+    return downloadState;
+  }
 
   downloadCancel(state: ActionState): void {
     state.stop();
