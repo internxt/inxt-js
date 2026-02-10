@@ -5,7 +5,6 @@ import { DownloadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors'
 import { downloadFileV2 } from '../../../../src/lib/core/download/downloadV2';
 import { getBridgeUrl, getBucketId, getFileId, getInvalidMnemonic, getNetworkCredentials } from '../fixtures';
 
-
 const creds = getNetworkCredentials();
 const bucketId = getBucketId();
 const fileId = getFileId();

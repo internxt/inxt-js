@@ -22,7 +22,8 @@ describe('HashStream tests', () => {
       const contentStream = Readable.from(content);
 
       await new Promise((resolve, reject) => {
-        contentStream.pipe(hasher)
+        contentStream
+          .pipe(hasher)
           .on('data', () => {})
           .on('error', reject)
           .on('end', resolve);
@@ -30,7 +31,7 @@ describe('HashStream tests', () => {
 
       const received = hasher.getHash();
       const expected = ripemd160(sha256(content));
-      
+
       expect(received).toEqual(expected);
     });
 
@@ -41,7 +42,8 @@ describe('HashStream tests', () => {
       const contentStream = Readable.from(content);
 
       await new Promise((resolve, reject) => {
-        contentStream.pipe(hasher)
+        contentStream
+          .pipe(hasher)
           .on('data', () => {})
           .on('error', reject)
           .on('end', resolve);
@@ -49,7 +51,7 @@ describe('HashStream tests', () => {
 
       const received = hasher.getHash();
       const expected = ripemd160(sha256(content));
-      
+
       expect(received).toEqual(expected);
     });
 
@@ -60,7 +62,8 @@ describe('HashStream tests', () => {
       const contentStream = Readable.from(content);
 
       await new Promise((resolve, reject) => {
-        contentStream.pipe(hasher)
+        contentStream
+          .pipe(hasher)
           .on('data', () => {})
           .on('error', reject)
           .on('end', resolve);
@@ -68,7 +71,7 @@ describe('HashStream tests', () => {
 
       const received = hasher.getHash();
       const expected = ripemd160(sha256(content));
-      
+
       expect(received).toEqual(expected);
     });
   });

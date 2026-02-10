@@ -82,7 +82,7 @@ const mutex = new Mutex();
 export const getProxy = async (): Promise<ProxyManager> => {
   let response = {
     ...new Proxy(''),
-    free: () => { },
+    free: () => {},
   };
 
   await mutex.dispatch(async () => {

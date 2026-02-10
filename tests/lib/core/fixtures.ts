@@ -1,4 +1,4 @@
-import { generateMnemonic } from "bip39";
+import { generateMnemonic } from 'bip39';
 
 export function getValidMnemonic(): string {
   return generateMnemonic();
@@ -8,7 +8,7 @@ export function getInvalidMnemonic(): string {
   return '';
 }
 
-export function getNetworkCredentials(): { user: string, pass: string } {
+export function getNetworkCredentials(): { user: string; pass: string } {
   return { user: 'user', pass: 'pass' };
 }
 

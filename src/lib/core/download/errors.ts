@@ -7,13 +7,13 @@
 enum ErrorCodes {
   DownloadHashMismatch = 1000,
   DownloadUnknownAlgorithm = 1100,
-  UploadUnknownAlgorithm = 2100
+  UploadUnknownAlgorithm = 2100,
 }
 
 class CodeError extends Error {
   constructor(
     protected errorMessage: string,
-    protected errorCode: number
+    protected errorCode: number,
   ) {
     super(`${errorMessage} (ERRNO: ${errorCode})`);
   }
@@ -35,5 +35,5 @@ export default {
   ErrorCodes,
   downloadHashMismatchError: new DownloadError(ErrorCodes.DownloadHashMismatch),
   downloadUnknownAlgorithmError: new DownloadError(ErrorCodes.DownloadUnknownAlgorithm),
-  uploadUnknownAlgorithmError: new UploadError(ErrorCodes.UploadUnknownAlgorithm)
+  uploadUnknownAlgorithmError: new UploadError(ErrorCodes.UploadUnknownAlgorithm),
 };

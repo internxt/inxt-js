@@ -15,23 +15,20 @@ export async function uploadFileMultipart(filepath: string) {
     const bucketId = EnvService.instance.get('BUCKET_ID');
 
     const fileId = await new Promise((resolve: (fileId: string) => void, reject) => {
-      const state = network.uploadMultipartFile(
-        bucketId, 
-        {
-          progressCallback: (progress: number) => {
-            logger.info('Progress %s%', (progress * 100).toFixed(2));
-          },
-          finishedCallback: (err: Error | null, res: string | null) => {
-            if (err) {
-              return reject(err);
-            }
-
-            resolve(res as string);
-          },
-          fileSize: statSync(filepath).size,
-          source: createReadStream(filepath),
+      const state = network.uploadMultipartFile(bucketId, {
+        progressCallback: (progress: number) => {
+          logger.info('Progress %s%', (progress * 100).toFixed(2));
         },
-      );
+        finishedCallback: (err: Error | null, res: string | null) => {
+          if (err) {
+            return reject(err);
+          }
+
+          resolve(res as string);
+        },
+        fileSize: statSync(filepath).size,
+        source: createReadStream(filepath),
+      });
 
       process.on('SIGINT', () => {
         logger.info('Aborting upload');

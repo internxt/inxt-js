@@ -27,11 +27,7 @@ function putStream(url: string, fileSize?: number): Writable {
     headers = { ...headers, 'Content-Length': fileSize.toString() };
   }
 
-  return undiciPipeline(
-    formattedUrl,
-    { headers, method: 'PUT' },
-    (data) => data.body,
-  );
+  return undiciPipeline(formattedUrl, { headers, method: 'PUT' }, (data) => data.body);
 }
 
 export function uploadFileV2(
@@ -58,7 +54,7 @@ export function uploadFileV2(
       customHeaders: {
         lib: 'inxt-js',
         ...appDetails.customHeaders,
-      }
+      },
     },
     {
       bridgeUser: creds.user,
@@ -139,7 +135,7 @@ export function uploadFileMultipart(
       customHeaders: {
         lib: 'inxt-js',
         ...appDetails.customHeaders,
-      }
+      },
     },
     {
       bridgeUser: creds.user,
@@ -208,6 +204,3 @@ export function uploadFileMultipart(
     parts,
   );
 }
-
-
-

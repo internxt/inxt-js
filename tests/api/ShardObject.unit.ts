@@ -9,7 +9,12 @@ import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { EnvironmentConfig } from '../../src';
 
-const config: EnvironmentConfig = { bridgePass: '', bridgeUser: '', bridgeUrl: 'https://api.internxt.com', useProxy: false };
+const config: EnvironmentConfig = {
+  bridgePass: '',
+  bridgeUser: '',
+  bridgeUrl: 'https://api.internxt.com',
+  useProxy: false,
+};
 const bridge = new Bridge(config);
 const shardMeta = generateShardMeta();
 let shardObject = new ShardObject(bridge, '', shardMeta);
@@ -59,7 +64,7 @@ describe('api/ShardObject.ts tests', () => {
         hash: shardHash,
         index: 0,
         operation: 'PULL',
-        parity: false, 
+        parity: false,
         replaceCount: 0,
         size: shardEncrypted.length,
         token: '',
@@ -69,17 +74,17 @@ describe('api/ShardObject.ts tests', () => {
           nodeID: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           port: 54321,
           protocol: 'http',
-          userAgent: '1.2.0-INXT'
-        }
+          userAgent: '1.2.0-INXT',
+        },
       };
-      
+
       spawnFarmer((req, res) => {
         Readable.from(shardEncrypted).pipe(res);
       }).then((stopFarmer) => {
         const shardObject = new ShardObject(bridge, '', shardMeta, shard);
 
         shardObject.download().then((shardStream) => {
-          const chunks: Buffer[] = []
+          const chunks: Buffer[] = [];
           shardStream.on('data', (chunk) => {
             chunks.push(chunk);
           });

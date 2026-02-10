@@ -12,7 +12,7 @@ export enum Methods {
   Post = 'POST',
   Put = 'PUT',
   Patch = 'PATCH',
-  Delete = 'DELETE'
+  Delete = 'DELETE',
 }
 
 export class INXTRequest extends EventEmitter {

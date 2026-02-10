@@ -87,10 +87,7 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
       });
 
       await new Promise((resolve, reject) => {
-        const downloadPipeline = encryptedFileStream
-          .pipe(progressNotifier)
-          .pipe(hasher)
-          .pipe(this.decipher);
+        const downloadPipeline = encryptedFileStream.pipe(progressNotifier).pipe(hasher).pipe(this.decipher);
 
         this.addAbortable(() => downloadPipeline.destroy());
 

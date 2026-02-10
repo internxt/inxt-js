@@ -19,9 +19,9 @@ export interface DownloadOneStreamStrategyParams extends DownloadParams {
 }
 
 export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
-export type DownloadOneStreamStrategyObject = { 
-  label: DownloadOneStreamStrategyLabel
-  params: DownloadOneStreamStrategyParams 
+export type DownloadOneStreamStrategyObject = {
+  label: DownloadOneStreamStrategyLabel;
+  params: DownloadOneStreamStrategyParams;
 };
 export type DownloadOneStreamStrategyFunction = (
   bucketId: string,

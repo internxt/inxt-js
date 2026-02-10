@@ -24,12 +24,15 @@ describe('# Tap tests', () => {
 
     expect(binaryDataLength < diameterSize).to.be.true;
 
-    readable.pipe(tap).on('data', (chunk: Buffer) => {
-      expect(chunk.length).to.equal(binaryDataLength);
-    }).once('end', () => {
-      tap.removeAllListeners();
-      done();
-    });
+    readable
+      .pipe(tap)
+      .on('data', (chunk: Buffer) => {
+        expect(chunk.length).to.equal(binaryDataLength);
+      })
+      .once('end', () => {
+        tap.removeAllListeners();
+        done();
+      });
   });
 
   it('Should work when: binary data length == diameterSize', (done) => {
@@ -40,12 +43,15 @@ describe('# Tap tests', () => {
 
     expect(diameterSize).to.equal(binaryDataLength);
 
-    readable.pipe(tap).on('data', (chunk: Buffer) => {
-      expect(chunk.length).to.equal(binaryDataLength);
-    }).once('end', () => {
-      tap.removeAllListeners();
-      done();
-    });
+    readable
+      .pipe(tap)
+      .on('data', (chunk: Buffer) => {
+        expect(chunk.length).to.equal(binaryDataLength);
+      })
+      .once('end', () => {
+        tap.removeAllListeners();
+        done();
+      });
   });
 
   it('Should work when: binary data length > diameterSize', (done) => {
@@ -56,33 +62,38 @@ describe('# Tap tests', () => {
     const tempPathFile = testFilePath;
     const tempWriteStream = createWriteStream(tempPathFile);
 
-    Readable.from(binaryData).pipe(tempWriteStream).once('finish', () => {
-      const readable = createReadStream(tempPathFile, {
-        highWaterMark: defaultReadableHighWatermark
+    Readable.from(binaryData)
+      .pipe(tempWriteStream)
+      .once('finish', () => {
+        const readable = createReadStream(tempPathFile, {
+          highWaterMark: defaultReadableHighWatermark,
+        });
+        const tap = new Tap(diameterSize);
+
+        expect(diameterSize > defaultReadableHighWatermark).to.be.true;
+        expect(binaryDataLength > diameterSize).to.be.true;
+
+        const closeEventListener = spy();
+
+        tap.on(TapEvents.Closed, closeEventListener);
+        tap.on(TapEvents.Closed, tap.open.bind(tap));
+
+        let result = Buffer.alloc(0);
+
+        readable
+          .pipe(tap)
+          .on('data', (chunk: Buffer) => {
+            result = Buffer.concat([result, chunk]);
+          })
+          .once('end', () => {
+            tap.removeAllListeners();
+
+            expect(closeEventListener.calledOnce).to.be.true;
+            expect(result.length).to.equal(binaryDataLength);
+            expect(Buffer.compare(result, binaryData)).to.equal(0);
+            done();
+          });
       });
-      const tap = new Tap(diameterSize);
-
-      expect(diameterSize > defaultReadableHighWatermark).to.be.true;
-      expect(binaryDataLength > diameterSize).to.be.true;
-
-      const closeEventListener = spy();
-
-      tap.on(TapEvents.Closed, closeEventListener);
-      tap.on(TapEvents.Closed, tap.open.bind(tap));
-
-      let result = Buffer.alloc(0);
-
-      readable.pipe(tap).on('data', (chunk: Buffer) => {
-        result = Buffer.concat([result, chunk]);
-      }).once('end', () => {
-        tap.removeAllListeners();
-
-        expect(closeEventListener.calledOnce).to.be.true;
-        expect(result.length).to.equal(binaryDataLength);
-        expect(Buffer.compare(result, binaryData)).to.equal(0);
-        done();
-      });
-    });
   });
 
   it('Should work when: binary data length == (2 * diameterSize)', (done) => {
@@ -95,33 +106,38 @@ describe('# Tap tests', () => {
     const tempPathFile = testFilePath;
     const tempWriteStream = createWriteStream(tempPathFile);
 
-    Readable.from(binaryData).pipe(tempWriteStream).once('finish', () => {
-      const readable = createReadStream(tempPathFile, {
-        highWaterMark: defaultReadableHighWatermark
+    Readable.from(binaryData)
+      .pipe(tempWriteStream)
+      .once('finish', () => {
+        const readable = createReadStream(tempPathFile, {
+          highWaterMark: defaultReadableHighWatermark,
+        });
+        const tap = new Tap(diameterSize);
+
+        expect(diameterSize > defaultReadableHighWatermark).to.be.true;
+        expect(binaryDataLength > diameterSize).to.be.true;
+
+        const closeEventListener = spy();
+
+        tap.on(TapEvents.Closed, closeEventListener);
+        tap.on(TapEvents.Closed, tap.open.bind(tap));
+
+        let result = Buffer.alloc(0);
+
+        readable
+          .pipe(tap)
+          .on('data', (chunk: Buffer) => {
+            result = Buffer.concat([result, chunk]);
+          })
+          .once('end', () => {
+            tap.removeAllListeners();
+
+            expect(closeEventListener.calledOnce).to.be.true;
+            expect(result.length).to.equal(binaryDataLength);
+            expect(Buffer.compare(result, binaryData)).to.equal(0);
+            done();
+          });
       });
-      const tap = new Tap(diameterSize);
-
-      expect(diameterSize > defaultReadableHighWatermark).to.be.true;
-      expect(binaryDataLength > diameterSize).to.be.true;
-
-      const closeEventListener = spy();
-
-      tap.on(TapEvents.Closed, closeEventListener);
-      tap.on(TapEvents.Closed, tap.open.bind(tap));
-
-      let result = Buffer.alloc(0);
-
-      readable.pipe(tap).on('data', (chunk: Buffer) => {
-        result = Buffer.concat([result, chunk]);
-      }).once('end', () => {
-        tap.removeAllListeners();
-
-        expect(closeEventListener.calledOnce).to.be.true;
-        expect(result.length).to.equal(binaryDataLength);
-        expect(Buffer.compare(result, binaryData)).to.equal(0);
-        done();
-      });
-    });
   });
 
   it('Should work when: binary data length == (2 * diameterSize + 1)', (done) => {
@@ -134,32 +150,37 @@ describe('# Tap tests', () => {
     const tempPathFile = testFilePath;
     const tempWriteStream = createWriteStream(tempPathFile);
 
-    Readable.from(binaryData).pipe(tempWriteStream).once('finish', () => {
-      const readable = createReadStream(tempPathFile, {
-        highWaterMark: defaultReadableHighWatermark
+    Readable.from(binaryData)
+      .pipe(tempWriteStream)
+      .once('finish', () => {
+        const readable = createReadStream(tempPathFile, {
+          highWaterMark: defaultReadableHighWatermark,
+        });
+        const tap = new Tap(diameterSize);
+
+        expect(diameterSize > defaultReadableHighWatermark).to.be.true;
+        expect(binaryDataLength > diameterSize).to.be.true;
+
+        const closeEventListener = spy();
+
+        tap.on(TapEvents.Closed, closeEventListener);
+        tap.on(TapEvents.Closed, tap.open.bind(tap));
+
+        let result = Buffer.alloc(0);
+
+        readable
+          .pipe(tap)
+          .on('data', (chunk: Buffer) => {
+            result = Buffer.concat([result, chunk]);
+          })
+          .once('end', () => {
+            tap.removeAllListeners();
+
+            expect(closeEventListener.calledOnce).to.be.true;
+            expect(result.length).to.equal(binaryDataLength);
+            expect(Buffer.compare(result, binaryData)).to.equal(0);
+            done();
+          });
       });
-      const tap = new Tap(diameterSize);
-
-      expect(diameterSize > defaultReadableHighWatermark).to.be.true;
-      expect(binaryDataLength > diameterSize).to.be.true;
-
-      const closeEventListener = spy();
-
-      tap.on(TapEvents.Closed, closeEventListener);
-      tap.on(TapEvents.Closed, tap.open.bind(tap));
-
-      let result = Buffer.alloc(0);
-
-      readable.pipe(tap).on('data', (chunk: Buffer) => {
-        result = Buffer.concat([result, chunk]);
-      }).once('end', () => {
-        tap.removeAllListeners();
-
-        expect(closeEventListener.calledOnce).to.be.true;
-        expect(result.length).to.equal(binaryDataLength);
-        expect(Buffer.compare(result, binaryData)).to.equal(0);
-        done();
-      });
-    });
   });
 });

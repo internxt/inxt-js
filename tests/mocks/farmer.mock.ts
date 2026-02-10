@@ -1,8 +1,8 @@
 import express from 'express';
 import { Server } from 'http';
 
-import { createHash, Hash } from "crypto";
-import { Transform, TransformCallback, TransformOptions } from "stream";
+import { createHash, Hash } from 'crypto';
+import { Transform, TransformCallback, TransformOptions } from 'stream';
 import { ContractNegotiated } from '../../src/lib/contracts';
 
 export class HashStream extends Transform {
@@ -68,7 +68,7 @@ export function getContractNegotiated(hash = '', token = ''): ContractNegotiated
     },
     hash,
     token,
-  }
+  };
 }
 
 type EndpointHandler = (req, res) => void;
@@ -79,14 +79,21 @@ function startServer(cb: () => void, customGet?: EndpointHandler, customPost?: E
     cb();
   });
 
-  app.get('/shards/:shardHash', customGet ? customGet : (req, res) => { 
-    res.status(200).send(); 
-  });
+  app.get(
+    '/shards/:shardHash',
+    customGet
+      ? customGet
+      : (req, res) => {
+          res.status(200).send();
+        },
+  );
 
   app.post('/shards/:hash', (req, res) => {
     const hasher = new HashStream();
 
-    req.pipe(hasher).on('data', () => {})
+    req
+      .pipe(hasher)
+      .on('data', () => {})
       .on('error', (err) => {
         console.error('ERROR HASING SHARD', err);
 
@@ -112,10 +119,14 @@ function closeServer(cb: () => void) {
 
 type CloseServerFunction = () => Promise<unknown>;
 
-const startApp = (customGet?: EndpointHandler, customPost?: EndpointHandler) => new Promise(r => startServer(() => r(null), customGet, customPost));
-const closeApp = () => new Promise(r => closeServer(() => r(null)));
+const startApp = (customGet?: EndpointHandler, customPost?: EndpointHandler) =>
+  new Promise((r) => startServer(() => r(null), customGet, customPost));
+const closeApp = () => new Promise((r) => closeServer(() => r(null)));
 
-export async function spawnFarmer(customGet?: EndpointHandler, customPost?: EndpointHandler): Promise<CloseServerFunction> {
+export async function spawnFarmer(
+  customGet?: EndpointHandler,
+  customPost?: EndpointHandler,
+): Promise<CloseServerFunction> {
   await startApp(customGet, customPost);
 
   return closeApp;

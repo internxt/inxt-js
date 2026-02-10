@@ -1,13 +1,13 @@
-import { randomBytes } from "crypto";
-import { Readable } from "stream";
+import { randomBytes } from 'crypto';
+import { Readable } from 'stream';
 
-import { ContractMeta } from "../../../../src/api";
-import { Events, NegotiateContract, upload, UploadOneShardStrategy } from "../../../../src/lib/core";
-import { ShardMeta } from "../../../../src/lib/models";
+import { ContractMeta } from '../../../../src/api';
+import { Events, NegotiateContract, upload, UploadOneShardStrategy } from '../../../../src/lib/core';
+import { ShardMeta } from '../../../../src/lib/models';
 
 let uploadStrategy: UploadOneShardStrategy;
 
-const content = randomBytes(16*1024);
+const content = randomBytes(16 * 1024);
 
 async function fakeNegotiateContract(shardMeta: ShardMeta): Promise<ContractMeta> {
   return {
@@ -17,12 +17,12 @@ async function fakeNegotiateContract(shardMeta: ShardMeta): Promise<ContractMeta
       nodeID: '',
       port: 99999,
       protocol: '1.2.0-INXT',
-      userAgent: ''
+      userAgent: '',
     },
     hash: '',
     operation: 'PUSH',
     token: '',
-    url: ''
+    url: '',
   };
 }
 
@@ -30,13 +30,13 @@ beforeEach(() => {
   uploadStrategy = new UploadOneShardStrategy({
     sourceToHash: {
       size: content.length,
-      stream: Readable.from(content)
+      stream: Readable.from(content),
     },
     sourceToUpload: {
       size: content.length,
-      stream: Readable.from(content)
+      stream: Readable.from(content),
     },
-    useProxy: false
+    useProxy: false,
   });
 });
 
@@ -47,7 +47,7 @@ describe('UploadOneShardStrategy', () => {
         it('Should reject an invalid size', () => {
           const tooShortFileEncryptionKey = randomBytes(31);
           const tooLongFileEncryptionKey = randomBytes(33);
-  
+
           expect(() => {
             uploadStrategy.setFileEncryptionKey(tooShortFileEncryptionKey);
           }).toThrow();
@@ -60,10 +60,8 @@ describe('UploadOneShardStrategy', () => {
         it('Should accept a valid size', () => {
           const fileEncryptionKeyWithProperLength = randomBytes(32);
           uploadStrategy.setFileEncryptionKey(fileEncryptionKeyWithProperLength);
-    
-          expect(uploadStrategy.fileEncryptionKey).toEqual(
-            fileEncryptionKeyWithProperLength
-          );
+
+          expect(uploadStrategy.fileEncryptionKey).toEqual(fileEncryptionKeyWithProperLength);
         });
       });
     });
@@ -94,11 +92,10 @@ describe('UploadOneShardStrategy', () => {
   describe('upload()', () => {
     describe('Required data check', () => {
       it('Should reject if file encryption key or iv are not set', () => {
-        expect(uploadStrategy.upload(fakeNegotiateContract))
-          .rejects.toEqual(
-            new Error('Set file encryption key and iv before trying to upload')
-          );
-      }); 
+        expect(uploadStrategy.upload(fakeNegotiateContract)).rejects.toEqual(
+          new Error('Set file encryption key and iv before trying to upload'),
+        );
+      });
     });
   });
 
@@ -115,7 +112,7 @@ describe('UploadOneShardStrategy', () => {
           expect(true).toBeTruthy();
           done();
         });
-        uploadStrategy.abort();        
+        uploadStrategy.abort();
       });
     });
   });

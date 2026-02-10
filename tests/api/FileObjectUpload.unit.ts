@@ -18,15 +18,20 @@ const { expect } = chai;
 chai.use(chaiAsPromised);
 
 function initializeFileObject() {
-  return new FileObjectUpload({
-    bridgePass: '',
-    bridgeUser: '',
-    bridgeUrl: 'https://api.internxt.com'
-  }, {
-    content: Readable.from(''),
-    name: '',
-    size: 1
-  }, 'fakeBucketId', logger);
+  return new FileObjectUpload(
+    {
+      bridgePass: '',
+      bridgeUser: '',
+      bridgeUrl: 'https://api.internxt.com',
+    },
+    {
+      content: Readable.from(''),
+      name: '',
+      size: 1,
+    },
+    'fakeBucketId',
+    logger,
+  );
 }
 
 let fileObject = initializeFileObject();
@@ -54,27 +59,33 @@ describe('# FileObjectUpload tests', () => {
         '638ffb6491e49d5848cd961f5352c41f1b0ceea0',
         '88d0229e598ab3aa279527629b21ddbc70854050',
         'c0846e015de2e2602d9bfe45d148fe864ac37dc7',
-        '45a334c54c415184a9f2ea7fb6dcbef1d5253fb9'
+        '45a334c54c415184a9f2ea7fb6dcbef1d5253fb9',
       ];
 
       const frameId = 'fakeId';
       fileObject.frameId = frameId;
 
       fileObject.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'hex');
-      fileObject.fileEncryptionKey = Buffer.from('fdaebc990db7cd3dab1ffac132cedfc856907fcdb660bf23dc32485f68a7e93e', 'hex');
+      fileObject.fileEncryptionKey = Buffer.from(
+        'fdaebc990db7cd3dab1ffac132cedfc856907fcdb660bf23dc32485f68a7e93e',
+        'hex',
+      );
 
-      const hmac = fileObject.GenerateHmac(shardsHashes.map((shardHash, index) => {
-        return {
-          hash: shardHash,
-          index,
-          challenges_as_str: [],
-          parity: false,
-          size: 0,
-          tree: []
-        }
-      }));
+      const hmac = fileObject.GenerateHmac(
+        shardsHashes.map((shardHash, index) => {
+          return {
+            hash: shardHash,
+            index,
+            challenges_as_str: [],
+            parity: false,
+            size: 0,
+            tree: [],
+          };
+        }),
+      );
 
-      const expectedHmac = 'e92a92ffbb5230e57b4c6027e97f881efa89816ca6835d5cc91ff654a4c60a077c081edb7933b31d2ab8eba21825afb52fa8b84e1c9fb1ddbf8713898df4959e';
+      const expectedHmac =
+        'e92a92ffbb5230e57b4c6027e97f881efa89816ca6835d5cc91ff654a4c60a077c081edb7933b31d2ab8eba21825afb52fa8b84e1c9fb1ddbf8713898df4959e';
 
       expect(hmac).to.deep.equal(expectedHmac);
     });
@@ -94,29 +105,35 @@ describe('# FileObjectUpload tests', () => {
         '638ffb6491e49d5848cd961f5352c41f1b0ceea0',
         '88d0229e598ab3aa279527629b21ddbc70854050',
         'c0846e015de2e2602d9bfe45d148fe864ac37dc7',
-        '45a334c54c415184a9f2ea7fb6dcbef1d5253fb9'
+        '45a334c54c415184a9f2ea7fb6dcbef1d5253fb9',
       ];
 
       const frameId = 'fakeId';
       fileObject.frameId = frameId;
 
       fileObject.index = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'hex');
-      fileObject.fileEncryptionKey = Buffer.from('fdaebc990db7cd3dab1ffac132cedfc856907fcdb660bf23dc32485f68a7e93e', 'hex');
-
-      const hmac = fileObject.GenerateHmac(
-        shardsHashes.map((shardHash, index) => {
-          return {
-            hash: shardHash,
-            index,
-            challenges_as_str: [],
-            parity: false,
-            size: 0,
-            tree: []
-          }
-        }).sort((sMetaA, sMetaB) => sMetaB.index - sMetaA.index)
+      fileObject.fileEncryptionKey = Buffer.from(
+        'fdaebc990db7cd3dab1ffac132cedfc856907fcdb660bf23dc32485f68a7e93e',
+        'hex',
       );
 
-      const expectedHmac = 'e92a92ffbb5230e57b4c6027e97f881efa89816ca6835d5cc91ff654a4c60a077c081edb7933b31d2ab8eba21825afb52fa8b84e1c9fb1ddbf8713898df4959e';
+      const hmac = fileObject.GenerateHmac(
+        shardsHashes
+          .map((shardHash, index) => {
+            return {
+              hash: shardHash,
+              index,
+              challenges_as_str: [],
+              parity: false,
+              size: 0,
+              tree: [],
+            };
+          })
+          .sort((sMetaA, sMetaB) => sMetaB.index - sMetaA.index),
+      );
+
+      const expectedHmac =
+        'e92a92ffbb5230e57b4c6027e97f881efa89816ca6835d5cc91ff654a4c60a077c081edb7933b31d2ab8eba21825afb52fa8b84e1c9fb1ddbf8713898df4959e';
 
       expect(hmac).to.deep.equal(expectedHmac);
     });
@@ -134,9 +151,9 @@ describe('# FileObjectUpload tests', () => {
 
   describe('upload()', () => {
     it('Should throw if encrypt() is not called before', () => {
-      expect(() => { fileObject.upload(() => {}); }).to.throw(
-        'Tried to upload a file not encrypted. Use .encrypt() before upload()'
-      );
+      expect(() => {
+        fileObject.upload(() => {});
+      }).to.throw('Tried to upload a file not encrypted. Use .encrypt() before upload()');
     });
 
     it('Should send shards without errors', (done) => {
@@ -153,23 +170,28 @@ describe('# FileObjectUpload tests', () => {
         const encryptedContent = cipher.read();
         const expectedHash = ripemd160(sha256(encryptedContent)).toString('hex');
 
-        sandbox.stub(bridge, 'sendShardToNode').returns(new INXTRequest(config, Methods.Post, 'http://localhost:54321/shards/' + expectedHash, false));
+        sandbox
+          .stub(bridge, 'sendShardToNode')
+          .returns(new INXTRequest(config, Methods.Post, 'http://localhost:54321/shards/' + expectedHash, false));
         sandbox.stub(fileObject, 'negotiateContract').returns(new Promise((r) => r(getContractNegotiated())));
 
         fileObject.encrypt();
 
         let stopFarmer;
 
-        startFarmer().then((stop) => {
-          stopFarmer = stop;
+        startFarmer()
+          .then((stop) => {
+            stopFarmer = stop;
 
-          return fileObject.upload(() => null);
-        }).then(() => {
-          stopFarmer();
-        }).finally(() => { 
-          done();
-        });
-      });      
+            return fileObject.upload(() => null);
+          })
+          .then(() => {
+            stopFarmer();
+          })
+          .finally(() => {
+            done();
+          });
+      });
     });
   });
 
@@ -183,15 +205,20 @@ describe('# FileObjectUpload tests', () => {
     it('Should pipe file content to cipher through funnel', (done) => {
       const filecontent = 'eeee';
       const filecontentStream = Readable.from(filecontent);
-      fileObject = new FileObjectUpload({
-        bridgePass: '',
-        bridgeUser: '',
-        bridgeUrl: 'https://api.internxt.com'
-      }, {
-        content: filecontentStream,
-        name: '',
-        size: 1
-      }, 'fakeBucketId', logger);
+      fileObject = new FileObjectUpload(
+        {
+          bridgePass: '',
+          bridgeUser: '',
+          bridgeUrl: 'https://api.internxt.com',
+        },
+        {
+          content: filecontentStream,
+          name: '',
+          size: 1,
+        },
+        'fakeBucketId',
+        logger,
+      );
 
       fileObject.encrypt();
       fileObject.cipher.on('data', () => {});
@@ -202,8 +229,6 @@ describe('# FileObjectUpload tests', () => {
   });
 
   describe('uploadShard()', () => {
-    it('Should call the correct endpoint', () => {
-
-    });
+    it('Should call the correct endpoint', () => {});
   });
 });

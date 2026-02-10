@@ -11,7 +11,7 @@ describe('# ActionState tests', () => {
     state.on(Events.Download.Abort, abortListener);
     state.stop();
 
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
 
     expect(abortListener.calledOnce);
   });
@@ -23,8 +23,8 @@ describe('# ActionState tests', () => {
     state.on(Events.Upload.Abort, abortListener);
     state.stop();
 
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
 
     expect(abortListener.calledOnce);
   });
-})
+});

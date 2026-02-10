@@ -76,10 +76,7 @@ export class ShardObject extends EventEmitter {
     return get<{ result: string }>(url, { useProxy }).then((res) => res.result);
   }
 
-  static async getPutStream(
-    url: PutUrl,
-    useProxy: boolean,
-  ): Promise<Writable> {
+  static async getPutStream(url: PutUrl, useProxy: boolean): Promise<Writable> {
     let free: undefined | (() => void);
     let targetUrl = url;
 
@@ -90,34 +87,37 @@ export class ShardObject extends EventEmitter {
     }
     const formattedUrl = new URL(targetUrl);
     const request = formattedUrl.protocol === 'http:' ? httpRequest : httpsRequest;
-    
-    return request({
-      headers: {
-        'Content-Type': 'application/octet-stream'
+
+    return request(
+      {
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+        hostname: formattedUrl.hostname,
+        port: formattedUrl.port,
+        protocol: formattedUrl.protocol,
+        path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
+        method: 'PUT',
       },
-      hostname: formattedUrl.hostname,
-      port: formattedUrl.port,
-      protocol: formattedUrl.protocol,
-      path: formattedUrl.pathname + '?' + formattedUrl.searchParams.toString(),
-      method: 'PUT',
-    }, (res) => {
-      if (res.statusCode !== 200) {
-        console.log('Request failed with status ' + res.statusCode);
-      }
+      (res) => {
+        if (res.statusCode !== 200) {
+          console.log('Request failed with status ' + res.statusCode);
+        }
 
-      const chunks: Buffer[] = [];
+        const chunks: Buffer[] = [];
 
-      res.on('data', chunks.push.bind(chunks));
-      res.once('error', (err) => {
-        console.log('err', err);
-      });
-      res.once('end', () => {
-        // const body = Buffer.concat(chunks);
-        // console.log(body.toString());
-        free?.();
-      });
-    });
-  } 
+        res.on('data', chunks.push.bind(chunks));
+        res.once('error', (err) => {
+          console.log('err', err);
+        });
+        res.once('end', () => {
+          // const body = Buffer.concat(chunks);
+          // console.log(body.toString());
+          free?.();
+        });
+      },
+    );
+  }
 
   static async putStreamTwo(
     url: PutUrl,
@@ -138,7 +138,7 @@ export class ShardObject extends EventEmitter {
     const putRequest = request(
       {
         headers: {
-          'Content-Type': 'application/octet-stream'
+          'Content-Type': 'application/octet-stream',
         },
         hostname: formattedUrl.hostname,
         port: formattedUrl.port,

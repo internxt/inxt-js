@@ -122,11 +122,11 @@ export class ExchangeReport {
 
   error() {
     this.DownloadError();
-    this.sendReport().catch(() => { });
+    this.sendReport().catch(() => {});
   }
 
   success() {
     this.DownloadOk();
-    this.sendReport().catch(() => { });
+    this.sendReport().catch(() => {});
   }
 }

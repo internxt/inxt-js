@@ -35,7 +35,7 @@ function startServer(cb: () => void) {
       res.status(200).send({ id: 'id' });
     } catch (err) {
       console.log('err', err);
-      res.status(400).send({ error: err })
+      res.status(400).send({ error: err });
     }
   });
 }
@@ -48,8 +48,8 @@ function closeServer(cb: () => void) {
 
 type CloseServerFunction = () => Promise<unknown>;
 
-const startApp = () => new Promise(r => startServer(() => r(null)));
-const closeApp = () => new Promise(r => closeServer(() => r(null)));
+const startApp = () => new Promise((r) => startServer(() => r(null)));
+const closeApp = () => new Promise((r) => closeServer(() => r(null)));
 
 export async function spawnBridge(): Promise<CloseServerFunction> {
   await startApp();

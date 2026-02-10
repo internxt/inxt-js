@@ -1,4 +1,4 @@
-import { logger } from "../../src/lib/utils/logger";
+import { logger } from '../../src/lib/utils/logger';
 
 export function getSilentLogger() {
   logger.silent = true;

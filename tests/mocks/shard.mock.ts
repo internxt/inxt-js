@@ -1,4 +1,4 @@
-import { Shard } from "../../src/api/shard";
+import { Shard } from '../../src/api/shard';
 
 const shard: Shard = {
   farmer: {
@@ -7,7 +7,7 @@ const shard: Shard = {
     nodeID: 'nodeId',
     port: 3000,
     protocol: '',
-    userAgent: ''
+    userAgent: '',
   },
   hash: '',
   index: 0,
@@ -16,7 +16,7 @@ const shard: Shard = {
   replaceCount: 0,
   size: 0,
   token: 'TOKEN',
-  healthy: true
+  healthy: true,
 };
 
 export function generateShard(): Shard {

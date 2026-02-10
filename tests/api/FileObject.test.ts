@@ -6,15 +6,20 @@ import { DownloadStrategy } from '../../src/lib/core';
 let fileObject: FileObject;
 
 beforeEach(() => {
-  fileObject = new FileObject({
-    bridgePass: '',
-    bridgeUser: '',
-    bridgeUrl: '',
-    appDetails: {
-      clientName: '',
-      clientVersion: '',
-    }
-  }, '', '', createStubInstance(DownloadStrategy))
+  fileObject = new FileObject(
+    {
+      bridgePass: '',
+      bridgeUser: '',
+      bridgeUrl: '',
+      appDetails: {
+        clientName: '',
+        clientVersion: '',
+      },
+    },
+    '',
+    '',
+    createStubInstance(DownloadStrategy),
+  );
 });
 
 describe('# FileObject', () => {
