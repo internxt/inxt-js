@@ -161,7 +161,7 @@ export class Environment {
 
     if (!this.config.bridgeUrl) {
       opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
-      
+
       return uploadState;
     }
 
@@ -185,20 +185,21 @@ export class Environment {
       this.config.bridgeUrl,
       {
         user: this.config.bridgeUser,
-        pass: this.config.bridgePass
+        pass: this.config.bridgePass,
       },
       opts.progressCallback,
       uploadState,
       this.config.appDetails,
-    ).then((fileId) => {
-      opts.finishedCallback(null, fileId);
-    }).catch((err) => {
-      opts.finishedCallback(
-        err.message === 'The operation was aborted' ? 
-          new Error('Process killed by user') : 
-          err, 
-        null);
-    });
+    )
+      .then((fileId) => {
+        opts.finishedCallback(null, fileId);
+      })
+      .catch((err) => {
+        opts.finishedCallback(
+          err.message === 'The operation was aborted' ? new Error('Process killed by user') : err,
+          null,
+        );
+      });
 
     return uploadState;
   }
@@ -214,7 +215,7 @@ export class Environment {
 
     if (!this.config.bridgeUrl) {
       opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
-      
+
       return uploadState;
     }
 
@@ -232,20 +233,21 @@ export class Environment {
       this.config.bridgeUrl,
       {
         user: this.config.bridgeUser,
-        pass: this.config.bridgePass
+        pass: this.config.bridgePass,
       },
       this.config.appDetails,
       opts.progressCallback,
-      uploadState
-    ).then((fileId) => {
-      opts.finishedCallback(null, fileId);
-    }).catch((err) => {
-      opts.finishedCallback(
-        err.message === 'The operation was aborted' ? 
-          new Error('Process killed by user') : 
-          err, 
-        null);
-    });
+      uploadState,
+    )
+      .then((fileId) => {
+        opts.finishedCallback(null, fileId);
+      })
+      .catch((err) => {
+        opts.finishedCallback(
+          err.message === 'The operation was aborted' ? new Error('Process killed by user') : err,
+          null,
+        );
+      });
 
     return uploadState;
   };
@@ -288,13 +290,13 @@ export class Environment {
     }
 
     const [downloadPromise, stream] = downloadFileV2(
-      fileId, 
-      bucketId, 
-      this.config.encryptionKey, 
+      fileId,
+      bucketId,
+      this.config.encryptionKey,
       this.config.bridgeUrl,
       {
         user: this.config.bridgeUser,
-        pass: this.config.bridgePass
+        pass: this.config.bridgePass,
       },
       this.config.appDetails,
       opts.progressCallback,

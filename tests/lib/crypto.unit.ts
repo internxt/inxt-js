@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { EncryptFilename, DecryptFileName, GenerateBucketKey } from '../../src/lib/crypto'
+import { EncryptFilename, DecryptFileName, GenerateBucketKey } from '../../src/lib/crypto';
 
 const mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const bucketId = '0123456789abcdef0000';
@@ -19,13 +19,15 @@ describe('# crypto', () => {
     const iv = Buffer.from(encrypted, 'base64').slice(16, 48);
     expect(iv).eql(expectedIv);
     // Expected result (From NODE-LIB)
-    const expectedResult = 'BzWLgZkGLrMR820uXDi0rBHujN+jasGdy200iksL1Tocl4LSxuFxjTj5uRurJEJYdwMYXlfhnQsvfBdzn2tXV7bewyEe6QLoeQ==';
+    const expectedResult =
+      'BzWLgZkGLrMR820uXDi0rBHujN+jasGdy200iksL1Tocl4LSxuFxjTj5uRurJEJYdwMYXlfhnQsvfBdzn2tXV7bewyEe6QLoeQ==';
     expect(encrypted).to.be.equals(expectedResult);
   });
 
   it('should decrypt filename', async () => {
-    const encryptedFilename = 'BzWLgZkGLrMR820uXDi0rBHujN+jasGdy200iksL1Tocl4LSxuFxjTj5uRurJEJYdwMYXlfhnQsvfBdzn2tXV7bewyEe6QLoeQ==';
+    const encryptedFilename =
+      'BzWLgZkGLrMR820uXDi0rBHujN+jasGdy200iksL1Tocl4LSxuFxjTj5uRurJEJYdwMYXlfhnQsvfBdzn2tXV7bewyEe6QLoeQ==';
     const decrypted = await DecryptFileName(mnemonic, bucketId, encryptedFilename);
     expect(decrypted).to.be.equals('dummy_filename0123456.xyz');
-  })
-})
+  });
+});

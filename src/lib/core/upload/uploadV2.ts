@@ -1,4 +1,4 @@
-import { Cipher, createCipheriv, randomBytes } from 'crypto';
+import { Cipheriv, createCipheriv, randomBytes } from 'crypto';
 import { Readable, Writable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { pipeline as undiciPipeline } from 'undici';
@@ -27,11 +27,7 @@ function putStream(url: string, fileSize?: number): Writable {
     headers = { ...headers, 'Content-Length': fileSize.toString() };
   }
 
-  return undiciPipeline(
-    formattedUrl,
-    { headers, method: 'PUT' },
-    (data) => data.body,
-  );
+  return undiciPipeline(formattedUrl, { headers, method: 'PUT' }, (data) => data.body);
 }
 
 export function uploadFileV2(
@@ -58,7 +54,7 @@ export function uploadFileV2(
       customHeaders: {
         lib: 'inxt-js',
         ...appDetails.customHeaders,
-      }
+      },
     },
     {
       bridgeUser: creds.user,
@@ -66,7 +62,7 @@ export function uploadFileV2(
     },
   );
 
-  let cipher: Cipher;
+  let cipher: Cipheriv;
   const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
 
   progress.on(ProgressEvents.Progress, (progress: number) => {
@@ -139,7 +135,7 @@ export function uploadFileMultipart(
       customHeaders: {
         lib: 'inxt-js',
         ...appDetails.customHeaders,
-      }
+      },
     },
     {
       bridgeUser: creds.user,
@@ -147,7 +143,7 @@ export function uploadFileMultipart(
     },
   );
 
-  let cipher: Cipher;
+  let cipher: Cipheriv;
   const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
   const partSize = 15 * 1024 * 1024;
   const parts = Math.ceil(fileSize / partSize);
@@ -208,6 +204,3 @@ export function uploadFileMultipart(
     parts,
   );
 }
-
-
-

@@ -3,12 +3,12 @@ import { Readable } from 'stream';
 import { logger } from '../../utils/logger';
 import { request } from 'undici';
 
-type Part = { PartNumber: number, ETag: string };
+type Part = { PartNumber: number; ETag: string };
 
 async function uploadPart(
   partUrl: string,
-  partStream: { size: number, stream: Buffer, index: number },
-  signal?: AbortSignal
+  partStream: { size: number; stream: Buffer; index: number },
+  signal?: AbortSignal,
 ) {
   const { statusCode, headers, body } = await request(partUrl, {
     signal,
@@ -16,19 +16,19 @@ async function uploadPart(
     method: 'PUT',
     headers: {
       'Content-Length': partStream.size.toString(),
-    }
+    },
   });
 
   if (statusCode === 200) {
     return headers.etag?.toString();
   }
 
-  throw (new Error(`Failed to upload part: ${statusCode} ${await body.text()}`));
+  throw new Error(`Failed to upload part: ${statusCode} ${await body.text()}`);
 }
 
 interface PartUpload {
   url: string;
-  source: { size: number, stream: Buffer, index: number };
+  source: { size: number; stream: Buffer; index: number };
 }
 
 export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
@@ -41,12 +41,7 @@ export async function uploadParts(partUrls: string[], stream: Readable, signal: 
   let partBuffer = Buffer.alloc(0);
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
-    logger.debug(
-      'Uploading part %s of %s => %s bytes',
-      part.source.index,
-      partUrls.length,
-      part.source.size
-    );
+    logger.debug('Uploading part %s of %s => %s bytes', part.source.index, partUrls.length, part.source.size);
 
     try {
       const etag = await uploadPart(part.url, part.source, signal);

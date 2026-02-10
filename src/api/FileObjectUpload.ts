@@ -41,7 +41,7 @@ export class FileObjectUpload extends EventEmitter implements FileObjectUploadPr
   index: Buffer;
   frameId: string;
   bucketId: string;
-  fileEncryptionKey = Buffer.alloc(0);
+  fileEncryptionKey: Buffer<ArrayBufferLike> = Buffer.alloc(0);
 
   constructor(config: EnvironmentConfig, name: string, bucketId: string, uploader: UploadStrategy, api?: InxtApiI) {
     super();

@@ -1,5 +1,5 @@
 import { eachLimit, queue, retry } from 'async';
-import { createDecipheriv, Decipher, randomBytes } from 'crypto';
+import { createDecipheriv, Decipheriv, randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { Events } from '..';
 
@@ -19,9 +19,9 @@ export interface DownloadOneStreamStrategyParams extends DownloadParams {
 }
 
 export type DownloadOneStreamStrategyLabel = 'OneStreamOnly';
-export type DownloadOneStreamStrategyObject = { 
-  label: DownloadOneStreamStrategyLabel
-  params: DownloadOneStreamStrategyParams 
+export type DownloadOneStreamStrategyObject = {
+  label: DownloadOneStreamStrategyLabel;
+  params: DownloadOneStreamStrategyParams;
 };
 export type DownloadOneStreamStrategyFunction = (
   bucketId: string,
@@ -34,7 +34,7 @@ export class DownloadOneStreamStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
   private internalBuffer: Buffer[] = [];
   private downloadsProgress: number[] = [];
-  private decipher: Decipher;
+  private decipher: Decipheriv;
   private concurrency: number;
   private useProxy: boolean;
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});

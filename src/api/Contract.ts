@@ -10,7 +10,7 @@ export interface ContractMeta {
     nodeID: string;
     lastSeen: number;
   };
-  url: string
+  url: string;
 }
 
 export class Contract {

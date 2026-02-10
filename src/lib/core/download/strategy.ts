@@ -13,8 +13,8 @@ export type DownloadStrategyFunction<T> = (
 ) => ActionState;
 
 export abstract class DownloadStrategy extends EventEmitter implements Abortable {
-  fileEncryptionKey = Buffer.alloc(0);
-  iv = Buffer.alloc(0);
+  fileEncryptionKey: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  iv: Buffer<ArrayBufferLike> = Buffer.alloc(0);
 
   /**
    * Should return the initialization vector used for file encryption

@@ -14,13 +14,12 @@ import Errors from './errors';
 import { ChunkSizeTransform } from '../../utils/streams/Chunker';
 import { AppDetails } from '@internxt/sdk/dist/shared';
 
-
 export function downloadFileV2(
   fileId: string,
   bucketId: string,
   mnemonic: string,
   bridgeUrl: string,
-  creds: { pass: string, user: string },
+  creds: { pass: string; user: string },
   appDetails: AppDetails,
   notifyProgress: DownloadProgressCallback,
   onV2Confirmed: () => void,
@@ -28,20 +27,24 @@ export function downloadFileV2(
   chunkSize?: number,
 ): [Promise<void>, PassThrough] {
   const outStream = new PassThrough();
-  const network = Network.client(bridgeUrl, {
-    ...appDetails,
-    customHeaders: {
-      lib: 'inxt-js',
-      ...appDetails.customHeaders,
-    }
-  }, {
-    bridgeUser: creds.user,
-    userId: sha256(Buffer.from(creds.pass)).toString('hex')
-  });
+  const network = Network.client(
+    bridgeUrl,
+    {
+      ...appDetails,
+      customHeaders: {
+        lib: 'inxt-js',
+        ...appDetails.customHeaders,
+      },
+    },
+    {
+      bridgeUser: creds.user,
+      userId: sha256(Buffer.from(creds.pass)).toString('hex'),
+    },
+  );
 
   const fileEncryptedSlices: {
-    stream: Readable,
-    hash: string
+    stream: Readable;
+    hash: string;
   }[] = [];
 
   const downloadFileStep: DownloadFileFunction = async (downloadables) => {
@@ -50,7 +53,7 @@ export function downloadFileV2(
     for (const downloadable of downloadables.sort((dA, dB) => dA.index - dB.index)) {
       fileEncryptedSlices.push({
         hash: downloadable.hash,
-        stream: await getStream(downloadable.url)
+        stream: await getStream(downloadable.url),
       });
     }
   };
@@ -73,19 +76,19 @@ export function downloadFileV2(
       if (chunkSize) {
         const chunker = new ChunkSizeTransform(chunkSize);
         await pipeline(fileEncryptedSlice.stream, hasher, decipher, progress, chunker, outStream, {
-          signal: abortController.signal
+          signal: abortController.signal,
         });
       } else {
         await pipeline(fileEncryptedSlice.stream, hasher, decipher, progress, outStream, {
-          signal: abortController.signal
+          signal: abortController.signal,
         });
       }
-      
+
       const calculatedHash = hasher.getHash().toString('hex');
       const expectedHash = fileEncryptedSlice.hash;
 
       if (calculatedHash !== expectedHash) {
-        throw Errors.downloadHashMismatchError; 
+        throw Errors.downloadHashMismatchError;
       }
     }
 
@@ -93,10 +96,10 @@ export function downloadFileV2(
   };
 
   const downloadPromise = downloadFile(
-    fileId, 
-    bucketId, 
-    mnemonic, 
-    network, 
+    fileId,
+    bucketId,
+    mnemonic,
+    network,
     {
       validateMnemonic: (mnemonic) => {
         return validateMnemonic(mnemonic);
@@ -105,15 +108,15 @@ export function downloadFileV2(
       randomBytes,
       generateFileKey: (mnemonic, bucketId, index) => {
         return GenerateFileKey(mnemonic, bucketId, index as Buffer | string);
-      }
-    }, 
-    Buffer.from, 
-    downloadFileStep, 
-    decryptFileStep
+      },
+    },
+    Buffer.from,
+    downloadFileStep,
+    decryptFileStep,
   ).catch((err) => {
     if (err instanceof FileVersionOneError) {
       throw err;
-    } 
+    }
     outStream.emit('error', err);
   });
 

@@ -1,4 +1,4 @@
-import { createDecipheriv, Decipher, randomBytes } from 'crypto';
+import { createDecipheriv, Decipheriv, randomBytes } from 'crypto';
 import { Events } from '..';
 
 import { Abortable, ActionState, Shard } from '../../../api';
@@ -30,7 +30,7 @@ export type DownloadOneShardStrategyFunction = (
 export class DownloadOneShardStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];
   private downloadProgress = 0;
-  private decipher: Decipher;
+  private decipher: Decipheriv;
   private useProxy: boolean;
   private progressIntervalId: NodeJS.Timeout = setTimeout(() => {});
   private aborted = false;
@@ -87,10 +87,7 @@ export class DownloadOneShardStrategy extends DownloadStrategy {
       });
 
       await new Promise((resolve, reject) => {
-        const downloadPipeline = encryptedFileStream
-          .pipe(progressNotifier)
-          .pipe(hasher)
-          .pipe(this.decipher);
+        const downloadPipeline = encryptedFileStream.pipe(progressNotifier).pipe(hasher).pipe(this.decipher);
 
         this.addAbortable(() => downloadPipeline.destroy());
 

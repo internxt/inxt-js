@@ -138,21 +138,24 @@ export class UploadOneShardStrategy extends UploadStrategy {
       const merkleTree = generateMerkleTree();
 
       await new Promise((resolve, reject) => {
-        hashingPipeline.on('data', () => {
-          // forces stream to flow
-        }).once('error', (err) => {
-          reject(err);
-        }).once('end', () => {
-          this.shardMeta = {
-            hash: hashingStepHasher.getHash().toString('hex'),
-            challenges_as_str: merkleTree.challenges_as_str,
-            index: 0,
-            parity: false,
-            size: this.sourceToUpload.size,
-            tree: merkleTree.leaf,
-          };
-          resolve(null);
-        });
+        hashingPipeline
+          .on('data', () => {
+            // forces stream to flow
+          })
+          .once('error', (err) => {
+            reject(err);
+          })
+          .once('end', () => {
+            this.shardMeta = {
+              hash: hashingStepHasher.getHash().toString('hex'),
+              challenges_as_str: merkleTree.challenges_as_str,
+              index: 0,
+              parity: false,
+              size: this.sourceToUpload.size,
+              tree: merkleTree.leaf,
+            };
+            resolve(null);
+          });
       });
 
       this.stopNotifyingEncryptProgress();
@@ -172,7 +175,7 @@ export class UploadOneShardStrategy extends UploadStrategy {
       uploadStepProgressNotifier.on(ProgressEvents.Progress, (progress) => {
         this.uploadProgress = progress;
       });
-      
+
       const uploadPipeline = uploadStepContent
         .pipe(uploadStepCipher)
         .pipe(uploadStepHasher)
@@ -188,13 +191,18 @@ export class UploadOneShardStrategy extends UploadStrategy {
       this.addToAbortables(() => this.stopNotifyingUploadProgress());
 
       await new Promise((resolve, reject) => {
-        ShardObject.putStreamTwo(contract.url, uploadPipeline, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(null);
-          }
-        }, this.useProxy);
+        ShardObject.putStreamTwo(
+          contract.url,
+          uploadPipeline,
+          (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(null);
+            }
+          },
+          this.useProxy,
+        );
       });
 
       const hashCalculatedUploading = uploadStepHasher.getHash().toString('hex');
@@ -209,10 +217,7 @@ export class UploadOneShardStrategy extends UploadStrategy {
         this.emit(Events.Upload.Finished, { result: [this.shardMeta] });
       } else {
         throw new Error(
-          'Hash mismatch: Uploading was ' + 
-          hashCalculatedUploading + 
-          ' hashing was ' + 
-          hashCalculatedHashing
+          'Hash mismatch: Uploading was ' + hashCalculatedUploading + ' hashing was ' + hashCalculatedHashing,
         );
       }
     } catch (err) {
