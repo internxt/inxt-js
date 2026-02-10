@@ -17,8 +17,8 @@ export type UploadStrategyObject = UploadOneStreamStrategyObject | UploadOneShar
 export type UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => ActionState;
 
 export abstract class UploadStrategy extends EventEmitter implements Abortable {
-  fileEncryptionKey = Buffer.alloc(0);
-  iv = Buffer.alloc(0);
+  fileEncryptionKey: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  iv: Buffer<ArrayBufferLike> = Buffer.alloc(0);
 
   /**
    * Should return the initialization vector used for file encryption

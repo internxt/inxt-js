@@ -119,11 +119,11 @@ export function EncryptMetaBuffer(fileMeta: string, encryptKey: Buffer, iv: Buff
   return Buffer.concat([digest, iv, cipherTextBuf]);
 }
 
-export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipher {
+export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipheriv {
   return crypto.createDecipheriv('aes-256-ctr', key, iv);
 }
 
-export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipher {
+export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipheriv {
   return crypto.createCipheriv('aes-256-ctr', key, iv);
 }
 

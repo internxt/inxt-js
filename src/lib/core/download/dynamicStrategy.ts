@@ -28,8 +28,8 @@ export class DownloadDynamicStrategy<
   private strategy?: DownloadStrategy;
   private params: DownloadOneShardStrategyParams | DownloadOneStreamStrategyParams;
 
-  iv = Buffer.alloc(0);
-  fk = Buffer.alloc(0);
+  iv: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  fk: Buffer<ArrayBufferLike> = Buffer.alloc(0);
 
   constructor(
     params: T extends DownloadOneShardStrategy ? DownloadOneShardStrategyParams : DownloadOneStreamStrategyParams,
