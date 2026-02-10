@@ -13,7 +13,7 @@
     "test": "jest",
     "test:watch": "jest --watch --detectOpenHandles",
     "lint": "eslint ./src",
-    "lint:fix": "yarn run lint -- --fix",
+    "lint:fix": "yarn run lint --fix",
     "cli": "ts-node --files src/cli/index.ts"
   },
   "keywords": [],

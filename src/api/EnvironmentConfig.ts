@@ -1,4 +1,4 @@
-import { AppDetails } from "@internxt/sdk/dist/shared";
+import { AppDetails } from '@internxt/sdk/dist/shared';
 
 export interface EnvironmentConfig {
   bridgeUrl?: string;
