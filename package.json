@@ -14,7 +14,8 @@
     "test:watch": "jest --watch --detectOpenHandles",
     "lint": "eslint ./src",
     "lint:fix": "yarn run lint --fix",
-    "cli": "ts-node --files src/cli/index.ts"
+    "cli": "ts-node --files src/cli/index.ts",
+    "format": "prettier --write src/**/*.{js,jsx,tsx,ts} tests/**/*.{js,jsx,tsx,ts}"
   },
   "keywords": [],
   "author": "",
