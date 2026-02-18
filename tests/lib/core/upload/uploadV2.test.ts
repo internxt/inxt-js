@@ -1,4 +1,4 @@
-import sinon from 'sinon';
+import { describe, expect, it } from 'vitest';
 import { fail } from 'node:assert';
 import { Readable } from 'stream';
 import { UploadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors';
@@ -20,10 +20,6 @@ const fileContent = 'some text that i have in the file';
 const fileBytes = getFileBytes(fileContent);
 const validMnemonic = getValidMnemonic();
 const invalidMnemonic = getInvalidMnemonic();
-
-beforeEach(() => {
-  sinon.reset();
-});
 
 describe('uploadFileV2()', () => {
   describe('Should handle errors properly', () => {

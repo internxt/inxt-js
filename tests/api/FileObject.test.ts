@@ -1,28 +1,28 @@
-import { createStubInstance } from 'sinon';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { FileObject } from '../../src/api';
-import { DownloadStrategy } from '../../src/lib/core';
+import { DownloadOneShardStrategy, DownloadOneShardStrategyParams } from '../../src/lib/core';
 
 let fileObject: FileObject;
 
-beforeEach(() => {
-  fileObject = new FileObject(
-    {
-      bridgePass: '',
-      bridgeUser: '',
-      bridgeUrl: '',
-      appDetails: {
-        clientName: '',
-        clientVersion: '',
-      },
-    },
-    '',
-    '',
-    createStubInstance(DownloadStrategy),
-  );
-});
-
 describe('# FileObject', () => {
+  beforeEach(() => {
+    fileObject = new FileObject(
+      {
+        bridgePass: '',
+        bridgeUser: '',
+        bridgeUrl: '',
+        appDetails: {
+          clientName: '',
+          clientVersion: '',
+        },
+      },
+      '',
+      '',
+      new DownloadOneShardStrategy({} as DownloadOneShardStrategyParams),
+    );
+  });
+
   it('Should set the file encryption key', () => {
     const fk = Buffer.from('fk');
 
