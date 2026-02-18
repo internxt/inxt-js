@@ -1,5 +1,4 @@
-import sinon from 'sinon';
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 import { fail } from 'node:assert';
 import { DownloadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors';
 import { downloadFileV2 } from '../../../../src/lib/core/download/downloadV2';
@@ -10,10 +9,6 @@ const bucketId = getBucketId();
 const fileId = getFileId();
 const bridgeUrl = getBridgeUrl();
 const invalidMnemonic = getInvalidMnemonic();
-
-beforeEach(() => {
-  sinon.reset();
-});
 
 describe('downloadFileV2()', () => {
   describe('Should handle errors properly', () => {

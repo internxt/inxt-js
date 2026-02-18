@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it } from 'vitest';
 import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 
 import { ContractMeta } from '../../../../src/api';
-import { Events, NegotiateContract, upload, UploadOneShardStrategy } from '../../../../src/lib/core';
+import { Events, UploadOneShardStrategy } from '../../../../src/lib/core';
 import { ShardMeta } from '../../../../src/lib/models';
 
 let uploadStrategy: UploadOneShardStrategy;
@@ -26,21 +27,21 @@ async function fakeNegotiateContract(shardMeta: ShardMeta): Promise<ContractMeta
   };
 }
 
-beforeEach(() => {
-  uploadStrategy = new UploadOneShardStrategy({
-    sourceToHash: {
-      size: content.length,
-      stream: Readable.from(content),
-    },
-    sourceToUpload: {
-      size: content.length,
-      stream: Readable.from(content),
-    },
-    useProxy: false,
-  });
-});
-
 describe('UploadOneShardStrategy', () => {
+  beforeEach(() => {
+    uploadStrategy = new UploadOneShardStrategy({
+      sourceToHash: {
+        size: content.length,
+        stream: Readable.from(content),
+      },
+      sourceToUpload: {
+        size: content.length,
+        stream: Readable.from(content),
+      },
+      useProxy: false,
+    });
+  });
+
   describe('setFileEncryptionKey()', () => {
     describe('File Encryption Key validation', () => {
       describe('Size validation', () => {
@@ -101,18 +102,15 @@ describe('UploadOneShardStrategy', () => {
 
   describe('abort()', () => {
     describe('Events emitted', () => {
-      it('Should emit an upload abort event if upload is aborted', (done) => {
-        const timeout = setTimeout(() => {
-          expect(true).toBeFalsy();
-          done();
-        }, 100);
+      it('Should emit an upload abort event if upload is aborted', () => {
+        let emitted = false;
 
         uploadStrategy.once(Events.Upload.Abort, () => {
-          clearTimeout(timeout);
-          expect(true).toBeTruthy();
-          done();
+          emitted = true;
         });
         uploadStrategy.abort();
+
+        expect(emitted).toBe(true);
       });
     });
   });

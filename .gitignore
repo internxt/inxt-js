@@ -20,3 +20,4 @@ lab/files
 build
 .npmrc
 dist
+coverage
