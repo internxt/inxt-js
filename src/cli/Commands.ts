@@ -3,6 +3,7 @@ import { buildCommand } from './CommandInterface';
 import { createBucket } from './create-bucket';
 import { deleteBucket } from './delete-bucket';
 import { downloadFile } from './download-file';
+import { downloadFileMultipart } from './download-file-multipart';
 import { getDownloadLinks } from './get-download-links';
 import { getFileInfo } from './get-filo-info';
 import { renameFile } from './rename-file';
@@ -104,6 +105,15 @@ export const getDownloadLinksCommand = buildCommand({
   options: [],
 }).action((bucketId: string, fileIdsSeparatedByCommas: string) => {
   getDownloadLinks(bucketId, fileIdsSeparatedByCommas.split(',')).finally(notifyProgramFinished('get-download-links'));
+});
+
+export const downloadFileMultipartCommand = buildCommand({
+  version: '0.0.1',
+  command: 'download-file-multipart <fileId> <fileSize> <path>',
+  description: 'Downloads a file by parts',
+  options: [],
+}).action((fileId: string, fileSize: string, path: string) => {
+  downloadFileMultipart(fileId, parseInt(fileSize), path).finally(notifyProgramFinished('download-file-multipart'));
 });
 
 // export const downloadFolderZippedCommand = buildCommand({
