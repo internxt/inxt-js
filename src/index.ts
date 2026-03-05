@@ -150,25 +150,17 @@ export class Environment {
     this.config.encryptionKey = newEncryptionKey;
   }
 
-  uploadMultipartFile(bucketId: string, opts: UploadOptions): ActionState {
-    const uploadState = new ActionState(ActionTypes.Upload);
-
+  uploadMultipartFile: UploadStrategyFunction = async (bucketId: string, opts: UploadOptions) => {
     if (!this.config.encryptionKey) {
-      opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-
-      return uploadState;
+      throw Error('Mnemonic was not provided, please, provide a mnemonic');
     }
 
     if (!this.config.bridgeUrl) {
-      opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
-
-      return uploadState;
+      throw Error('Missing param "bridgeUrl"');
     }
 
     if (!bucketId) {
-      opts.finishedCallback(Error('Bucket id was not provided'), null);
-
-      return uploadState;
+      throw Error('Bucket id was not provided');
     }
 
     // if (!opts.parts || isNaN(opts.parts) || opts.parts < 2) {
@@ -177,7 +169,7 @@ export class Environment {
     //   return uploadState;
     // }
 
-    uploadFileMultipart(
+    return await uploadFileMultipart(
       opts.fileSize,
       opts.source,
       bucketId,
@@ -187,45 +179,26 @@ export class Environment {
         user: this.config.bridgeUser,
         pass: this.config.bridgePass,
       },
-      opts.progressCallback,
-      uploadState,
       this.config.appDetails,
-    )
-      .then((fileId) => {
-        opts.finishedCallback(null, fileId);
-      })
-      .catch((err) => {
-        opts.finishedCallback(
-          err.message === 'The operation was aborted' ? new Error('Process killed by user') : err,
-          null,
-        );
-      });
+      opts.progressCallback,
+      opts.abortSignal,
+    );
+  };
 
-    return uploadState;
-  }
-
-  upload: UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => {
-    const uploadState = new ActionState(ActionTypes.Upload);
-
+  upload: UploadStrategyFunction = async (bucketId: string, opts: UploadOptions) => {
     if (!this.config.encryptionKey) {
-      opts.finishedCallback(Error('Mnemonic was not provided, please, provide a mnemonic'), null);
-
-      return uploadState;
+      throw Error('Mnemonic was not provided, please, provide a mnemonic');
     }
 
     if (!this.config.bridgeUrl) {
-      opts.finishedCallback(Error('Missing param "bridgeUrl"'), null);
-
-      return uploadState;
+      throw Error('Missing param "bridgeUrl"');
     }
 
     if (!bucketId) {
-      opts.finishedCallback(Error('Bucket id was not provided'), null);
-
-      return uploadState;
+      throw Error('Bucket id was not provided');
     }
 
-    uploadFileV2(
+    return await uploadFileV2(
       opts.fileSize,
       opts.source,
       bucketId,
@@ -237,19 +210,8 @@ export class Environment {
       },
       this.config.appDetails,
       opts.progressCallback,
-      uploadState,
-    )
-      .then((fileId) => {
-        opts.finishedCallback(null, fileId);
-      })
-      .catch((err) => {
-        opts.finishedCallback(
-          err.message === 'The operation was aborted' ? new Error('Process killed by user') : err,
-          null,
-        );
-      });
-
-    return uploadState;
+      opts.abortSignal,
+    );
   };
 
   download: DownloadStrategyFunction<any> = (

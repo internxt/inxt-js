@@ -9,8 +9,6 @@ import { ALGORITHMS, Network } from '@internxt/sdk/dist/network';
 
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
 import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
-import { ActionState } from '../../../api';
-import { Events } from '..';
 import Errors from '../download/errors';
 import { UploadProgressCallback } from '.';
 import { logger } from '../../utils/logger';
@@ -39,14 +37,8 @@ export function uploadFileV2(
   creds: { pass: string; user: string },
   appDetails: AppDetails,
   notifyProgress: UploadProgressCallback,
-  actionState: ActionState,
+  abortSignal: AbortSignal,
 ): Promise<string> {
-  const abortController = new AbortController();
-
-  actionState.once(Events.Upload.Abort, () => {
-    abortController.abort();
-  });
-
   const network = Network.client(
     bridgeUrl,
     {
@@ -84,6 +76,7 @@ export function uploadFileV2(
     bucketId,
     mnemonic,
     fileSize,
+    abortSignal,
     async (algorithm, key, iv) => {
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
@@ -93,13 +86,13 @@ export function uploadFileV2(
 
       cipher = createCipheriv('aes-256-ctr', key as Buffer, iv as Buffer);
     },
-    async (url: string) => {
+    async (url) => {
       logger.debug('Uploading file to %s...', url);
 
       const hasher = new HashStream();
 
       await pipeline(source, cipher, hasher, progress, putStream(url, fileSize), {
-        signal: abortController.signal,
+        signal: abortSignal,
       });
 
       const fileHash = hasher.getHash().toString('hex');
@@ -118,16 +111,10 @@ export function uploadFileMultipart(
   mnemonic: string,
   bridgeUrl: string,
   creds: { pass: string; user: string },
-  notifyProgress: UploadProgressCallback,
-  actionState: ActionState,
   appDetails: AppDetails,
+  notifyProgress: UploadProgressCallback,
+  abortSignal: AbortSignal,
 ): Promise<string> {
-  const abortController = new AbortController();
-
-  actionState.once(Events.Upload.Abort, () => {
-    abortController.abort();
-  });
-
   const network = Network.client(
     bridgeUrl,
     {
@@ -167,6 +154,7 @@ export function uploadFileMultipart(
     bucketId,
     mnemonic,
     fileSize,
+    abortSignal,
     async (algorithm, key, iv) => {
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
@@ -181,16 +169,12 @@ export function uploadFileMultipart(
 
       const hasher = new HashStream();
       const pipelineToFinish = pipeline(source, cipher, hasher, progress, {
-        signal: abortController.signal,
+        signal: abortSignal,
       });
 
-      const parts = await uploadParts(urls, progress, abortController.signal);
+      const parts = await uploadParts(urls, progress, abortSignal);
 
       await pipelineToFinish;
-
-      if (abortController.signal.aborted) {
-        throw new Error('Process killed by user');
-      }
 
       const fileHash = hasher.getHash().toString('hex');
 

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
 import { UploadOneStreamStrategyObject, UploadOneShardStrategyObject, UploadOptions } from '.';
-import { Abortable, ActionState, ContractMeta } from '../../../api';
+import { Abortable, ContractMeta } from '../../../api';
 import { ShardMeta } from '../../models';
 
 export type NegotiateContract = (shardMeta: ShardMeta) => Promise<ContractMeta>;
@@ -14,7 +14,7 @@ export type UploadStrategyLabel = string;
 
 export type UploadStrategyObject = UploadOneStreamStrategyObject | UploadOneShardStrategyObject;
 
-export type UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => ActionState;
+export type UploadStrategyFunction = (bucketId: string, opts: UploadOptions) => Promise<string>;
 
 export abstract class UploadStrategy extends EventEmitter implements Abortable {
   fileEncryptionKey: Buffer<ArrayBufferLike> = Buffer.alloc(0);

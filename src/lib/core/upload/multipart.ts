@@ -8,7 +8,7 @@ type Part = { PartNumber: number; ETag: string };
 async function uploadPart(
   partUrl: string,
   partStream: { size: number; stream: Buffer; index: number },
-  signal?: AbortSignal,
+  signal: AbortSignal,
 ) {
   const { statusCode, headers, body } = await request(partUrl, {
     signal,
