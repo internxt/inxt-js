@@ -414,8 +414,8 @@
 
 "@internxt/sdk@1.15.2":
   version "1.15.2"
-  resolved "https://npm.pkg.github.com/download/@internxt/sdk/1.15.2/9c6e01d70ceb2035b451f373de18629c4d6ed9e9#9c6e01d70ceb2035b451f373de18629c4d6ed9e9"
-  integrity sha512-IDuCMm/ByA6MHux1Hh3YTvVIj/tjOGZUho2v/XKo1i+FnjnMnbTKXClUI2080BbcDiacxL1QD013+l5dREX5RQ==
+  resolved "https://registry.yarnpkg.com/@internxt/sdk/-/sdk-1.15.2.tgz#240dfb0f9ad3d18bf0ea32a36b15aabc5cc6bed9"
+  integrity sha512-Hial7LUBGQ0nUTQc9G6ANRCYyVseGA73JG9ZMQCywkqGlEBslrLod0TuxyvrEcvFLkfS4iNvATWGZGNFMsMceg==
   dependencies:
     axios "1.13.5"
     internxt-crypto "0.0.13"
