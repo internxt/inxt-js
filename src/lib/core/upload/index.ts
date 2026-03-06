@@ -13,14 +13,13 @@ export type UploadProgressCallback = (
   totalBytes: number | null,
 ) => void;
 export type EncryptProgressCallback = (progress: number) => void;
-export type UploadFinishCallback = (err: Error | null, response: string | null) => void;
 
 export interface UploadOptions {
   progressCallback: UploadProgressCallback;
-  finishedCallback: UploadFinishCallback;
   encryptProgressCallback?: EncryptProgressCallback;
   fileSize: number;
   source: Readable;
+  abortSignal?: AbortSignal;
 }
 
 type FileId = string;

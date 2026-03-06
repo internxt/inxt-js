@@ -31,7 +31,7 @@ interface PartUpload {
   source: { size: number; stream: Buffer; index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
+export async function uploadParts(partUrls: string[], stream: Readable, signal?: AbortSignal): Promise<Part[]> {
   const parts: Part[] = [];
   const concurrency = 10;
 
