@@ -22,7 +22,7 @@ import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './ser
 import { HashStream } from './lib/utils/streams';
 import { downloadFileV2 } from './lib/core/download/downloadV2';
 import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
-import { uploadFileMultipart, uploadFileV2 } from './lib/core/upload/uploadV2';
+import { upload as uploadFileV2 } from './lib/core/upload/uploadV2';
 
 type GetBucketsCallback = (err: Error | null, result: any) => void;
 
@@ -149,41 +149,6 @@ export class Environment {
   setEncryptionKey(newEncryptionKey: string): void {
     this.config.encryptionKey = newEncryptionKey;
   }
-
-  uploadMultipartFile: UploadStrategyFunction = async (bucketId: string, opts: UploadOptions) => {
-    if (!this.config.encryptionKey) {
-      throw Error('Mnemonic was not provided, please, provide a mnemonic');
-    }
-
-    if (!this.config.bridgeUrl) {
-      throw Error('Missing param "bridgeUrl"');
-    }
-
-    if (!bucketId) {
-      throw Error('Bucket id was not provided');
-    }
-
-    // if (!opts.parts || isNaN(opts.parts) || opts.parts < 2) {
-    //   opts.finishedCallback(Error('Invalid "parts" parameter. Expected number > 1'), null);
-
-    //   return uploadState;
-    // }
-
-    return await uploadFileMultipart(
-      opts.fileSize,
-      opts.source,
-      bucketId,
-      this.config.encryptionKey,
-      this.config.bridgeUrl,
-      {
-        user: this.config.bridgeUser,
-        pass: this.config.bridgePass,
-      },
-      this.config.appDetails,
-      opts.progressCallback,
-      opts.abortSignal,
-    );
-  };
 
   upload: UploadStrategyFunction = async (bucketId: string, opts: UploadOptions) => {
     if (!this.config.encryptionKey) {

@@ -5,7 +5,7 @@ import { pipeline as undiciPipeline } from 'undici';
 import { validateMnemonic } from 'bip39';
 
 import { uploadFile, uploadMultipartFile } from '@internxt/sdk/dist/network/upload';
-import { ALGORITHMS, Network } from '@internxt/sdk/dist/network';
+import { ALGORITHMS, Crypto, Network } from '@internxt/sdk/dist/network';
 
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
 import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
@@ -15,7 +15,20 @@ import { logger } from '../../utils/logger';
 import { uploadParts } from './multipart';
 import { AppDetails } from '@internxt/sdk/dist/shared';
 
-function putStream(url: string, fileSize?: number): Writable {
+const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100MB
+
+const crypto: Crypto = {
+  validateMnemonic: (mnemonic: string) => {
+    return validateMnemonic(mnemonic);
+  },
+  algorithm: ALGORITHMS.AES256CTR,
+  generateFileKey: (mnemonic, bucketId, index) => {
+    return GenerateFileKey(mnemonic, bucketId, index as Buffer);
+  },
+  randomBytes,
+};
+
+function putStream(url: string, fileSize: number): Writable {
   const formattedUrl = new URL(url);
   let headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',
@@ -29,50 +42,19 @@ function putStream(url: string, fileSize?: number): Writable {
 }
 
 export function uploadFileV2(
+  network: Network,
   fileSize: number,
   source: Readable,
   bucketId: string,
   mnemonic: string,
-  bridgeUrl: string,
-  creds: { pass: string; user: string },
-  appDetails: AppDetails,
-  notifyProgress: UploadProgressCallback,
+  progress: ProgressNotifier,
   abortSignal?: AbortSignal,
 ): Promise<string> {
-  const network = Network.client(
-    bridgeUrl,
-    {
-      ...appDetails,
-      customHeaders: {
-        lib: 'inxt-js',
-        ...appDetails.customHeaders,
-      },
-    },
-    {
-      bridgeUser: creds.user,
-      userId: sha256(Buffer.from(creds.pass)).toString('hex'),
-    },
-  );
-
   let cipher: Cipheriv;
-  const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
-
-  progress.on(ProgressEvents.Progress, (progress: number) => {
-    notifyProgress(progress, null, null);
-  });
 
   return uploadFile(
     network,
-    {
-      validateMnemonic: (mnemonic: string) => {
-        return validateMnemonic(mnemonic);
-      },
-      algorithm: ALGORITHMS.AES256CTR,
-      generateFileKey: (mnemonic, bucketId, index) => {
-        return GenerateFileKey(mnemonic, bucketId, index as Buffer);
-      },
-      randomBytes,
-    },
+    crypto,
     bucketId,
     mnemonic,
     fileSize,
@@ -105,52 +87,21 @@ export function uploadFileV2(
 }
 
 export function uploadFileMultipart(
+  network: Network,
   fileSize: number,
   source: Readable,
   bucketId: string,
   mnemonic: string,
-  bridgeUrl: string,
-  creds: { pass: string; user: string },
-  appDetails: AppDetails,
-  notifyProgress: UploadProgressCallback,
+  progress: ProgressNotifier,
   abortSignal?: AbortSignal,
 ): Promise<string> {
-  const network = Network.client(
-    bridgeUrl,
-    {
-      ...appDetails,
-      customHeaders: {
-        lib: 'inxt-js',
-        ...appDetails.customHeaders,
-      },
-    },
-    {
-      bridgeUser: creds.user,
-      userId: sha256(Buffer.from(creds.pass)).toString('hex'),
-    },
-  );
-
   let cipher: Cipheriv;
-  const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
   const partSize = 15 * 1024 * 1024;
   const parts = Math.ceil(fileSize / partSize);
 
-  progress.on(ProgressEvents.Progress, (progress: number) => {
-    notifyProgress(progress, null, null);
-  });
-
   return uploadMultipartFile(
     network,
-    {
-      validateMnemonic: (mnemonic: string) => {
-        return validateMnemonic(mnemonic);
-      },
-      algorithm: ALGORITHMS.AES256CTR,
-      generateFileKey: (mnemonic, bucketId, index) => {
-        return GenerateFileKey(mnemonic, bucketId, index as Buffer);
-      },
-      randomBytes,
-    },
+    crypto,
     bucketId,
     mnemonic,
     fileSize,
@@ -187,4 +138,43 @@ export function uploadFileMultipart(
     abortSignal,
     parts,
   );
+}
+
+export function upload(
+  fileSize: number,
+  source: Readable,
+  bucketId: string,
+  mnemonic: string,
+  bridgeUrl: string,
+  creds: { pass: string; user: string },
+  appDetails: AppDetails,
+  notifyProgress: UploadProgressCallback,
+  abortSignal?: AbortSignal,
+): Promise<string> {
+  const network = Network.client(
+    bridgeUrl,
+    {
+      ...appDetails,
+      customHeaders: {
+        lib: 'inxt-js',
+        ...appDetails.customHeaders,
+      },
+    },
+    {
+      bridgeUser: creds.user,
+      userId: sha256(Buffer.from(creds.pass)).toString('hex'),
+    },
+  );
+
+  const progress = new ProgressNotifier(fileSize, 2000, { emitClose: false });
+
+  progress.on(ProgressEvents.Progress, (progress: number) => {
+    notifyProgress(progress, null, null);
+  });
+
+  if (fileSize > MULTIPART_THRESHOLD) {
+    return uploadFileMultipart(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
+  }
+
+  return uploadFileV2(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
 }
