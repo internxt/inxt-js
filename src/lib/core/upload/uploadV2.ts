@@ -37,7 +37,7 @@ export function uploadFileV2(
   creds: { pass: string; user: string },
   appDetails: AppDetails,
   notifyProgress: UploadProgressCallback,
-  abortSignal: AbortSignal,
+  abortSignal?: AbortSignal,
 ): Promise<string> {
   const network = Network.client(
     bridgeUrl,
@@ -113,7 +113,7 @@ export function uploadFileMultipart(
   creds: { pass: string; user: string },
   appDetails: AppDetails,
   notifyProgress: UploadProgressCallback,
-  abortSignal: AbortSignal,
+  abortSignal?: AbortSignal,
 ): Promise<string> {
   const network = Network.client(
     bridgeUrl,

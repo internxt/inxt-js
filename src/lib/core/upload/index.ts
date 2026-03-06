@@ -19,7 +19,7 @@ export interface UploadOptions {
   encryptProgressCallback?: EncryptProgressCallback;
   fileSize: number;
   source: Readable;
-  abortSignal: AbortSignal;
+  abortSignal?: AbortSignal;
 }
 
 type FileId = string;

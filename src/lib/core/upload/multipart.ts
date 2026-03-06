@@ -8,7 +8,7 @@ type Part = { PartNumber: number; ETag: string };
 async function uploadPart(
   partUrl: string,
   partStream: { size: number; stream: Buffer; index: number },
-  signal: AbortSignal,
+  signal?: AbortSignal,
 ) {
   const { statusCode, headers, body } = await request(partUrl, {
     signal,
@@ -31,7 +31,7 @@ interface PartUpload {
   source: { size: number; stream: Buffer; index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable, signal: AbortSignal): Promise<Part[]> {
+export async function uploadParts(partUrls: string[], stream: Readable, signal?: AbortSignal): Promise<Part[]> {
   const parts: Part[] = [];
   const concurrency = 10;
 
