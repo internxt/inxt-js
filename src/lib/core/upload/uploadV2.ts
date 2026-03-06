@@ -76,7 +76,6 @@ export function uploadFileV2(
     bucketId,
     mnemonic,
     fileSize,
-    abortSignal,
     async (algorithm, key, iv) => {
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
@@ -101,6 +100,7 @@ export function uploadFileV2(
 
       return fileHash;
     },
+    abortSignal,
   );
 }
 
@@ -154,7 +154,6 @@ export function uploadFileMultipart(
     bucketId,
     mnemonic,
     fileSize,
-    abortSignal,
     async (algorithm, key, iv) => {
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
@@ -185,6 +184,7 @@ export function uploadFileMultipart(
         parts,
       };
     },
+    abortSignal,
     parts,
   );
 }
