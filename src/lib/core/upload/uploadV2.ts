@@ -1,7 +1,7 @@
 import { Cipheriv, createCipheriv, randomBytes } from 'crypto';
-import { Readable, Writable } from 'stream';
+import { PassThrough, Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { pipeline as undiciPipeline } from 'undici';
+import { request } from 'undici';
 import { validateMnemonic } from 'bip39';
 
 import { uploadFile, uploadMultipartFile } from '@internxt/sdk/dist/network/upload';
@@ -28,17 +28,27 @@ const crypto: Crypto = {
   randomBytes,
 };
 
-function putStream(url: string, fileSize: number): Writable {
-  const formattedUrl = new URL(url);
-  let headers: Record<string, string> = {
+async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',
   };
 
   if (fileSize) {
-    headers = { ...headers, 'Content-Length': fileSize.toString() };
+    headers['Content-Length'] = fileSize.toString();
   }
 
-  return undiciPipeline(formattedUrl, { headers, method: 'PUT' }, (data) => data.body);
+  const { statusCode, body: responseBody } = await request(url, {
+    method: 'PUT',
+    headers,
+    body,
+    signal,
+  });
+
+  await responseBody.dump();
+
+  if (statusCode !== 200) {
+    throw new Error(`S3 upload failed with status ${statusCode}`);
+  }
 }
 
 export function uploadFileV2(
@@ -71,10 +81,14 @@ export function uploadFileV2(
       logger.debug('Uploading file to %s...', url);
 
       const hasher = new HashStream();
+      const relayStream = new PassThrough();
 
-      await pipeline(source, cipher, hasher, progress, putStream(url, fileSize), {
+      const pipelinePromise = pipeline(source, cipher, hasher, progress, relayStream, {
         signal: abortSignal,
       });
+
+      await putFile(url, relayStream, fileSize, abortSignal);
+      await pipelinePromise;
 
       const fileHash = hasher.getHash().toString('hex');
 
