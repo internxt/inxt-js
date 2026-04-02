@@ -1,7 +1,7 @@
 import { queue } from 'async';
-import { Readable } from 'stream';
 import { logger } from '../../utils/logger';
 import { request } from 'undici';
+import { ProgressNotifier } from '../../utils/streams';
 
 type Part = { PartNumber: number; ETag: string };
 
@@ -31,14 +31,18 @@ interface PartUpload {
   source: { size: number; stream: Buffer; index: number };
 }
 
-export async function uploadParts(partUrls: string[], stream: Readable, signal?: AbortSignal): Promise<Part[]> {
+export async function uploadParts(
+  partUrls: string[],
+  progress: ProgressNotifier,
+  signal?: AbortSignal,
+): Promise<Part[]> {
   const parts: Part[] = [];
   const concurrency = 10;
 
   const partLength = 15 * 1024 * 1024;
   let bytesRead = 0;
   let partNumber = 1;
-  let partBuffer = Buffer.alloc(0);
+  let partChunks: Buffer[] = [];
 
   const uploadQueue = queue(async (part: PartUpload, callback) => {
     logger.debug('Uploading part %s of %s => %s bytes', part.source.index, partUrls.length, part.source.size);
@@ -56,16 +60,17 @@ export async function uploadParts(partUrls: string[], stream: Readable, signal?:
     }
   }, concurrency);
 
-  for await (const chunk of stream) {
+  for await (const chunk of progress) {
     bytesRead += chunk.length;
-    partBuffer = Buffer.concat([partBuffer, chunk]);
+    partChunks.push(chunk);
 
     while (uploadQueue.running() >= concurrency) {
       await uploadQueue.unsaturated();
     }
 
     while (bytesRead >= partLength) {
-      const slice = partBuffer.slice(0, partLength);
+      const partBuffer = Buffer.concat(partChunks);
+      const slice = partBuffer.subarray(0, partLength);
       uploadQueue.push({
         url: partUrls[partNumber - 1],
         source: {
@@ -75,13 +80,14 @@ export async function uploadParts(partUrls: string[], stream: Readable, signal?:
         },
       });
 
-      partBuffer = partBuffer.slice(partLength);
+      partChunks = [partBuffer.subarray(partLength)];
       bytesRead -= partLength;
       partNumber += 1;
     }
   }
 
   if (bytesRead > 0) {
+    const partBuffer = Buffer.concat(partChunks);
     uploadQueue.push({
       url: partUrls[partNumber - 1],
       source: {
