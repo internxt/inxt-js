@@ -20,11 +20,8 @@ import { AppDetails } from '@internxt/sdk/dist/shared';
 async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',
+    'Content-Length': fileSize.toString(),
   };
-
-  if (fileSize) {
-    headers['Content-Length'] = fileSize.toString();
-  }
 
   const { statusCode, body: responseBody } = await request(url, {
     method: 'PUT',
