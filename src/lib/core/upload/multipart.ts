@@ -20,6 +20,7 @@ async function uploadPart(
   });
 
   if (statusCode === 200) {
+    await body.dump();
     return headers.etag?.toString();
   }
 
