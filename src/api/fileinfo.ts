@@ -41,7 +41,7 @@ export function GetFileInfo(
     });
 }
 
-export function GetFileMirror(
+export async function GetFileMirror(
   config: EnvironmentConfig,
   bucketId: string,
   fileId: string,
@@ -59,20 +59,22 @@ export function GetFileMirror(
     headers: token ? { 'x-token': token } : {},
   };
 
-  return request(config, 'GET', path + queryParams, params, false).then((res: AxiosResponse) => res.data as Shard[]);
+  return await request(config, 'GET', path + queryParams, params, false).then(
+    (res: AxiosResponse) => res.data as Shard[],
+  );
 }
 
-export function ReplacePointer(
+export async function ReplacePointer(
   config: EnvironmentConfig,
   bucketId: string,
   fileId: string,
   pointerIndex: number,
   excludeNodes: string[] = [],
 ): Promise<Shard[]> {
-  return GetFileMirror(config, bucketId, fileId, 1, pointerIndex, excludeNodes);
+  return await GetFileMirror(config, bucketId, fileId, 1, pointerIndex, excludeNodes);
 }
 
-export function GetFileMirrors(
+export async function GetFileMirrors(
   config: EnvironmentConfig,
   bucketId: string,
   fileId: string,
@@ -80,7 +82,7 @@ export function GetFileMirrors(
 ): Promise<Shard[]> {
   const shards: Shard[] = [];
 
-  return doUntil(
+  return await doUntil(
     (next: (err: Error | null, results?: Shard[], shards?: Shard[]) => void) => {
       GetFileMirror(config, bucketId, fileId, 3, shards.length, [], token)
         .then((results: any) => {

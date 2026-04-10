@@ -2,13 +2,13 @@ import eslintConfigInternxt from '@internxt/eslint-config-internxt';
 
 export default [
   {
-    ignores: ['dist', 'build'],
+    ignores: ['build'],
   },
   ...eslintConfigInternxt,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "no-console": "off"
-    }
-  }
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': 'off',
+    },
+  },
 ];
