@@ -283,17 +283,17 @@
   dependencies:
     uuid "^11.1.0"
 
-"@internxt/prettier-config@internxt/prettier-config#v1.0.2":
-  version "1.0.2"
-  resolved "https://codeload.github.com/internxt/prettier-config/tar.gz/9fa74e9a2805e1538b50c3809324f1c9d0f3e4f9"
+"@internxt/prettier-config@internxt/prettier-config#v2.0.0":
+  version "2.0.0"
+  resolved "https://codeload.github.com/internxt/prettier-config/tar.gz/66ff94f2d78b71884eac141ae026ca3892c6c4d6"
 
-"@internxt/sdk@1.15.3":
-  version "1.15.3"
-  resolved "https://registry.yarnpkg.com/@internxt/sdk/-/sdk-1.15.3.tgz#ac941ad41e02d487f63f33116fcf1b7ee8376585"
-  integrity sha512-tJ+QyhLNt8Uvxa+a+nNIBoiA6MuSiqo48heBFot7Y0aW4hUWesrPS5w+yTUwIJtRPJPLBIXqcR6yQcyHBfEUZA==
+"@internxt/sdk@1.15.9":
+  version "1.15.9"
+  resolved "https://registry.yarnpkg.com/@internxt/sdk/-/sdk-1.15.9.tgz#4346d90880ba72777990432ba11b20c3c2de82b5"
+  integrity sha512-9lIVrYqArLzaiHWDh0N7usiDNwH2ZWLFQCOfECu49SFzaFnUprQIvvPZhxgX0uVDSNMebnknFvW+gFzYjvQP8A==
   dependencies:
-    axios "1.13.5"
-    internxt-crypto "0.0.13"
+    axios "1.13.6"
+    internxt-crypto "1.0.2"
 
 "@isaacs/cliui@^8.0.2":
   version "8.0.2"
@@ -355,7 +355,12 @@
     "@emnapi/runtime" "^1.7.1"
     "@tybys/wasm-util" "^0.10.1"
 
-"@noble/curves@~2.0.0":
+"@noble/ciphers@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-2.1.1.tgz#c8c74fcda8c3d1f88797d0ecda24f9fc8b92b052"
+  integrity sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw==
+
+"@noble/curves@^2.0.1", "@noble/curves@~2.0.0":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-2.0.1.tgz#64ba8bd5e8564a02942655602515646df1cdb3ad"
   integrity sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw==
@@ -909,15 +914,6 @@ asynckit@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
   integrity sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==
-
-axios@1.13.5:
-  version "1.13.5"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.13.5.tgz#5e464688fa127e11a660a2c49441c009f6567a43"
-  integrity sha512-cz4ur7Vb0xS4/KUN0tPWe44eqxrIu31me+fbang3ijiNscE129POzipJJA6zniq2C/Z6sJCjMimjS8Lc/GAs8Q==
-  dependencies:
-    follow-redirects "^1.15.11"
-    form-data "^4.0.5"
-    proxy-from-env "^1.1.0"
 
 axios@1.13.6:
   version "1.13.6"
@@ -1850,11 +1846,13 @@ inherits@^2.0.3, inherits@~2.0.3, inherits@~2.0.4:
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
-internxt-crypto@0.0.13:
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/internxt-crypto/-/internxt-crypto-0.0.13.tgz#90c83828a34667ecf6938ad7c22d94c9f0d9808b"
-  integrity sha512-V8Epf4oFZQZwMyIt8mcw7w36M+tryQ9VcfaiKtcruNW/129bawZnPXEeoOfLvAV+9OYlY2ZAwIYP0EtOD2ec6g==
+internxt-crypto@1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/internxt-crypto/-/internxt-crypto-1.0.2.tgz#983fe991dfbb00a453e93070bb34049a88a94707"
+  integrity sha512-F9PuXci0eU1wlgDwqEbGR7hVDNS0MX8VNh/W+pdpR4ZsEsjRDBrOD2g1DvViR2woCxPiu1AW9Wwekpw2YVKfnA==
   dependencies:
+    "@noble/ciphers" "^2.1.1"
+    "@noble/curves" "^2.0.1"
     "@noble/hashes" "^2.0.1"
     "@noble/post-quantum" "^0.5.2"
     "@scure/bip39" "^2.0.1"
