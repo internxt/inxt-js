@@ -28,8 +28,8 @@ const crypto: Crypto = {
   randomBytes,
 };
 
-async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
-  const headers: Record<string, string> = {
+export async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
+  const headers = {
     'Content-Type': 'application/octet-stream',
     'Content-Length': fileSize.toString(),
   };
@@ -48,7 +48,7 @@ async function putFile(url: string, body: Readable, fileSize: number, signal?: A
   }
 }
 
-export function uploadFileV2(
+export async function uploadFileV2(
   network: Network,
   fileSize: number,
   source: Readable,
@@ -59,7 +59,7 @@ export function uploadFileV2(
 ): Promise<string> {
   let cipher: Cipheriv;
 
-  return uploadFile(
+  return await uploadFile(
     network,
     crypto,
     bucketId,
@@ -97,7 +97,7 @@ export function uploadFileV2(
   );
 }
 
-export function uploadFileMultipart(
+export async function uploadFileMultipart(
   network: Network,
   fileSize: number,
   source: Readable,
@@ -110,7 +110,7 @@ export function uploadFileMultipart(
   const partSize = 15 * 1024 * 1024;
   const parts = Math.ceil(fileSize / partSize);
 
-  return uploadMultipartFile(
+  return await uploadMultipartFile(
     network,
     crypto,
     bucketId,
@@ -151,7 +151,7 @@ export function uploadFileMultipart(
   );
 }
 
-export function upload(
+export async function upload(
   fileSize: number,
   source: Readable,
   bucketId: string,
@@ -184,8 +184,8 @@ export function upload(
   });
 
   if (fileSize > MULTIPART_THRESHOLD) {
-    return uploadFileMultipart(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
+    return await uploadFileMultipart(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
   }
 
-  return uploadFileV2(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
+  return await uploadFileV2(network, fileSize, source, bucketId, mnemonic, progress, abortSignal);
 }
