@@ -46,7 +46,7 @@
     "@internxt/lib": "1.4.1",
     "@internxt/sdk": "1.15.9",
     "async": "3.2.6",
-    "axios": "1.13.6",
+    "axios": "1.15.0",
     "bip39": "3.1.0",
     "undici": "7.24.4",
     "winston": "3.19.0"
