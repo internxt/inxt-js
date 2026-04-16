@@ -43,29 +43,25 @@ export async function uploadParts(
   let bytesRead = 0;
   let partNumber = 1;
   let partChunks: Buffer[] = [];
+  let uploadPartError: Error | null = null;
 
-  const uploadQueue = queue(async (part: PartUpload, callback) => {
-    logger.debug(
-      'Uploading part %s of %s => %s bytes',
-      part.source.index,
-      partUrls.length,
-      part.source.size
-    );
+  const uploadQueue = queue(async (part: PartUpload) => {
+    logger.debug('Uploading part %s of %s => %s bytes', part.source.index, partUrls.length, part.source.size);
 
-    try {
-      const etag = await uploadPart(part.url, part.source, signal);
+    const etag = await uploadPart(part.url, part.source, signal);
 
-      if (!etag) {
-        throw new Error('ETag header was not returned');
-      }
-      parts.push({ PartNumber: part.source.index, ETag: etag });
-      callback();
-    } catch (err) {
-      callback(err as Error);
+    if (!etag) {
+      throw new Error('ETag header was not returned');
     }
+    parts.push({ PartNumber: part.source.index, ETag: etag });
   }, concurrency);
 
+  uploadQueue.error((err) => {
+    uploadPartError = err;
+  });
+
   for await (const chunk of progress) {
+    if (uploadPartError) break;
     bytesRead += chunk.length;
     partChunks.push(chunk);
 
@@ -91,7 +87,7 @@ export async function uploadParts(
     }
   }
 
-  if (bytesRead > 0) {
+  if (bytesRead > 0 && !uploadPartError) {
     const partBuffer = Buffer.concat(partChunks);
     uploadQueue.push({
       url: partUrls[partNumber - 1],
@@ -103,8 +99,12 @@ export async function uploadParts(
     });
   }
 
-  while (uploadQueue.running() > 0 || uploadQueue.length() > 0) {
+  while (!uploadPartError && (uploadQueue.running() > 0 || uploadQueue.length() > 0)) {
     await uploadQueue.drain();
+  }
+
+  if (uploadPartError) {
+    throw uploadPartError;
   }
 
   return parts.sort((pA, pB) => pA.PartNumber - pB.PartNumber);
