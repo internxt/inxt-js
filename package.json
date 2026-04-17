@@ -1,6 +1,6 @@
 {
   "name": "@internxt/inxt-js",
-  "version": "2.2.11",
+  "version": "2.2.12",
   "description": "",
   "main": "build/index.js",
   "types": "build/index.d.ts",
