@@ -61,7 +61,7 @@ export async function uploadParts(
   });
 
   for await (const chunk of progress) {
-    if (uploadPartError) break;
+    if (uploadPartError) throw uploadPartError;
     bytesRead += chunk.length;
     partChunks.push(chunk);
 
