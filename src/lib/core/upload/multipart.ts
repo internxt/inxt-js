@@ -46,15 +46,19 @@ export async function uploadParts(
   let partChunks: Buffer[] = [];
   let uploadPartError: Error | null = null;
 
-  const uploadQueue = queue(async (part: PartUpload) => {
+  const uploadQueue = queue(async (part: PartUpload, callback) => {
     logger.debug('Uploading part %s of %s => %s bytes', part.source.index, partUrls.length, part.source.size);
+    try {
+      const etag = await uploadPart(part.url, part.source, signal);
 
-    const etag = await uploadPart(part.url, part.source, signal);
-
-    if (!etag) {
-      throw new Error('ETag header was not returned');
+      if (!etag) {
+        throw new Error('ETag header was not returned');
+      }
+      parts.push({ PartNumber: part.source.index, ETag: etag });
+      callback();
+    } catch (err) {
+      callback(err as Error);
     }
-    parts.push({ PartNumber: part.source.index, ETag: etag });
   }, concurrency);
 
   uploadQueue.error((err) => {
