@@ -8,13 +8,11 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'lcov'],
-      exclude: [
-        'test/',
-        'dist/',
-        '**/*types.ts',
-        ...coverageConfigDefaults.exclude
-      ],
+      exclude: ['test/', 'dist/', '**/*types.ts', ...coverageConfigDefaults.exclude],
     },
-    restoreMocks: true
-  }
+    restoreMocks: true,
+  },
+  oxc: {
+    target: 'es2015',
+  },
 });
