@@ -28,24 +28,22 @@ const crypto: Crypto = {
   randomBytes,
 };
 
-export async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
-  const headers = {
-    'Content-Type': 'application/octet-stream',
-    'Content-Length': fileSize.toString(),
-  };
-
+async function putFile(url: string, body: Readable, fileSize: number, signal?: AbortSignal): Promise<void> {
   const { statusCode, body: responseBody } = await request(url, {
-    method: 'PUT',
-    headers,
-    body,
     signal,
+    body,
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': fileSize.toString(),
+    },
   });
 
-  await responseBody.dump();
-
   if (statusCode !== 200) {
-    throw new Error(`S3 upload failed with status ${statusCode}`);
+    throw new Error(`Failed to upload file: ${statusCode} ${await responseBody.text()}`);
   }
+
+  await responseBody.dump();
 }
 
 export async function uploadFileV2(

@@ -9,7 +9,7 @@ async function uploadPart(
   partUrl: string,
   partStream: { size: number; stream: Buffer; index: number },
   signal?: AbortSignal,
-) {
+): Promise<string | undefined> {
   const { statusCode, headers, body } = await request(partUrl, {
     signal,
     body: partStream.stream,
@@ -19,12 +19,12 @@ async function uploadPart(
     },
   });
 
-  if (statusCode === 200) {
-    await body.dump();
-    return headers.etag?.toString();
+  if (statusCode !== 200) {
+    throw new Error(`Failed to upload part: ${statusCode} ${await body.text()}`);
   }
 
-  throw new Error(`Failed to upload part: ${statusCode} ${await body.text()}`);
+  await body.dump();
+  return headers.etag?.toString();
 }
 
 interface PartUpload {
