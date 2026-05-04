@@ -7,7 +7,7 @@ export type UploadProgressCallback = (
   uploadedBytes: number | null,
   totalBytes: number | null,
 ) => void;
-export type EncryptProgressCallback = (progress: number) => void;
+type EncryptProgressCallback = (progress: number) => void;
 
 export interface UploadOptions {
   progressCallback: UploadProgressCallback;

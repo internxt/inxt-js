@@ -1,0 +1,7 @@
+{
+  "project": ["src/**/*.ts"],
+  "ignoreDependencies": ["lint-staged", "ts-node"],
+  "rules": {
+    "enumMembers": "off"
+  }
+}

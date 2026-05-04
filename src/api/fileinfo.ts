@@ -41,7 +41,7 @@ export function GetFileInfo(
     });
 }
 
-export async function GetFileMirror(
+async function GetFileMirror(
   config: EnvironmentConfig,
   bucketId: string,
   fileId: string,

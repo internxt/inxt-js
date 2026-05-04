@@ -46,7 +46,7 @@ async function putFile(url: string, body: Readable, fileSize: number, signal?: A
   await responseBody.dump();
 }
 
-export async function uploadFileV2(
+async function uploadFileV2(
   network: Network,
   fileSize: number,
   source: Readable,
@@ -95,7 +95,7 @@ export async function uploadFileV2(
   );
 }
 
-export async function uploadFileMultipart(
+async function uploadFileMultipart(
   network: Network,
   fileSize: number,
   source: Readable,
