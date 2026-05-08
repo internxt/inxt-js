@@ -1,5 +1,6 @@
 import { request } from '../services/request';
 import { EnvironmentConfig, Shard } from '.';
+import { AxiosResponse } from 'axios';
 
 export interface ExchangeReportParams {
   dataHash: string | null;
@@ -78,7 +79,7 @@ export class ExchangeReport {
     return true;
   }
 
-  sendReport() {
+  sendReport(): Promise<AxiosResponse<JSON>> {
     if (this.params.exchangeEnd == null) {
       this.params.exchangeEnd = new Date();
     }
