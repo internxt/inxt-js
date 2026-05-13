@@ -11,7 +11,7 @@ describe('# Mutex tests', () => {
     const iterations = 1000;
     const randomMaxMultiplier = 5;
 
-    this.timeout(iterations * randomMaxMultiplier * loops);
+    await new Promise((resolve) => setTimeout(resolve, iterations * randomMaxMultiplier * loops));
 
     const promises = [];
 
