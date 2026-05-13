@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "clean": "rimraf dist build coverage",
-    "build": "yarn clean && tsc",
+    "build": "yarn clean && tsc -p tsconfig.build.json",
+    "type-check": "tsc",
     "test": "vitest run --coverage",
     "test:watch": "vitest watch",
     "lint": "eslint ./src",

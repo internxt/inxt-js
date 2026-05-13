@@ -3,13 +3,11 @@
     "target": "esnext",
     "module": "commonjs",
     "sourceMap": false,
-    "outDir": "./build",
-    "rootDir": "./src",
     "strict": true,
     "typeRoots": ["node_modules/@types", "src/@types"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true
   },
-  "exclude": ["tests", "build", "lab", "src/cli"]
+  "include": ["src", "tests"]
 }
