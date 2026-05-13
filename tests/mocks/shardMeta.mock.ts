@@ -1,4 +1,6 @@
-const shardMeta = {
+import { ShardMeta } from '../../src/lib/models';
+
+const shardMeta: ShardMeta = {
   challenges_as_str: [],
   hash: '',
   index: 0,
@@ -7,6 +9,6 @@ const shardMeta = {
   tree: [],
 };
 
-export function generateShardMeta() {
+export function generateShardMeta(): ShardMeta {
   return shardMeta;
 }
