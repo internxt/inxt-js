@@ -1,4 +1,4 @@
-import { ShardMeta } from '../../src/lib/shardMeta';
+import { ShardMeta } from '../../src/lib/models';
 
 const shardMeta: ShardMeta = {
   challenges_as_str: [],

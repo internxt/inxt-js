@@ -9,12 +9,10 @@ import { Shard, EnvironmentConfig } from './';
 import { logger } from '../lib/utils/logger';
 import { DEFAULT_INXT_MIRRORS } from './constants';
 import { wrap } from '../lib/utils/error';
-import { ShardObject } from './ShardObject';
 import { DownloadStrategy, Events } from '../lib/core';
 import { Abortable } from './Abortable';
 
 export class FileObject extends EventEmitter {
-  shards: ShardObject[] = [];
   rawShards: Shard[] = [];
   fileInfo: FileInfo | undefined;
   config: EnvironmentConfig;

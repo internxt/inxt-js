@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 
-import { generateShard, generateShardMeta } from '../mocks';
+import { generateShardMeta } from '../mocks';
 import { Bridge } from '../../src/services/api';
 import { Methods } from '../../src/lib';
 
@@ -14,7 +14,7 @@ describe('services/api.ts', () => {
     describe('# constructor()', () => {
       it('Should throw if bridge url is empty', () => {
         expect(() => {
-          const b = new Bridge({ bridgeUser: 'fake@user.com', bridgePass: 'fakePass', bridgeUrl: '' });
+          new Bridge({ bridgeUser: 'fake@user.com', bridgePass: 'fakePass', bridgeUrl: '' });
         }).to.throw('Empty bridge url');
       });
     });
