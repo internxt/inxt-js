@@ -4,7 +4,9 @@
     "module": "commonjs",
     "sourceMap": false,
     "strict": true,
-    "typeRoots": ["node_modules/@types", "src/@types"],
+    "noEmit": true,
+    "types": ["vitest/globals"],
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true

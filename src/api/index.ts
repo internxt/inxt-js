@@ -8,4 +8,3 @@ export * from './FileObject';
 export * from './fileinfo';
 export * from './FileObjectUploadProtocol';
 export * from './Shard';
-export * from './ShardObject';

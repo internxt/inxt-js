@@ -3,7 +3,6 @@ import { Server } from 'http';
 
 import { createHash, Hash } from 'crypto';
 import { Transform, TransformCallback, TransformOptions } from 'stream';
-import { ContractNegotiated } from '../../src/lib/contracts';
 
 export class HashStream extends Transform {
   hasher: Hash;
@@ -55,7 +54,7 @@ let app: express.Application;
 let server: Server;
 const testServerPort = 54321;
 
-export function getContractNegotiated(hash = '', token = ''): ContractNegotiated {
+export function getContractNegotiated(hash = '', token = '') {
   return {
     operation: 'PUSH',
     farmer: {
@@ -71,9 +70,9 @@ export function getContractNegotiated(hash = '', token = ''): ContractNegotiated
   };
 }
 
-type EndpointHandler = (req, res) => void;
+type EndpointHandler = (req: express.Request, res: express.Response) => void;
 
-function startServer(cb: () => void, customGet?: EndpointHandler, customPost?: EndpointHandler) {
+function startServer(cb: () => void, customGet?: EndpointHandler) {
   app = express();
   server = app.listen(testServerPort, () => {
     cb();
@@ -119,15 +118,11 @@ function closeServer(cb: () => void) {
 
 type CloseServerFunction = () => Promise<unknown>;
 
-const startApp = (customGet?: EndpointHandler, customPost?: EndpointHandler) =>
-  new Promise((r) => startServer(() => r(null), customGet, customPost));
+const startApp = (customGet?: EndpointHandler) => new Promise((r) => startServer(() => r(null), customGet));
 const closeApp = () => new Promise((r) => closeServer(() => r(null)));
 
-export async function spawnFarmer(
-  customGet?: EndpointHandler,
-  customPost?: EndpointHandler,
-): Promise<CloseServerFunction> {
-  await startApp(customGet, customPost);
+export async function spawnFarmer(customGet?: EndpointHandler): Promise<CloseServerFunction> {
+  await startApp(customGet);
 
   return closeApp;
 }
