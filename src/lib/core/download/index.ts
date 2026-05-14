@@ -10,7 +10,7 @@ export * from './oneStreamStrategy';
 export * from './oneShardStrategy';
 export * from './dynamicStrategy';
 
-export type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
+type DownloadFinishedCallback = (err: Error | null, fileStream: Readable | null) => void;
 export type DownloadProgressCallback = (
   progress: number,
   downloadedBytes: number | null,

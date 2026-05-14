@@ -100,25 +100,6 @@ export function streamRequest(targetUrl: string, timeoutSeconds?: number): Reada
   });
 }
 
-export async function get<K>(url: string, config = { useProxy: false }): Promise<K> {
-  let targetUrl = url;
-  let free: undefined | (() => void);
-
-  if (config.useProxy) {
-    const proxy = await getProxy();
-    free = proxy.free;
-    targetUrl = `${proxy.url}/${targetUrl}`;
-  }
-
-  return axios.get<K>(targetUrl).then((res) => {
-    if (free) {
-      free();
-    }
-
-    return res.data;
-  });
-}
-
 export async function getStream(url: string, config = { useProxy: false }): Promise<Readable> {
   let targetUrl = url;
   let free: undefined | (() => void);

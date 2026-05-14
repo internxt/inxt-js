@@ -1,5 +1,3 @@
-import { expect } from 'chai';
-
 import { generateShardMeta } from '../mocks';
 import { Bridge } from '../../src/services/api';
 import { Methods } from '../../src/lib';

@@ -3,38 +3,6 @@ import { EnvironmentConfig, ExchangeReport, Shard } from '../api';
 import { INXTRequest, Methods } from '../lib';
 import { ShardMeta } from '../lib/models';
 
-export interface GetBucketByIdResponse {
-  user: string;
-  encryptionKey: string;
-  publicPermissions: string[];
-  created: string;
-  name: string;
-  pubkeys: string[];
-  status: 'Active' | 'Inactive';
-  transfer: number;
-  storage: number;
-  id: string;
-}
-
-export interface GetFileByIdResponse {
-  /* file-id */
-  id: string;
-}
-
-export interface FrameStaging {
-  /* frame id */
-  id: string;
-  /* user email */
-  user: string;
-  shards: [];
-  storageSize: number;
-  /* frame size */
-  size: number;
-  locked: boolean;
-  /* created timestamp stringified */
-  created: string;
-}
-
 export interface CreateEntryFromFrameBody {
   frame: string;
   filename: string;
@@ -46,52 +14,6 @@ export interface CreateEntryFromFrameBody {
   erasure?: {
     type: string;
   };
-}
-
-export interface CreateEntryFromFrameResponse {
-  /* bucket entry id */
-  id: string;
-  index: string;
-  /* frame id */
-  frame: string;
-  /* bucket id */
-  bucket: string;
-  mimetype: string;
-  name: string;
-  renewal: string;
-  created: string;
-  hmac: {
-    value: string;
-    type: string;
-  };
-  erasure: {
-    type: string;
-  };
-  size: number;
-}
-
-export interface SendShardToNodeResponse {
-  result: string;
-}
-
-export interface AddShardToFrameBody {
-  /* shard hash */
-  hash: string;
-  /* shard size */
-  size: number;
-  /* shard index */
-  index: number;
-  /* if exists a shard parity for this shard */
-  parity: boolean;
-  /* shard challenges */
-  challenges: string[];
-  tree: string[];
-  /* nodes excluded from being the shard's node */
-  exclude: string[];
-}
-
-export interface SendShardToNodeResponse {
-  result: string;
 }
 
 export interface CreateFileTokenResponse {
@@ -106,24 +28,11 @@ export interface CreateFileTokenResponse {
 }
 export type GetDownloadLinksResponse = { fileId: string; link: string; index: string }[];
 
-export interface InxtApiI {
-  getBucketById(bucketId: string, params?: AxiosRequestConfig): INXTRequest;
-  getFileById(bucketId: string, fileId: string, params?: AxiosRequestConfig): INXTRequest;
-  createFrame(params?: AxiosRequestConfig): INXTRequest;
-  createEntryFromFrame(bucketId: string, body: CreateEntryFromFrameBody, params?: AxiosRequestConfig): INXTRequest;
-  addShardToFrame(frameId: string, body: ShardMeta, params?: AxiosRequestConfig): INXTRequest;
-  sendUploadExchangeReport(exchangeReport: ExchangeReport): Promise<AxiosResponse<JSON>>;
-  sendShardToNode(shard: Shard, shardContent: Buffer): INXTRequest;
-  createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest;
-  renameFile(bucketId: string, fileId: string, newName: string): INXTRequest;
-  createBucket(bucketName: string): INXTRequest;
-}
-
 function emptyINXTRequest(config: EnvironmentConfig): INXTRequest {
   return new INXTRequest(config, Methods.Get, '', {}, false);
 }
 
-class InxtApi implements InxtApiI {
+class InxtApi {
   protected config: EnvironmentConfig;
   protected url: string;
 
@@ -183,7 +92,7 @@ class InxtApi implements InxtApiI {
 }
 
 // tslint:disable-next-line: max-classes-per-file
-export class EmptyBridgeUrlError extends Error {
+class EmptyBridgeUrlError extends Error {
   constructor() {
     super('Empty bridge url');
   }

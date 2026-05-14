@@ -1,0 +1,25 @@
+name: Find deadcode
+
+on:
+  pull_request:
+
+jobs:
+  find_deadcode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Find deadcode
+        run: yarn find-deadcode
