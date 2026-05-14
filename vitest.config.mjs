@@ -12,7 +12,4 @@ export default defineConfig({
     },
     restoreMocks: true,
   },
-  oxc: {
-    target: 'es2015',
-  },
 });

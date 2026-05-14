@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 
-import { wrap, WrappedError } from '../../src/lib/utils/error';
+import { wrap } from '../../src/lib/utils/error';
 
 describe('# Utils error tests', () => {
   describe('wrap()', () => {

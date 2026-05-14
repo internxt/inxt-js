@@ -1,5 +1,4 @@
-import { expect } from 'chai';
-import { EncryptFilename, DecryptFileName, GenerateBucketKey } from '../../src/lib/crypto';
+import { DecryptFileName, EncryptFilename, GenerateBucketKey } from '../../src/lib/utils/crypto';
 
 const mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const bucketId = '0123456789abcdef0000';

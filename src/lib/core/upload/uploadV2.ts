@@ -78,12 +78,12 @@ async function uploadFileV2(
       const hasher = new HashStream();
       const relayStream = new PassThrough();
 
+      const putFilePromise = putFile(url, relayStream, fileSize, abortSignal);
       const pipelinePromise = pipeline(source, cipher, hasher, progress, relayStream, {
         signal: abortSignal,
       });
 
-      await putFile(url, relayStream, fileSize, abortSignal);
-      await pipelinePromise;
+      await Promise.all([pipelinePromise, putFilePromise]);
 
       const fileHash = hasher.getHash().toString('hex');
 
