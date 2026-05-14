@@ -28,9 +28,6 @@ type GetBucketsCallback = (err: Error | null, result: any) => void;
 
 type GetBucketIdCallback = (err: Error | null, result: any) => void;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type DeleteBucketCallback = (err: Error | null, result: any) => void;
-
 type ListFilesCallback = (err: Error | null, result: any) => void;
 
 type DeleteFileCallback = (err: Error | null, result: any) => void;
@@ -144,10 +141,6 @@ export class Environment {
   listFiles(bucketId: string, cb: ListFilesCallback): void {
     /* TODO */
     cb(Error('Not implemented yet'), null);
-  }
-
-  setEncryptionKey(newEncryptionKey: string): void {
-    this.config.encryptionKey = newEncryptionKey;
   }
 
   upload: UploadStrategyFunction = async (bucketId: string, opts: UploadOptions) => {
@@ -264,10 +257,6 @@ export class Environment {
   };
 
   downloadCancel(state: ActionState): void {
-    state.stop();
-  }
-
-  uploadCancel(state: ActionState): void {
     state.stop();
   }
 
