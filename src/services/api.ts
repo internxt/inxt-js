@@ -92,7 +92,7 @@ class InxtApi {
 }
 
 // tslint:disable-next-line: max-classes-per-file
-export class EmptyBridgeUrlError extends Error {
+class EmptyBridgeUrlError extends Error {
   constructor() {
     super('Empty bridge url');
   }

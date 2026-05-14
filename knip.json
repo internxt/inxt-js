@@ -1,7 +1,7 @@
 {
   "entry": ["src/cli/*.ts"],
   "project": ["src/**/*.ts"],
-  "ignoreDependencies": ["lint-staged", "express", "@types/express"],
+  "ignoreDependencies": ["express", "@types/express"],
   "rules": {
     "enumMembers": "off"
   }
