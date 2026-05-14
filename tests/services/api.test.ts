@@ -3,18 +3,20 @@ import { expect } from 'chai';
 import { generateShardMeta } from '../mocks';
 import { Bridge } from '../../src/services/api';
 import { Methods } from '../../src/lib';
+import { AppDetails } from '@internxt/sdk/dist/shared';
 
 const bridgeUrl = 'https://api.internxt.com';
 const bridgePass = 'bridgePass';
 const bridgeUser = 'fake@user.com';
-const bridge = new Bridge({ bridgePass, bridgeUser, bridgeUrl });
+const appDetails: AppDetails = { clientName: 'clientName', clientVersion: '1.0.0' };
+const bridge = new Bridge({ bridgePass, bridgeUser, bridgeUrl, appDetails });
 
 describe('services/api.ts', () => {
   describe('Bridge', () => {
     describe('# constructor()', () => {
       it('Should throw if bridge url is empty', () => {
         expect(() => {
-          new Bridge({ bridgeUser: 'fake@user.com', bridgePass: 'fakePass', bridgeUrl: '' });
+          new Bridge({ bridgeUser: 'fake@user.com', bridgePass: 'fakePass', bridgeUrl: '', appDetails });
         }).to.throw('Empty bridge url');
       });
     });
