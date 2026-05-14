@@ -7,27 +7,11 @@ export function sha256(input: Buffer): Buffer {
   return crypto.createHash('sha256').update(input).digest();
 }
 
-export function sha256HashBuffer(): crypto.Hash {
-  return crypto.createHash('sha256');
-}
-
-export function sha512(input: Buffer): Buffer {
-  return crypto.createHash('sha512').update(input).digest();
-}
-
-export function sha512HmacBuffer(key: Buffer | string): crypto.Hmac {
-  return crypto.createHmac('sha512', key);
-}
-
-export function sha512HmacBufferFromHex(key: string): crypto.Hmac {
+function sha512HmacBufferFromHex(key: string): crypto.Hmac {
   return crypto.createHmac('sha512', Buffer.from(key, 'hex'));
 }
 
-export function ripemd160(input: Buffer | string): Buffer {
-  return crypto.createHash('ripemd160').update(input).digest();
-}
-
-export function GetDeterministicKey(key: string, data: string): Buffer {
+function GetDeterministicKey(key: string, data: string): Buffer {
   const sha512input = key + data;
 
   return crypto.createHash('sha512').update(Buffer.from(sha512input, 'hex')).digest();
@@ -103,7 +87,7 @@ function decryptMeta(bufferBase64: string, decryptKey: string) {
   }
 }
 
-export function EncryptMeta(fileMeta: string, key: Buffer, iv: Buffer): string {
+function EncryptMeta(fileMeta: string, key: Buffer, iv: Buffer): string {
   const cipher: crypto.CipherCCM = Aes256gcmEncrypter(key, iv);
   const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()]);
   const digest = cipher.getAuthTag();
@@ -111,23 +95,7 @@ export function EncryptMeta(fileMeta: string, key: Buffer, iv: Buffer): string {
   return Buffer.concat([digest, iv, cipherTextBuf]).toString('base64');
 }
 
-export function EncryptMetaBuffer(fileMeta: string, encryptKey: Buffer, iv: Buffer): Buffer {
-  const cipher: crypto.CipherGCM = Aes256gcmEncrypter(encryptKey, iv);
-  const cipherTextBuf = Buffer.concat([cipher.update(fileMeta, 'utf-8'), cipher.final()]);
-  const digest = cipher.getAuthTag();
-
-  return Buffer.concat([digest, iv, cipherTextBuf]);
-}
-
-export function Aes256ctrDecrypter(key: Buffer, iv: Buffer): crypto.Decipheriv {
-  return crypto.createDecipheriv('aes-256-ctr', key, iv);
-}
-
-export function Aes256ctrEncrypter(key: Buffer, iv: Buffer): crypto.Cipheriv {
-  return crypto.createCipheriv('aes-256-ctr', key, iv);
-}
-
-export function Aes256gcmEncrypter(key: Buffer, iv: Buffer): crypto.CipherGCM {
+function Aes256gcmEncrypter(key: Buffer, iv: Buffer): crypto.CipherGCM {
   return crypto.createCipheriv('aes-256-gcm', key, iv);
 }
 
@@ -138,13 +106,13 @@ export async function GenerateFileKey(mnemonic: string, bucketId: string, index:
   return GetFileDeterministicKey(bucketKey.slice(0, 32), index).slice(0, 32);
 }
 
-export async function GenerateFileBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
+async function GenerateFileBucketKey(mnemonic: string, bucketId: string): Promise<Buffer> {
   const seed = await mnemonicToSeed(mnemonic);
 
   return GetFileDeterministicKey(seed, Buffer.from(bucketId, 'hex'));
 }
 
-export function GetFileDeterministicKey(key: Buffer | string, data: Buffer | string): Buffer {
+function GetFileDeterministicKey(key: Buffer | string, data: Buffer | string): Buffer {
   const hash = crypto.createHash('sha512');
   hash.update(key).update(data);
 

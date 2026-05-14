@@ -1,31 +1,18 @@
 import { createDecipheriv, Decipheriv, randomBytes } from 'crypto';
 import { Events } from '..';
 
-import { Abortable, ActionState, Shard } from '../../../api';
+import { Abortable, Shard } from '../../../api';
 
 import { getStream } from '../../../services/request';
 import { HashStream, ProgressNotifier, Events as ProgressEvents } from '../../utils/streams';
 import { wrap } from '../../utils/error';
 import { DownloadStrategy, DownloadParams } from './strategy';
-import { DownloadOptions } from '.';
 import { logger } from '../../utils/logger';
 
 export interface DownloadOneShardStrategyParams extends DownloadParams {
   useProxy: boolean;
   chunkSize?: number;
 }
-
-export type DownloadOneShardStrategyLabel = 'OneShardOnly';
-export type DownloadOneShardStrategyObject = {
-  label: DownloadOneShardStrategyLabel;
-  params: DownloadOneShardStrategyParams;
-};
-export type DownloadOneShardStrategyFunction = (
-  bucketId: string,
-  fileId: string,
-  opts: DownloadOptions,
-  strategyObj: DownloadOneShardStrategyObject,
-) => ActionState;
 
 export class DownloadOneShardStrategy extends DownloadStrategy {
   private abortables: Abortable[] = [];

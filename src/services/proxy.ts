@@ -5,7 +5,7 @@ const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 const MAX_CONCURRENT_BROWSER_CONNECTIONS = 6;
 
-export class ProxyBalancer {
+class ProxyBalancer {
   private proxies: Proxy[];
 
   constructor() {
@@ -37,7 +37,7 @@ export class ProxyBalancer {
   }
 }
 
-export class Proxy {
+class Proxy {
   public url: string;
   private currentRequests: ProxyRequest[];
 
@@ -59,7 +59,7 @@ export class Proxy {
   }
 }
 
-export interface ProxyRequest {
+interface ProxyRequest {
   id: string;
 }
 

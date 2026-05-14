@@ -1,4 +1,4 @@
-import { ActionState, Shard } from '../../../api';
+import { Shard } from '../../../api';
 
 import { DownloadStrategy } from './strategy';
 import {
@@ -6,21 +6,13 @@ import {
   DownloadOneShardStrategyParams,
   DownloadOneStreamStrategy,
   DownloadOneStreamStrategyParams,
-  DownloadOptions,
 } from '.';
 import { Events } from '..';
 
-export type DownloadDynamicStrategyLabel = 'Dynamic';
 export type DownloadDynamicStrategyObject<T> = {
-  label: DownloadDynamicStrategyLabel;
+  label: 'Dynamic';
   params: T extends DownloadOneShardStrategy ? DownloadOneShardStrategyParams : DownloadOneStreamStrategyParams;
 };
-export type DownloadDynamicStrategyFunction<T> = (
-  bucketId: string,
-  fileId: string,
-  opts: DownloadOptions,
-  strategyObj: DownloadDynamicStrategyObject<T>,
-) => ActionState;
 
 export class DownloadDynamicStrategy<
   T = DownloadOneShardStrategy | DownloadOneStreamStrategy,

@@ -1,4 +1,4 @@
-export class WrappedError extends Error {
+class WrappedError extends Error {
   header = '';
 
   constructor(message: string) {
