@@ -13,51 +13,56 @@ export interface CreateFileTokenResponse {
 }
 export type GetDownloadLinksResponse = { fileId: string; link: string; index: string }[];
 
+class InxtApi {
+  protected config: EnvironmentConfig;
+
+  constructor(config: EnvironmentConfig) {
+    this.config = config;
+    this.config.bridgeUrl = config.bridgeUrl ?? '';
+  }
+}
+
 class EmptyBridgeUrlError extends Error {
   constructor() {
     super('Empty bridge url');
   }
 }
 
-export class Bridge {
-  protected config: EnvironmentConfig;
-  protected url: string;
-
+export class Bridge extends InxtApi {
   constructor(config: EnvironmentConfig) {
     if (!config.bridgeUrl) {
       throw new EmptyBridgeUrlError();
     }
 
-    this.config = config;
-    this.url = config.bridgeUrl;
+    super(config);
   }
 
   createFileToken(bucketId: string, fileId: string, operation: 'PUSH' | 'PULL'): INXTRequest {
-    const targetUrl = `${this.url}/buckets/${bucketId}/tokens`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/tokens`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { operation, file: fileId } }, false);
   }
 
   renameFile(bucketId: string, fileId: string, newName: string): INXTRequest {
-    const targetUrl = `${this.url}/buckets/${bucketId}/files/${fileId}`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/files/${fileId}`;
 
     return new INXTRequest(this.config, Methods.Patch, targetUrl, { data: { name: newName } });
   }
 
   createBucket(bucketName: string) {
-    const targetUrl = `${this.url}/buckets`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets`;
 
     return new INXTRequest(this.config, Methods.Post, targetUrl, { data: { name: bucketName } });
   }
 
   deleteBucket(bucketId: string) {
-    const targetUrl = `${this.url}/buckets/${bucketId}`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}`;
 
     return new INXTRequest(this.config, Methods.Delete, targetUrl, {});
   }
 
   getDownloadLinks(bucketId: string, fileIds: string[]) {
-    const targetUrl = `${this.url}/buckets/${bucketId}/bulk-files?fileIds=${fileIds.join(',')}`;
+    const targetUrl = `${this.config.bridgeUrl}/buckets/${bucketId}/bulk-files?fileIds=${fileIds.join(',')}`;
 
     return new INXTRequest(this.config, Methods.Get, targetUrl, {});
   }
