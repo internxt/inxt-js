@@ -10,7 +10,6 @@ import { getStream } from '../../../services/request';
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
 import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
 import { DownloadProgressCallback } from '.';
-import Errors from './errors';
 import { ChunkSizeTransform } from '../../utils/streams/Chunker';
 import { AppDetails } from '@internxt/sdk/dist/shared';
 
@@ -60,7 +59,7 @@ export function downloadFileV2(
 
   const decryptFileStep: DecryptFileFunction = async (algorithm, key, iv, fileSize) => {
     if (algorithm !== ALGORITHMS.AES256CTR.type) {
-      throw Errors.downloadUnknownAlgorithmError;
+      throw new Error(`Invalid algorithm: ${algorithm}.`);
     }
 
     const decipher = createDecipheriv('aes-256-ctr', key as Buffer, iv as Buffer);
@@ -88,7 +87,7 @@ export function downloadFileV2(
       const expectedHash = fileEncryptedSlice.hash;
 
       if (calculatedHash !== expectedHash) {
-        throw Errors.downloadHashMismatchError;
+        throw new Error(`Hash mismatch. Expected: ${expectedHash}. Got: ${calculatedHash}.`);
       }
     }
 
@@ -101,9 +100,7 @@ export function downloadFileV2(
     mnemonic,
     network,
     {
-      validateMnemonic: (mnemonic) => {
-        return validateMnemonic(mnemonic);
-      },
+      validateMnemonic,
       algorithm: ALGORITHMS.AES256CTR,
       randomBytes,
       generateFileKey: (mnemonic, bucketId, index) => {
