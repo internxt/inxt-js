@@ -24,3 +24,9 @@ jobs:
 
       - name: Run Typescript compiler
         run: yarn type-check
+
+      - name: Run Prettier
+        run: yarn format
+
+      - name: Run Eslint
+        run: yarn lint
