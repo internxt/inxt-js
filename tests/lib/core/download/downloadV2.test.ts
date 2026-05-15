@@ -14,7 +14,7 @@ describe('downloadFileV2()', () => {
   describe('Should handle errors properly', () => {
     it('Should throw if the mnemonic is invalid', async () => {
       try {
-        const [promise, outStream] = downloadFileV2(
+        const [, outStream] = downloadFileV2(
           fileId,
           bucketId,
           invalidMnemonic,

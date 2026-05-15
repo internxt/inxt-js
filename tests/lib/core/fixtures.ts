@@ -1,9 +1,3 @@
-import { generateMnemonic } from 'bip39';
-
-export function getValidMnemonic(): string {
-  return generateMnemonic();
-}
-
 export function getInvalidMnemonic(): string {
   return '';
 }

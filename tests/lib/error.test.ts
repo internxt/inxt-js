@@ -1,5 +1,3 @@
-import { expect } from 'chai';
-
 import { wrap } from '../../src/lib/utils/error';
 
 describe('# Utils error tests', () => {

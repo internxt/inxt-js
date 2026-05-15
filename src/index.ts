@@ -1,4 +1,3 @@
-import { request } from '@internxt/lib';
 import {
   UploadStrategyFunction,
   UploadOptions,
@@ -11,7 +10,7 @@ import {
   Events,
 } from './lib/core';
 
-import { EncryptFilename, GenerateFileKey } from './lib/utils/crypto';
+import { EncryptFilename } from './lib/utils/crypto';
 
 // TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
@@ -19,7 +18,6 @@ import { ActionState, ActionTypes, Bucket, EnvironmentConfig } from './api';
 
 import { FileInfo, GetFileInfo } from './api/fileinfo';
 import { Bridge, CreateFileTokenResponse, GetDownloadLinksResponse } from './services/api';
-import { HashStream } from './lib/utils/streams';
 import { downloadFileV2 } from './lib/core/download/downloadV2';
 import { FileVersionOneError } from '@internxt/sdk/dist/network/download';
 import { upload as uploadFileV2 } from './lib/core/upload/uploadV2';
@@ -32,15 +30,8 @@ type ListFilesCallback = (err: Error | null, result: any) => void;
 
 type DeleteFileCallback = (err: Error | null, result: any) => void;
 
-const utils = {
-  generateFileKey: GenerateFileKey,
-  Hasher: HashStream,
-};
-
 export class Environment {
   config: EnvironmentConfig;
-
-  static utils = utils;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
@@ -86,9 +77,6 @@ export class Environment {
       .start<Bucket>()
       .then((bucket) => {
         return bucket.id;
-      })
-      .catch((err) => {
-        throw new Error(request.extractMessageFromError(err));
       });
   }
 
@@ -114,12 +102,7 @@ export class Environment {
    * @param cb Callback that will receive the response after deletion
    */
   deleteBucket(bucketId: string): Promise<void> {
-    return new Bridge(this.config)
-      .deleteBucket(bucketId)
-      .start<void>()
-      .catch((err) => {
-        throw new Error(request.extractMessageFromError(err));
-      });
+    return new Bridge(this.config).deleteBucket(bucketId).start<void>();
   }
 
   /**

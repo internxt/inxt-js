@@ -1,7 +1,6 @@
 {
   "entry": ["src/cli/*.ts"],
-  "project": ["src/**/*.ts"],
-  "ignoreDependencies": ["express", "@types/express"],
+  "project": ["src/**/*.ts", "tests/**/*.ts"],
   "rules": {
     "enumMembers": "off"
   }

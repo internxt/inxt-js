@@ -3,14 +3,7 @@ import { fail } from 'node:assert';
 import { Readable } from 'stream';
 import { UploadInvalidMnemonicError } from '@internxt/sdk/dist/network/errors';
 import { upload } from '../../../../src/lib/core/upload/uploadV2';
-import {
-  getBridgeUrl,
-  getBucketId,
-  getFileBytes,
-  getInvalidMnemonic,
-  getNetworkCredentials,
-  getValidMnemonic,
-} from '../fixtures';
+import { getBridgeUrl, getBucketId, getFileBytes, getInvalidMnemonic, getNetworkCredentials } from '../fixtures';
 
 const creds = getNetworkCredentials();
 const bucketId = getBucketId();
@@ -18,7 +11,6 @@ const bridgeUrl = getBridgeUrl();
 const abortSignal = new AbortController().signal;
 const fileContent = 'some text that i have in the file';
 const fileBytes = getFileBytes(fileContent);
-const validMnemonic = getValidMnemonic();
 const invalidMnemonic = getInvalidMnemonic();
 
 describe('upload()', () => {
