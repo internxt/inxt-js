@@ -23,12 +23,6 @@ export async function GenerateBucketKey(mnemonic: string, bucketId: string): Pro
   return GetDeterministicKey(seed, bucketId).toString('hex').slice(0, 64);
 }
 
-// export async function GenerateFileKey(mnemonic: string, bucketId: string, index: Buffer): Promise<Buffer> {
-//   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
-
-//   return GetDeterministicKey(bucketKey.slice(0, 32), index.toString('hex')).slice(0, 32);
-// }
-
 export async function EncryptFilename(mnemonic: string, bucketId: string, filename: string): Promise<string> {
   const bucketKey = await GenerateBucketKey(mnemonic, bucketId);
 
