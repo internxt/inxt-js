@@ -15,10 +15,11 @@ export type GetDownloadLinksResponse = { fileId: string; link: string; index: st
 
 class InxtApi {
   protected config: EnvironmentConfig;
+  protected url: string;
 
   constructor(config: EnvironmentConfig) {
     this.config = config;
-    this.config.bridgeUrl = config.bridgeUrl ?? '';
+    this.url = config.bridgeUrl ?? '';
   }
 }
 
@@ -30,10 +31,9 @@ class EmptyBridgeUrlError extends Error {
 
 export class Bridge extends InxtApi {
   constructor(config: EnvironmentConfig) {
-    if (!config.bridgeUrl) {
+    if (config.bridgeUrl === '') {
       throw new EmptyBridgeUrlError();
     }
-
     super(config);
   }
 
