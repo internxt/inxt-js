@@ -9,7 +9,6 @@ import { ALGORITHMS, Crypto, Network } from '@internxt/sdk/dist/network';
 
 import { GenerateFileKey, sha256 } from '../../utils/crypto';
 import { Events as ProgressEvents, HashStream, ProgressNotifier } from '../../utils/streams';
-import Errors from '../download/errors';
 import { UploadProgressCallback } from '.';
 import { logger } from '../../utils/logger';
 import { uploadParts } from './multipart';
@@ -67,7 +66,7 @@ async function uploadFileV2(
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
       if (algorithm !== ALGORITHMS.AES256CTR.type) {
-        throw Errors.uploadUnknownAlgorithmError;
+        throw new Error(`Invalid algorithm: ${algorithm}.`);
       }
 
       cipher = createCipheriv('aes-256-ctr', key as Buffer, iv as Buffer);
@@ -118,7 +117,7 @@ async function uploadFileMultipart(
       logger.debug('Encrypting file using %s (key %s, iv %s)...', algorithm, key.toString('hex'), iv.toString('hex'));
 
       if (algorithm !== ALGORITHMS.AES256CTR.type) {
-        throw Errors.uploadUnknownAlgorithmError;
+        throw new Error(`Invalid algorithm: ${algorithm}.`);
       }
 
       cipher = createCipheriv('aes-256-ctr', key as Buffer, iv as Buffer);
