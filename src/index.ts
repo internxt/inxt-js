@@ -30,9 +30,9 @@ type ListFilesCallback = (err: Error | null, result: any) => void;
 type DeleteFileCallback = (err: Error | null, result: any) => void;
 
 const utils = {
-    generateFileKey: GenerateFileKey,
-    generateFileBucketKey: GenerateFileBucketKey,
-    getFileDeterministicKey: GetFileDeterministicKey,
+  generateFileKey: GenerateFileKey,
+  generateFileBucketKey: GenerateFileBucketKey,
+  getFileDeterministicKey: GetFileDeterministicKey,
 };
 
 export class Environment {
