@@ -10,7 +10,7 @@ import {
   Events,
 } from './lib/core';
 
-import { EncryptFilename } from './lib/utils/crypto';
+import { EncryptFilename, GenerateFileBucketKey, GenerateFileKey, GetFileDeterministicKey } from './lib/utils/crypto';
 
 // TODO: Remove this
 import { BUCKET_ID_NOT_PROVIDED, ENCRYPTION_KEY_NOT_PROVIDED } from './api/constants';
@@ -27,8 +27,13 @@ type GetBucketsCallback = (err: Error | null, result: any) => void;
 type GetBucketIdCallback = (err: Error | null, result: any) => void;
 
 type ListFilesCallback = (err: Error | null, result: any) => void;
-
 type DeleteFileCallback = (err: Error | null, result: any) => void;
+
+const utils = {
+    generateFileKey: GenerateFileKey,
+    generateFileBucketKey: GenerateFileBucketKey,
+    getFileDeterministicKey: GetFileDeterministicKey,
+};
 
 export class Environment {
   config: EnvironmentConfig;
@@ -37,6 +42,7 @@ export class Environment {
     this.config = config;
   }
 
+  static utils = utils;
   /**
    * Gets file info
    * @param bucketId Bucket id where file is stored
