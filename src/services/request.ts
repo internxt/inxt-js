@@ -33,6 +33,12 @@ export async function request(
   };
 
   const options = { ...DefaultOptions, ...params };
+  options.headers = {
+    'internxt-client': config.appDetails.clientName,
+    'internxt-version': config.appDetails.clientVersion,
+    ...config.appDetails.customHeaders,
+    ...params.headers,
+  };
 
   return await axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
     if (useProxy && proxy) {
