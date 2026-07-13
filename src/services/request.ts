@@ -34,6 +34,7 @@ export async function request(
 
   const options = { ...DefaultOptions, ...params };
 
+  console.log({ options });
   return await axios.request<JSON>(options).then((value: AxiosResponse<JSON>) => {
     if (useProxy && proxy) {
       proxy.free();
